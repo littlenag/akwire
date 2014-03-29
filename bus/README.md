@@ -1,0 +1,1 @@
+builder for rabbitmq
