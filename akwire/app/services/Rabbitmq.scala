@@ -50,6 +50,7 @@ class Rabbitmq extends Actor {
 
     case 'consume =>
       try {
+        logger.debug("Waiting for message")
         val delivery = consumer.nextDelivery();
         self ! ('deliver, new String(delivery.getBody()))
       } catch {
