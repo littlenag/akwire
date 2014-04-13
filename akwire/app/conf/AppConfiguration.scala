@@ -1,11 +1,12 @@
 package conf
 
-import akka.actor.ActorSystem
+import akka.actor.{Props, ActorSystem}
 import org.springframework.context.ApplicationContext
 import org.springframework.scala.context.function.{ContextSupport, FunctionalConfiguration}
 import util.SpringExtentionImpl
 
 import org.slf4j.{LoggerFactory, Logger}
+import services.Rabbitmq
 
 class AppConfiguration extends FunctionalConfiguration with ContextSupport {
 
@@ -29,4 +30,10 @@ class AppConfiguration extends FunctionalConfiguration with ContextSupport {
     SpringExtentionImpl(system)
     system
   }
+
+  val rabbitmqService = bean("rabbitmq") {
+    val system = actorSystem()
+    system.actorOf(Props[Rabbitmq])
+  }
+
 }

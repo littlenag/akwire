@@ -47,7 +47,7 @@ object Global extends GlobalSettings {
   // get hold of the actor system
   val system = ctx.getBean(classOf[ActorSystem])
 
-  //val prop = SpringExtentionImpl(system).props("countingActor")
+  val prop = SpringExtentionImpl(system).props("countingActor")
 
   // use the Spring Extension to create props for a named actor bean
   //val counter = system.actorOf(prop, "counter")

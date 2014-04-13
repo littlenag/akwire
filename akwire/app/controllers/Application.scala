@@ -13,8 +13,9 @@ import akka.actor.ActorRef
  *
  * @Named("rabbitmq") aamq : ActorRef
  */
-@Singleton
-@org.springframework.stereotype.Controller
+//@Singleton
+//@org.springframework.stereotype.Controller
+@Named
 class Application @Inject() (uuidGenerator: UUIDGenerator) extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Application])

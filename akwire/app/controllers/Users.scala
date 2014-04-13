@@ -6,7 +6,7 @@ import scala.concurrent.Future
 import reactivemongo.api.Cursor
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.Singleton
+import javax.inject.{Named, Singleton}
 import play.api.mvc._
 import play.api.libs.json._
 
@@ -15,7 +15,7 @@ import play.api.libs.json._
  * play plugin. This provides a non-blocking driver for mongoDB as well as some useful additions for handling JSon.
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
-@Singleton
+@Named
 class Users extends Controller with MongoController {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Users])
