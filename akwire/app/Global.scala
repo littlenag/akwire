@@ -21,4 +21,32 @@ object Global extends GlobalSettings {
    * that we can override to resolve a given controller. This resolution is required by the Play router.
    */
   override def getControllerInstance[A](controllerClass: Class[A]): A = injector.getInstance(controllerClass)
+
+    // create a spring context
+  implicit val ctx = FunctionalConfigApplicationContext(classOf[AppConfiguration])
+
+  import Config._
+
+  // get hold of the actor system
+  val system = ctx.getBean(classOf[ActorSystem])
+
+  val prop = SpringExtentionImpl(system).props("countingActor")
+
+  // use the Spring Extension to create props for a named actor bean
+  val counter = system.actorOf(prop, "counter")
+
+  // tell it to count three times
+  counter ! COUNT
+  counter ! COUNT
+  counter ! COUNT
+
+  val result = (counter ? GET).mapTo[Int]
+  // print the result
+  result onComplete {
+    case Success(result) => println(s"Got back $result")
+    case Failure(failure) => println(s"Got an exception $failure")
+  }
+
+  system.shutdown
+  system.awaitTermination
 }

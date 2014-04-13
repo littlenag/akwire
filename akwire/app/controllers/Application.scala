@@ -1,9 +1,10 @@
 package controllers
 
 import javax.inject.{Singleton, Inject}
-import services.UUIDGenerator
+import services.{Rabbitmq, UUIDGenerator}
 import org.slf4j.{LoggerFactory, Logger}
 import play.api.mvc._
+import akka.actor.ActorRef
 
 /**
  * Instead of declaring an object of Application as per the template project, we must declare a class given that
@@ -11,7 +12,7 @@ import play.api.mvc._
  * @param uuidGenerator the UUID generator service we wish to receive.
  */
 @Singleton
-class Application @Inject() (uuidGenerator: UUIDGenerator) extends Controller {
+class Application @Inject() (uuidGenerator: UUIDGenerator, aamq : @Named("rabbitmq") ActorRef) extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Application])
 

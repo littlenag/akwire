@@ -12,5 +12,42 @@ GET     /randomUUID                 @controllers.Application.randomUUID
 GET     /users                      @controllers.Users.findUsers
 POST    /user                       @controllers.Users.createUser
 
+# Agent management API
+GET     /agents                     @controllers.Agents.findAgents
+PUT     /agent                      @controllers.Agents.updateAgent
+
+# Plugin management API
+##GET     /plugins                    @controllers.Plugins.findPlugins
+
+# Organizer management API
+# - (app)    application class
+# - (both)   system/service/application
+# - (both)   group/team
+# - (device) location
+# - (device) network
+# - (device) product class
+#
+# what can you then bind an agent template to?
+#
+# an organizer follows our tagging convention: organizer:/some/class
+# by default when an organizer is created then all the agents/plugins/devices
+#
+# when you create an agent you need to decide whether or not it will have a profile attached
+# if it does, then the root organizer must have its default profile specified at the time
+# of creation. A NullProfile is recommended.
+#
+##GET     /organizers                  @controllers.Organizers.findOrganizers
+##POST    /organizer                   @controllers.Organizers.createOrganizer
+##PUT     /organizer                   @controllers.Organizers.updateOrganizer
+
+# Once you've organized your hosts can then bind the organizer to a profile
+# the profile specifies which plugins must be present and running, and
+# what default configuration a plugin might have
+#
+# - (agent) profiles
+##GET     /profiles                   @controllers.Profiles.findProfiles
+##POST    /profile                    @controllers.Profiles.createProfile
+##PUT     /profile                    @controllers.Profiles.updateProfile
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

@@ -2,30 +2,30 @@
 dependencies = [
     'ngRoute',
     'ui.bootstrap',
-    'myApp.filters',
-    'myApp.services',
-    'myApp.controllers',
-    'myApp.directives',
-    'myApp.common',
-    'myApp.routeConfig'
+    'akwire.filters',
+    'akwire.services',
+    'akwire.controllers',
+    'akwire.directives',
+    'akwire.common',
+    'akwire.routeConfig'
 ]
 
-app = angular.module('myApp', dependencies)
+app = angular.module('akwire', dependencies)
 
-angular.module('myApp.routeConfig', ['ngRoute'])
+angular.module('akwire.routeConfig', ['ngRoute'])
     .config ($routeProvider) ->
         $routeProvider
             .when('/', {
-                templateUrl: '/assets/partials/view.html'
+                templateUrl: '/assets/partials/view-agents.html'
             })
             .when('/users/create', {
                 templateUrl: '/assets/partials/create.html'
             })
             .otherwise({redirectTo: '/'})
 
-@commonModule = angular.module('myApp.common', [])
-@controllersModule = angular.module('myApp.controllers', [])
-@servicesModule = angular.module('myApp.services', [])
-@modelsModule = angular.module('myApp.models', [])
-@directivesModule = angular.module('myApp.directives', [])
-@filtersModule = angular.module('myApp.filters', [])
+@commonModule = angular.module('akwire.common', [])
+@controllersModule = angular.module('akwire.controllers', [])
+@servicesModule = angular.module('akwire.services', [])
+@modelsModule = angular.module('akwire.models', [])
+@directivesModule = angular.module('akwire.directives', [])
+@filtersModule = angular.module('akwire.filters', [])
