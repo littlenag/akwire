@@ -14,6 +14,7 @@ abstract class UUIDGenerator() {
  * A simple implementation of UUIDGenerator that we will inject.
  */
 @Singleton
+@org.springframework.stereotype.Service
 class SimpleUUIDGenerator extends UUIDGenerator {
   def generate: UUID = UUID.randomUUID()
 }

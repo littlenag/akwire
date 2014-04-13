@@ -1,4 +1,6 @@
 import sbt._
+import Keys._
+import play.Project._
 
 object ApplicationBuild extends Build {
 
@@ -15,19 +17,22 @@ object ApplicationBuild extends Build {
 
     "org.mockito" % "mockito-core" % "1.9.5" % "test",
 
-    "org.springframework.scala" % "spring-scala" % "1.0.0.M2",
 
     /** SCALA DEPS **/
     "org.reactivemongo" %% "reactivemongo" % "0.10.0",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
 
     /** Likely will want this eventually **/
-    "com.github.sstone" %% "akka-amqp-proxies" % "1.3"
+    "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
+
+    // Update to RC1 when feasible
+    "org.springframework.scala" %% "spring-scala" % "1.0.0.RC1"
+
   )
 
 
-  val main = play.Project(appName, appVersion, appDependencies).settings(
-    // Add your own project settings here      
+  // Add your own project settings here'
+  val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
+    resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/"
   )
-
 }
