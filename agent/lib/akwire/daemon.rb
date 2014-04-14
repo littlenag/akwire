@@ -44,8 +44,6 @@ module Akwire
         @logger.info('reconnected to rabbitmq')
       end
       @amq = @rabbitmq.channel
-
-#      puts "is connected: #{@rabbitmq.connected?}"
     end
 
     def publish_keepalive

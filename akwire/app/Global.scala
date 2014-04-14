@@ -1,10 +1,7 @@
 import akka.actor.ActorSystem
-import com.google.inject.{Guice, AbstractModule}
 import conf.AppConfiguration
 import org.springframework.scala.context.function.FunctionalConfigApplicationContext
 import play.api.GlobalSettings
-import services.UUIDGenerator
-import util.SpringExtentionImpl
 import org.slf4j.{LoggerFactory, Logger}
 
 /**
@@ -29,7 +26,7 @@ object Global extends GlobalSettings {
 
   private final val logger: Logger = LoggerFactory.getLogger("global")
 
-  logger.error("Global starting")
+  logger.info("Akwire starting")
 
   // create a spring context
   implicit val ctx = FunctionalConfigApplicationContext(classOf[AppConfiguration])
@@ -47,7 +44,7 @@ object Global extends GlobalSettings {
   // get hold of the actor system
   val system = ctx.getBean(classOf[ActorSystem])
 
-  val prop = SpringExtentionImpl(system).props("countingActor")
+  //val prop = SpringExtentionImpl(system).props("countingActor")
 
   // use the Spring Extension to create props for a named actor bean
   //val counter = system.actorOf(prop, "counter")

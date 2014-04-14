@@ -21,21 +21,26 @@ class Rabbitmq extends Actor {
 
   var connected = false;
 
-  logger.debug("RabbitMQ Service Started")
-
+  logger.info("RabbitMQ Service Started")
 
   def receive = {
     case 'connect =>
       try {
-        logger.debug("Connecting to RabbitMQ")
+        logger.info("Connecting to RabbitMQ")
 
         val connection = factory.newConnection()
         val channel = connection.createChannel()
 
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null)
+        val KEEP_ALIVES_EXCHANGE = "keepalives"
+
+        channel.exchangeDeclare(KEEP_ALIVES_EXCHANGE, "direct")
+        val queueName = channel.queueDeclare().getQueue()
+        channel.queueBind(queueName, KEEP_ALIVES_EXCHANGE, "")
+        //channel.queueDeclare(QUEUE_NAME, true, false, false, null)
 
         consumer = new QueueingConsumer(channel);
-        channel.basicConsume(QUEUE_NAME, true, consumer);
+
+        channel.basicConsume(queueName, true, consumer);
 
         connected = true
 
@@ -50,7 +55,7 @@ class Rabbitmq extends Actor {
 
     case 'consume =>
       try {
-        logger.debug("Waiting for message")
+        logger.info("Waiting for message")
         val delivery = consumer.nextDelivery();
         self ! ('deliver, new String(delivery.getBody()))
       } catch {
@@ -60,7 +65,7 @@ class Rabbitmq extends Actor {
       }
 
     case ('deliver, msg : String) =>
-      logger.debug("!!! Received message: " + msg)
+      logger.info("!!! Received message: " + msg)
 
       // Delivery is done, go back to consuming
       self ! 'consume
