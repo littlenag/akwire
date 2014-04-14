@@ -1,13 +1,7 @@
-# Wraps up a zinc module
-
-require 'logging'
-
-module Zinc
-
+module Akwire
   class Measurement
-    include Logging
-
     def initialize(defn, value)
+      @logger = Logger.get
       @def = defn
       @value = Float(value)
     end
@@ -18,9 +12,8 @@ module Zinc
   end
 
   class Report
-    include Logging
-
     def initialize(defn, value)
+      @logger = Logger.get
       @def = defn
       @value = value.to_s
     end
@@ -30,12 +23,35 @@ module Zinc
     end
   end
 
-#  class Event end
+  class Status
+    def initialize(defn, value)
+      @logger = Logger.get
+      @def = defn
+      @value = value.to_s
+    end
+
+    def to_s
+      "#{@def.mod.prop(:name)}/#{@def.prop(:name)} => #{@value}"
+    end
+  end
+
+  class NagiosWrapper
+    def initialize(defn, value)
+      @logger = Logger.get
+      @def = defn
+      @value = value.to_s
+    end
+
+    def to_s
+      "#{@def.mod.prop(:name)}/#{@def.prop(:name)} => #{@value}"
+    end
+  end
+
+# aperiodic data types: event, log, alert
 
   class PatternDsl
-    include Logging
-
     def initialize(name, mod)
+      @logger = Logger.get
       @module = mod
       @props = {}
       @props[:name] = name
@@ -63,9 +79,8 @@ module Zinc
   end
 
   class MeasurementDsl
-    include Logging
-
     def initialize(name, mod)
+      @logger = Logger.get
       @module = mod
       @props = {}
       @props[:name] = name
@@ -92,11 +107,9 @@ module Zinc
     end
   end
 
-  class ModuleDsl
-
-    include Logging
-
+  class CollectorDsl
     def initialize
+      @logger = Logger.get
       @props = {}
       @props[:measurements] = {}
     end
@@ -128,12 +141,11 @@ module Zinc
     end
   end
 
-  class Tmr
-    include Logging
-
+  class Collector
     def initialize(file)
-      logger.debug("Loading module: #{file}")
-      @module = ModuleDsl.new
+      @logger = Logger.get
+      @logger.debug("Loading collector: #{file}")
+      @module = CollectorDsl.new
       @module.instance_eval(File::read(file), file)
     end
 
@@ -146,7 +158,15 @@ module Zinc
     end
 
     def name
-      @dsl.prop(:name)
+      @module.prop(:name)
+    end
+
+    def description
+      @module.prop(:description)
+    end
+
+    def needs_config?
+      false
     end
 
     def to_s

@@ -8,11 +8,10 @@
   },
 
   "daemon": {
-    "modules": "/home/mark/.rvm/gems",
     "id": "auto"
   },
 
-  "modules": {
+  "collectors": {
 
   }
 }

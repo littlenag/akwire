@@ -20,7 +20,7 @@ module Akwire
       @settings = base.settings
       @collectors = base.collectors
       base.setup_process
-      @collectors.load_settings(@settings.to_hash)
+      @collectors.configure_from_settings(@settings[:collectors].to_hash)
       @timers = Array.new
       @checks_in_progress = Array.new
       @safe_mode = @settings[:daemon][:safe_mode] || false
@@ -94,6 +94,10 @@ module Akwire
       end
     end
 
+    def setup_collectors
+      @logger.debug('scheduling collectors')
+    end
+
     def unsubscribe
       @logger.warn('unsubscribing from client subscriptions')
       if @rabbitmq.connected?
@@ -124,7 +128,7 @@ module Akwire
 #      setup_standalone
 #      setup_sockets
 
-# load modules
+      setup_collectors
 # register
 # pull config
 # process incoming requests

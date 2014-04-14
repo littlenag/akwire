@@ -13,6 +13,7 @@ require File.join(File.dirname(__FILE__), 'cli')
 require File.join(File.dirname(__FILE__), 'logstream')
 require File.join(File.dirname(__FILE__), 'settings')
 require File.join(File.dirname(__FILE__), 'collectors')
+require File.join(File.dirname(__FILE__), 'dsl')
 require File.join(File.dirname(__FILE__), 'process')
 require File.join(File.dirname(__FILE__), 'io')
 require File.join(File.dirname(__FILE__), 'rabbitmq')
@@ -54,10 +55,17 @@ module Akwire
     end
 
     def collectors
+      # This will instantiate the Collectors but they will have to wait for 
+      # their configurations
       collectors = Collectors.new
       if @options[:collector_dir]
-        collectors.require_directory(@options[:collector_dir])
+        collectors.load_directory(@options[:collector_dir])
       end
+
+      if @options[:load_gem_collectors]
+        collectors.load_gems(@options[:load_gem_collectors])
+      end
+
       collectors.load_all
       collectors
     end

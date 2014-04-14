@@ -3,6 +3,8 @@ module Akwire
     def initialize
       @logger = Logger.get
       @collectors = Hash.new
+      @collector_dir = nil
+      @collector_gems = false
     end
 
     def [](key)
@@ -13,50 +15,58 @@ module Akwire
       @collectors.has_key?(name)
     end
 
-    def require_directory(directory)
-      path = directory.gsub(/\\(?=\S)/, '/')
-      Dir.glob(File.join(path, '**/*.rb')).each do |file|
-        begin
-          require File.expand_path(file)
-        rescue ScriptError => error
-          @logger.error('failed to require extension', {
-            :extension_file => file,
-            :error => error
-          })
-          @logger.warn('ignoring extension', {
-            :extension_file => file
-          })
-        end
-      end
+    def load_directory(dir) 
+      @collector_dir = dir
+    end
+
+    def load_gems(val) 
+      @collector_gems = val
     end
 
     def load_all
+      Dir[@collector_dir + "/**/main.mon"].each do |file|
+        c = Collector.new(file)
+        @collectors[c.name] = c
+        @logger.info('loaded collector', {
+                       :name => c.name,
+                       :description => c.description
+                     })
+      end
+        
     end
 
-    def load_settings(settings={})
-      all_extensions.each do |extension|
-        extension.settings = settings
+    def configure_from_settings(settings={})
+      all_collectors.each do |collector|
+        if collector.needs_config?
+          if settings.has_key?(collector.name)
+            collector.configure(settings[collector.name])
+          else
+            @logger.info('collector requires configuration', {
+                           :collector => collector.name
+                         })
+          end
+        end
       end
     end
 
     def stop_all(&block)
-      extensions = all_extensions
-      stopper = Proc.new do |extension|
-        if extension.nil?
+      collectors = all_collectors
+      stopper = Proc.new do |collector|
+        if collector.nil?
           block.call
         else
-          extension.stop do
-            stopper.call(extensions.pop)
+          collector.stop do
+            stopper.call(collector.pop)
           end
         end
       end
-      stopper.call(extensions.pop)
+      stopper.call(collectors.pop)
     end
 
     private
 
-    def all_extensions
-      @collectors.flatten
+    def all_collectors
+      @collectors.values
     end
 
     def loaded(name, description)
@@ -67,67 +77,4 @@ module Akwire
     end
   end
 
-  module Module
-    class Base
-      attr_accessor :logger, :settings
-
-      def initialize
-        EM::next_tick do
-          post_init
-        end
-      end
-
-      def name
-        'base'
-      end
-
-      def description
-        'module description (change me)'
-      end
-
-      def definition
-        {
-          :type => 'module',
-          :name => name
-        }
-      end
-
-      def post_init
-        true
-      end
-
-      def run(data=nil, &block)
-        block.call('noop', 0)
-      end
-
-      def stop(&block)
-        block.call
-      end
-
-      def [](key)
-        definition[key.to_sym]
-      end
-
-      def has_key?(key)
-        definition.has_key?(key.to_sym)
-      end
-
-      def safe_run(data=nil, &block)
-        begin
-          data ? run(data.dup, &block) : run(&block)
-        rescue => error
-          block.call(error.to_s, 2)
-        end
-      end
-
-      def self.descendants
-        ObjectSpace.each_object(Class).select do |klass|
-          klass < self
-        end
-      end
-    end
-
-#    Object.const_set("module".capitalize, Class.new(Base))
-
-  end
 end

@@ -1,21 +1,9 @@
 #!/usr/bin/env ruby
 
-if File.symlink?(__FILE__)
-  ZINC_DIR = File.dirname(File.dirname(File.readlink(__FILE__)))
-elsif File.dirname(__FILE__) == "."
-  ZINC_DIR = File.dirname(File.expand_path("."))
-else
-  ZINC_DIR = File.expand_path(File.dirname(File.dirname(__FILE__)))
-end
+require 'collectors'
 
-$: << (ZINC_DIR + "/lib")
-
-require 'mon'
-require 'logging'
-require 'getoptlong'
-
-module Zinc
-  class MonRunner
+module Akwire
+  class App
     include Logging
 
     def initialize(name, args)
