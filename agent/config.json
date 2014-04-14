@@ -1,0 +1,18 @@
+{
+  "rabbitmq": {
+    "host": "localhost",
+    "port": 5672,
+    "user": "guest",
+    "password": "guest",
+    "vhost": "/"
+  },
+
+  "daemon": {
+    "modules": "/home/mark/.rvm/gems",
+    "id": "auto"
+  },
+
+  "modules": {
+
+  }
+}

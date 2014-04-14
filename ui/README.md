@@ -1,1 +1,0 @@
-this is the core ui, written using the playframework

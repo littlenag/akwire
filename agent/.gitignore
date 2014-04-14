@@ -1,0 +1,10 @@
+.bundle
+.vagrant
+.DS_Store
+*.lock
+vendor
+dump.rdb
+*.png
+pkg/*
+*~
+\#*

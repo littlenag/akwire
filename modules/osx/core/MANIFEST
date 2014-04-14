@@ -1,0 +1,15 @@
+author:
+
+email:
+
+description:
+
+version:
+
+class:
+ - system
+ - device
+ - group
+ - location
+ - :tax/tag
+ - :flat -> :tags/flat

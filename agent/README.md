@@ -1,8 +1,11 @@
-Ruby based agent
- - core daemons for the major platforms
-  : windows
-  : linux (centos 5/6, debian, ubuntu)
-  : os x
+![akwire](https://raw.github.com/littlenag/akwire/master/akwire-logo.png)
 
- - core plugins for the major platforms
+An agent-based data collection framework that aims to be simple, malleable, and scalable.
 
+[![Build Status](https://secure.travis-ci.org/littlenag/akwire.png)](https://travis-ci.org/littlenag/akwire)
+
+## Documentation
+  Please refer to the [Akwire Docs](http://docs.akwire.irksomeideas.com/).
+
+## License
+  Akwire is released under the [MIT license](https://raw.github.com/littlenag/akwire/master/MIT-LICENSE.txt).

@@ -1,0 +1,23 @@
+name 'core'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Collect core cpu metrics for a given server."
+
+measurement "uptime" do
+  collect { File.read("/proc/uptime").split[0] }
+end
+
+measurement "load-average/1m" do
+  collect { File.read("/proc/loadavg").split[0] }
+end
+
+measurement "load-average/5m" do
+  collect { File.read("/proc/loadavg").split[1] }
+end
+
+measurement "load-average/15m" do
+  collect { File.read("/proc/loadavg").split[2] }
+end
+

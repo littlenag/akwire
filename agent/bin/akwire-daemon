@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+unless $:.include?(File.dirname(__FILE__) + '/../lib/')
+  $: << File.dirname(__FILE__) + '/../lib'
+end
+
+require 'akwire/daemon'
+
+options = Akwire::CLI.read_daemon_opts
+Akwire::Daemon.run(options)

@@ -1,0 +1,20 @@
+name 'core.osx'
+version '0.0.1'
+description "Returns core metrics for a given server."
+
+#measurement "uptime" do
+#  collect { `uptime`.split[0] }
+#end
+
+measurement "load-average/1m" do
+  collect { `uptime`.split("load averages:")[-1].split[0] }
+end
+
+measurement "load-average/5m" do
+  collect { `uptime`.split("load averages:")[-1].split[0] }
+end
+
+measurement "load-average/15m" do
+  collect { `uptime`.split("load averages:")[-1].split[0] }
+end
+
