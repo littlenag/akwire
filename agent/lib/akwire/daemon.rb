@@ -94,8 +94,32 @@ module Akwire
       end
     end
 
+    def publish_observations
+      @collectors.collect_observations do |collector, obs|
+        obs.each do |o|
+          begin
+            @logger.debug("publishing observation: #{collector}", {
+                            :obs => o
+                        })
+            @amq.direct('observations').publish(Oj.dump(obs.to_s))
+          rescue AMQ::Client::ConnectionClosedError => error
+            @logger.error('failed to publish keepalive', {
+                            :payload => obs,
+                            :error => error.to_s
+                          })
+          end
+        end
+      end    
+    end
+
     def setup_collectors
       @logger.debug('scheduling collectors')
+      publish_observations
+      @timers << EM::PeriodicTimer.new(60) do
+        if @rabbitmq.connected?
+          publish_observations
+        end
+      end
     end
 
     def unsubscribe
@@ -124,13 +148,10 @@ module Akwire
     def start
       setup_rabbitmq
       setup_keepalives
-#      setup_subscriptions
-#      setup_standalone
-#      setup_sockets
 
-      setup_collectors
 # register
-# pull config
+# pull config for each collector
+      setup_collectors
 # process incoming requests
     end
 

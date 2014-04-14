@@ -49,6 +49,13 @@ module Akwire
       end
     end
 
+    def collect_observations
+      all_collectors.each do |collector|
+        obs = collector.collect
+        yield collector, obs
+      end
+    end
+
     def stop_all(&block)
       collectors = all_collectors
       stopper = Proc.new do |collector|

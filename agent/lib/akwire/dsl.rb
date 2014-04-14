@@ -9,6 +9,12 @@ module Akwire
     def to_s
       "#{@def.mod.prop(:name)}/#{@def.prop(:name)} => #{@value}"
     end
+
+    def to_hash
+      {
+        "#{@def.mod.prop(:name)}/#{@def.prop(:name)}" => @value
+      }
+    end
   end
 
   class Report
