@@ -50,7 +50,7 @@ module Akwire
     end
 
     def collect_observations
-      all_collectors.each do |collector|
+      all_collectors.select {|c| c.active? }.each do |collector|
         obs = collector.collect
         yield collector, obs
       end

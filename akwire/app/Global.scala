@@ -9,21 +9,6 @@ import org.slf4j.{LoggerFactory, Logger}
  */
 object Global extends GlobalSettings {
 
-  /**
-   * Bind types such that whenever UUIDGenerator is required, an instance of SimpleUUIDGenerator will be used.
-   */
-//  val injector = Guice.createInjector(new AbstractModule {
-//    protected def configure() {
-//      bind(classOf[UUIDGenerator]).to(classOf[SimpleUUIDGenerator])
-//    }
-//  })
-
-  /**
-   * Controllers must be resolved through the application context. There is a special method of GlobalSettings
-   * that we can override to resolve a given controller. This resolution is required by the Play router.
-   */
-  //override def getControllerInstance[A](controllerClass: Class[A]): A = injector.getInstance(controllerClass)
-
   private final val logger: Logger = LoggerFactory.getLogger("global")
 
   logger.info("Akwire starting")
@@ -31,6 +16,10 @@ object Global extends GlobalSettings {
   // create a spring context
   implicit val ctx = FunctionalConfigApplicationContext(classOf[AppConfiguration])
 
+  /**
+   * Controllers must be resolved through the application context. There is a special method of GlobalSettings
+   * that we can override to resolve a given controller. This resolution is required by the Play router.
+   */
   override def getControllerInstance[A](clazz: Class[A]): A = {
     //if (clazz.isAnnotationPresent(Component.class)
     //    || clazz.isAnnotationPresent(Controller.class)

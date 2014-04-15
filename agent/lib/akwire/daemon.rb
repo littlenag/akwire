@@ -98,9 +98,7 @@ module Akwire
       @collectors.collect_observations do |collector, obs|
         obs.each do |o|
           begin
-            @logger.debug("publishing observation: #{collector}", {
-                            :obs => o
-                        })
+            @logger.debug("publishing observation", o.to_hash)
             @amq.direct('observations').publish(Oj.dump(obs.to_s))
           rescue AMQ::Client::ConnectionClosedError => error
             @logger.error('failed to publish keepalive', {

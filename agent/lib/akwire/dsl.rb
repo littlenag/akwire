@@ -1,7 +1,23 @@
 module Akwire
-  class Measurement
-    def initialize(defn, value)
+  class Observation
+    def initialize(defn)
       @logger = Logger.get
+      @def = defn
+    end
+
+    def collector
+      @def.mod.prop(:name)
+    end
+
+    def key
+      @def.prop(:name)
+    end
+
+  end
+
+  class Measurement < Observation
+    def initialize(defn, value)
+      super defn
       @def = defn
       @value = Float(value)
     end
@@ -12,15 +28,17 @@ module Akwire
 
     def to_hash
       {
-        "#{@def.mod.prop(:name)}/#{@def.prop(:name)}" => @value
+        :type => "m",
+        :collector => collector,
+        :key => key,
+        :value => @value
       }
     end
   end
 
-  class Report
+  class Report < Observation
     def initialize(defn, value)
-      @logger = Logger.get
-      @def = defn
+      super defn
       @value = value.to_s
     end
 
@@ -29,10 +47,9 @@ module Akwire
     end
   end
 
-  class Status
+  class Status < Observation
     def initialize(defn, value)
-      @logger = Logger.get
-      @def = defn
+      super defn
       @value = value.to_s
     end
 
@@ -43,8 +60,7 @@ module Akwire
 
   class NagiosWrapper
     def initialize(defn, value)
-      @logger = Logger.get
-      @def = defn
+      super defn
       @value = value.to_s
     end
 
@@ -118,10 +134,14 @@ module Akwire
       @logger = Logger.get
       @props = {}
       @props[:measurements] = {}
+      @props[:version] = ""
+      @props[:author] = ""
+      @props[:description] = ""
+      @props[:interval] = 5
     end
 
-    def prop(p)
-      @props[p]
+    def [](key)
+      @props[key]
     end
 
     def props
@@ -151,24 +171,36 @@ module Akwire
     def initialize(file)
       @logger = Logger.get
       @logger.debug("Loading collector: #{file}")
-      @module = CollectorDsl.new
-      @module.instance_eval(File::read(file), file)
+      @wrapper = CollectorDsl.new
+      @wrapper.instance_eval(File::read(file), file)
     end
 
     def collect
       obs = []
-      @module.props[:measurements].each_pair { |name,measDef|
+      @wrapper.props[:measurements].each_pair { |name,measDef|
         obs << Measurement.new(measDef, measDef.prop(:callback).call())
       }
       return obs
     end
 
+    # Meta-data provided by the plugin
+
     def name
-      @module.prop(:name)
+      @wrapper.prop(:name)
     end
 
     def description
-      @module.prop(:description)
+      @wrapper[:description]
+    end
+
+    # Configured values
+
+    def active?
+      false
+    end
+
+    def configured_interval
+      1
     end
 
     def needs_config?
