@@ -125,6 +125,9 @@ module Akwire
             #  - pid, own identity, manager's identity
             # use ssh public keys for identities?
             # ssl certs?
+
+            # support a list of local commands to run (like munin)
+
             
 #        @timers << EM::PeriodicTimer.new(60) do
 #          if @rabbitmq.connected?
@@ -191,22 +194,24 @@ module Akwire
     def unsubscribe
       @logger.warn('unsubscribing from client subscriptions')
       if @rabbitmq.connected?
-        @check_request_queue.unsubscribe
+        @command_queue.unsubscribe
       else
-        @check_request_queue.before_recovery do
-          @check_request_queue.unsubscribe
+        @command.before_recovery do
+          @command.unsubscribe
         end
       end
     end
     
-    def complete_checks_in_progress(&block)
+    def complete_checks_in_progress(&when_done)
       @logger.info('completing checks in progress', {
         :checks_in_progress => @checks_in_progress
       })
       retry_until_true do
         if @checks_in_progress.empty?
-          block.call
+          when_done.call
           true
+        else
+          false
         end
       end
     end
@@ -255,6 +260,7 @@ module Akwire
       end
       unsubscribe
       complete_checks_in_progress do
+        @logger.warn('stopping collectors')
         @collectors.stop_all do
           @rabbitmq.close
           @logger.warn('stopping reactor')

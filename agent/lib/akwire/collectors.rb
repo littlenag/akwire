@@ -56,18 +56,18 @@ module Akwire
       end
     end
 
-    def stop_all(&block)
-      collectors = all_collectors
-      stopper = Proc.new do |collector|
-        if collector.nil?
-          block.call
-        else
-          collector.stop do
-            stopper.call(collector.pop)
-          end
-        end
-      end
-      stopper.call(collectors.pop)
+    def stop_all(&when_done)
+      EM::Iterator.new(all_collectors).each(
+                                           foreach = proc { |collector,iter|
+                                             collector.stop {
+                                               @logger.warn("stopped collector: #{collector}")
+                                               iter.next
+                                             }
+                                           }, 
+                                           after = proc { |results|
+                                             @logger.warn("stopped all collectors")
+                                             when_done.call if block_given?
+                                           })
     end
 
     private

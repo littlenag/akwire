@@ -193,6 +193,11 @@ module Akwire
       @wrapper[:description]
     end
 
+    # Life-cycle hooks
+    def stop(&block)
+      block.call if block_given?
+    end
+
     # Configured values
 
     def active?
