@@ -186,7 +186,7 @@ module Akwire
     # Meta-data provided by the plugin
 
     def name
-      @wrapper.prop(:name)
+      @wrapper[:name]
     end
 
     def description

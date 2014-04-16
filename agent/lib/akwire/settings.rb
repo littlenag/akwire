@@ -145,10 +145,8 @@ module Akwire
       unless @settings[:daemon][:id] =~ /^[\w\.-]+$/
         invalid('daemon must have a unique id and it cannot contain spaces or special characters')
       end
-      if @settings[:daemon].has_key?(:keepalive)
-        unless @settings[:daemon][:keepalive].is_a?(Hash)
-          invalid('client keepalive must be a hash')
-        end
+      unless @settings[:daemon][:mode] =~ /^independent|managed$/
+        invalid('daemon must have a unique id and it cannot contain spaces or special characters')
       end
     end
 

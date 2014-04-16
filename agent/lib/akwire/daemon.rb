@@ -21,6 +21,11 @@ module Akwire
       @collectors = base.collectors
       base.setup_process
       @collectors.configure_from_settings(@settings[:collectors].to_hash)
+
+      @waiting_for_token = true
+      @token = nil
+      @token_requester = nil
+
       @timers = Array.new
       @checks_in_progress = Array.new
       @safe_mode = @settings[:daemon][:safe_mode] || false
@@ -37,60 +42,122 @@ module Akwire
         })
         stop
       end
+
       @rabbitmq.before_reconnect do
         @logger.warn('reconnecting to rabbitmq')
       end
+
       @rabbitmq.after_reconnect do
         @logger.info('reconnected to rabbitmq')
+        # re-register here if managed
       end
+
       @amq = @rabbitmq.channel
+
     end
 
-    def publish_keepalive
+    def request_token
       payload = {
-          :timestamp => Time.now.to_i,
-          :agent => "some random id"
+        :version => 1,
+        :timestamp => Time.now.to_i,
+        :agent_id => @settings[:daemon][:id],
+        :command => "issue-session-token"
       }
-      @logger.debug('publishing keepalive', {
+
+      @logger.debug('requesting session token', {
         :payload => payload
       })
+
       begin
-        @amq.direct('keepalives').publish(Oj.dump(payload))
+        @amq.direct('registration').publish(Oj.dump(payload))
       rescue AMQ::Client::ConnectionClosedError => error
-        @logger.error('failed to publish keepalive', {
+        @logger.error('failed to request session token', {
           :payload => payload,
           :error => error.to_s
         })
       end
     end
 
-    def setup_keepalives
-      @logger.debug('scheduling keepalives')
-      publish_keepalive
-      @timers << EM::PeriodicTimer.new(20) do
-        if @rabbitmq.connected?
-          publish_keepalive
-        end
-      end
+    def process_command(command)
+      @logger.info('received command', {
+                     :command => command
+                   })
+      
     end
 
-    def setup_subscriptions
-      @logger.debug('subscribing to client subscriptions')
-      @check_request_queue = @amq.queue('', :auto_delete => true) do |queue|
-        @settings[:client][:subscriptions].each do |exchange_name|
-          @logger.debug('binding queue to exchange', {
-            :queue_name => queue.name,
-            :exchange_name => exchange_name
-          })
-          queue.bind(@amq.fanout(exchange_name))
+    # Establish a session with the manager
+    def setup_session
+      @logger.debug('binding to m2a exchange')
+      
+      @command_queue = @amq.queue(@settings[:daemon][:id], :auto_delete => true) do |queue|
+        
+        @logger.debug('binding agent queue to (management -> agent) exchange', {
+                        :queue_name => queue.name
+                      })
+
+        # No other agents should receive commands directed to this agent
+        queue.bind(@amq.fanout("m2a"), :routing_key => @settings[:daemon][:id])
+
+        # Drop stale messages
+        queue.purge
+
+        token_requestor = EM::PeriodicTimer.new(30) do
+          if @rabbitmq.connected?
+            request_token
+          end
         end
-        queue.subscribe do |payload|
-          check = Oj.load(payload)
-          @logger.info('received check request', {
-            :check => check
-          })
-          process_check(check)
+
+        handle_token = EM.spawn do
+          case response[:result] 
+          when "registration-accepted" then
+            
+            @logger.info('session established with manager', {
+                           :response => response
+                         })
+            
+            # this point we might validate the token and the manager's
+            # identity, or if this is our very first run we might
+            # auto-accept the identity and save it in a file under var
+            
+            # to save:
+            #  - pid, own identity, manager's identity
+            # use ssh public keys for identities?
+            # ssl certs?
+            
+#        @timers << EM::PeriodicTimer.new(60) do
+#          if @rabbitmq.connected?
+#            check_heartbeat
+#          end
+#        end
+
+            @token = response[:token]
+            
+          when "registration-denied" then
+            @logger.error('manager denied registration attempt', {
+                            :manager => response[:manager_id]
+                          })
+            stop
+          else
+            @logger.info('malformed message', {
+                           :manager => response
+                         })
+          end
+
         end
+
+        handle_command = EM.spawn do 
+          process_command(command)
+        end
+
+        queue.subscribe do |headers,payload|
+          command = Oj.load(payload)
+          if @token.nil?
+            handle_token(command)
+          else
+            handle_command(command)
+          end
+        end
+         
       end
     end
 
@@ -119,7 +186,7 @@ module Akwire
         end
       end
     end
-
+    
     def unsubscribe
       @logger.warn('unsubscribing from client subscriptions')
       if @rabbitmq.connected?
@@ -130,7 +197,7 @@ module Akwire
         end
       end
     end
-
+    
     def complete_checks_in_progress(&block)
       @logger.info('completing checks in progress', {
         :checks_in_progress => @checks_in_progress
@@ -145,12 +212,39 @@ module Akwire
 
     def start
       setup_rabbitmq
-      setup_keepalives
+
+# two major modes
+      case @settings[:daemon][:mode].to_sym
+      when :managed then
+        @logger.info("Running in MANAGED mode")
+
+#  - managed:
+#    - announce until registered
+#    - no data published until registered
+#    - commands accepted
+#    - configs pulled
 
 # register
 # pull config for each collector
-      setup_collectors
+
 # process incoming requests
+# stop publishing keepalives once registered?
+        
+        setup_session
+        setup_collectors
+
+      when :independent then
+        @logger.info("Running in INDEPENDENT mode")
+
+#  - independent: (collectd-like existence)
+#    - no keep alives
+#    - no commands accepted
+#    - won't register
+#    - collectors published immediately
+
+        setup_collectors
+      end
+
     end
 
     def stop
