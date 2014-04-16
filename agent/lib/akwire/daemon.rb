@@ -101,13 +101,15 @@ module Akwire
         # Drop stale messages
         queue.purge
 
+        request_token
+
         token_requestor = EM::PeriodicTimer.new(30) do
           if @rabbitmq.connected?
             request_token
           end
         end
 
-        handle_token = EM.spawn do
+        handle_token = EM.spawn do |response|
           case response[:result] 
           when "registration-accepted" then
             
@@ -145,19 +147,18 @@ module Akwire
 
         end
 
-        handle_command = EM.spawn do 
+        handle_command = EM.spawn do |command|
           process_command(command)
         end
 
         queue.subscribe do |headers,payload|
           command = Oj.load(payload)
           if @token.nil?
-            handle_token(command)
+            handle_token.notify command
           else
-            handle_command(command)
+            handle_command.notify command
           end
         end
-         
       end
     end
 
