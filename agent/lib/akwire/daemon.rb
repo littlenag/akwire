@@ -69,7 +69,7 @@ module Akwire
       })
 
       begin
-        @amq.direct('registration').publish(Oj.dump(payload))
+        @amq.direct('agent.to.hub').publish(Oj.dump(payload))
       rescue AMQ::Client::ConnectionClosedError => error
         @logger.error('failed to request session token', {
           :payload => payload,
@@ -87,16 +87,16 @@ module Akwire
 
     # Establish a session with the manager
     def setup_session
-      @logger.debug('binding to m2a exchange')
+      @logger.debug('binding to hub.to.agent exchange')
       
       @command_queue = @amq.queue(@settings[:daemon][:id], :auto_delete => true) do |queue|
         
-        @logger.debug('binding agent queue to (management -> agent) exchange', {
+        @logger.debug('binding agent queue to (hub -> agent) exchange', {
                         :queue_name => queue.name
                       })
 
         # No other agents should receive commands directed to this agent
-        queue.bind(@amq.fanout("m2a"), :routing_key => @settings[:daemon][:id])
+        queue.bind(@amq.fanout("hub.to.agent"), :routing_key => @settings[:daemon][:id])
 
         # Drop stale messages
         queue.purge

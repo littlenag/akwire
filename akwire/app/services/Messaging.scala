@@ -1,7 +1,7 @@
 package services
 
 import com.rabbitmq.client._
-import akka.actor.{ActorSystem, Props, Actor}
+import akka.actor.{ActorRef, ActorSystem, Props, Actor}
 import play.api.Configuration
 
 import org.slf4j.{LoggerFactory, Logger}
@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired
 import scala.beans.BeanProperty
 import javax.annotation.PostConstruct
 import javax.inject.Named
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json._
+
+import models.AgentId
 
 @Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
@@ -57,18 +59,18 @@ class Supervisor extends Actor {
 
   def receive = {
     case ('start, factory : ConnectionFactory) =>
-      val registrationActor = context.actorOf(Props[RegistrationHandler], "RegistrationActor")
+      val sessionBroker = context.actorOf(Props[SessionBroker], "SessionBroker")
 
       try {
         logger.info("Connecting to RabbitMQ")
 
-        registrationActor ! ('connect, factory.newConnection())
+        sessionBroker ! ('connect, factory.newConnection())
 
       } catch {
         case e: Exception =>
           logger.error("Error connecting to RabbitMQ: " + e)
-          if (registrationActor != null) {
-            registrationActor ! 'disconnect
+          if (sessionBroker != null) {
+            sessionBroker ! 'disconnect
           }
           self ! 'reconnect
       }
@@ -80,36 +82,41 @@ class Supervisor extends Actor {
   }
 }
 
-// Listens for new Agents to start broadcasting, registers them, and creates a persistent heartbeat between
-// the agent and the manager
-class RegistrationHandler extends Actor {
-  private final val logger: Logger = LoggerFactory.getLogger(classOf[RegistrationHandler])
+// Listens for new Agents to start broadcasting, registers them, establishes a session,
+// and creates a persistent heartbeat between the agent and the manager
+class SessionBroker extends Actor with DefaultWrites {
+  private final val logger: Logger = LoggerFactory.getLogger(classOf[SessionBroker])
 
-  var consumer : QueueingConsumer = null;
+  var incomingMessages : QueueingConsumer = null;
 
-  var channel : Channel = null;
+  var incomingChannel : Channel = null;
+  var outgoingChannel : Channel = null;
 
   var connected = false;
 
-  val QUEUE_NAME = "agent-registration-requests"
+  var registeredAgents : Map[AgentId, ActorRef] = new collection.immutable.HashMap
+
+  val HUB_TO_AGENT_EXCH = "hub.to.agent"
+  val AGENT_TO_HUB_EXCH = "agent.to.hub"
+
+  var nextSessionToken = 0
 
   def receive = {
     case ('connect, connection : Connection) =>
       try {
         logger.info("Connecting to RabbitMQ")
 
-        channel = connection.createChannel()
+        incomingChannel = connection.createChannel()
+        outgoingChannel = connection.createChannel()
 
-        val REGISTRATION_EXCHANGE = "registration"
+        incomingChannel.exchangeDeclare(AGENT_TO_HUB_EXCH, "direct")
 
-        channel.exchangeDeclare(REGISTRATION_EXCHANGE, "direct")
-        val queueName = channel.queueDeclare().getQueue()
-        channel.queueBind(queueName, REGISTRATION_EXCHANGE, "")
-        //channel.queueDeclare(QUEUE_NAME, true, false, false, null)
+        incomingChannel.queueDeclare(AGENT_TO_HUB_EXCH, false, true, true, null)
+        incomingChannel.queueBind(AGENT_TO_HUB_EXCH, AGENT_TO_HUB_EXCH, "")
 
-        consumer = new QueueingConsumer(channel);
+        incomingMessages = new QueueingConsumer(incomingChannel);
 
-        channel.basicConsume(queueName, true, consumer);
+        incomingChannel.basicConsume(AGENT_TO_HUB_EXCH, true, incomingMessages);
 
         connected = true
 
@@ -122,31 +129,98 @@ class RegistrationHandler extends Actor {
           self ! 'reconnect
       }
 
+    case ('publish, agentId : AgentId, msg : JsValue) =>
+      self ! ('publish, agentId, msg.toString())
+
+    case ('publish, agentId : AgentId, msg : String) =>
+
+      // use the agentId as the routing key
+      // Set mandatory true (message must find a home in some queue)
+
+      outgoingChannel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true,
+        MessageProperties.PERSISTENT_TEXT_PLAIN,
+        msg.getBytes);
+
     case 'consume =>
       try {
-        logger.info("Waiting for registration requests")
-        val request = consumer.nextDelivery();
-        self ! ('deliver, Json.parse(request.getBody()))
+        logger.info("Waiting for messages")
+        val request = incomingMessages.nextDelivery();
+        self ! ('process, Json.parse(request.getBody()))
       } catch {
         case e: Exception =>
           logger.error("Error with RabbitMQ: " + e)
           self ! 'reconnect
       }
 
-    case ('deliver, msg : JsValue) =>
-      logger.info("Received registration request: " + msg)
+    case ('process, msg : JsValue) =>
+      logger.info("Received message: " + msg)
 
-      logger.info("From: " + msg\"agent_id")
+      // route to agent
+      // is registration request
+      //
+
+      val agentId = new AgentId((msg\"agent_id").as[String])
+
+      if (registeredAgents.contains(agentId) && (msg\"command").as[String] != "issue-session-token") {
+        // Route the message to the agent handler
+        logger.info("Processing message: " + msg)
+        registeredAgents(agentId) ! ('process, msg)
+      } else if (registeredAgents.contains(agentId) && (msg\"command").as[String] == "issue-session-token") {
+        logger.info("What !?!: " + msg)
+        self ! ('publish, agentId, Json.toJson( Map.apply("result" -> "registration-denied", "token" -> nextSessionToken.toString)))
+      } else {
+
+        logger.info("command: " + (msg\"command").as[String])
+
+        // Is this a registration request?
+        if ((msg\"command").as[String].equals("issue-session-token")) {
+          logger.info("Received registration request")
+
+          // assume the request is valid
+
+          val newAgentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
+          registeredAgents += (agentId -> newAgentHandler);
+
+          newAgentHandler ! ('processRegistration, msg)
+
+          // send the session token back to the agent
+
+          nextSessionToken += 1
+
+          self ! ('publish, agentId, Json.toJson( Map.apply("result" -> "registration-accepted", "token" -> nextSessionToken.toString)))
+
+          logger.info("Accepted and registered agent:" + agentId)
+
+        } else {
+          logger.info("Message received from unregistered agent")
+        }
+
+      }
 
       // Delivery is done, go back to consuming
       self ! 'consume
 
     case 'disconnect =>
       connected = false
-      channel.close
+      incomingChannel.close
 
     case a => logger.error("Bad message: " + a)
   }
-
 }
 
+// This Actor handles all communication with an agent
+class AgentHandler extends Actor {
+  private final val logger: Logger = LoggerFactory.getLogger(classOf[AgentHandler])
+
+  def receive = {
+    case ('processRegistration, msg) =>
+
+    case ('receive, msg: JsValue) =>
+
+    case ('send, msg : JsValue) =>
+
+    case 'disconnect =>
+
+    case a => logger.error("Bad message: " + a)
+  }
+}

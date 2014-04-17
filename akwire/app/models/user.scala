@@ -5,6 +5,8 @@ case class User( age: Int,
                  lastName: String,
                  active: Boolean)
 
+case class AgentId(value: String)
+
 case class Agent( id: String,
                   hostName: String,
                   connected: Boolean,        // currently connected?

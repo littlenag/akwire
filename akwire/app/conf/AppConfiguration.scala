@@ -1,12 +1,11 @@
 package conf
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorSystem}
 import org.springframework.context.ApplicationContext
 import org.springframework.scala.context.function.{ContextSupport, FunctionalConfiguration}
 import util.SpringExtentionImpl
 
 import org.slf4j.{LoggerFactory, Logger}
-import services.Rabbitmq
 import reactivemongo.api.MongoDriver
 
 class AppConfiguration extends FunctionalConfiguration with ContextSupport {
