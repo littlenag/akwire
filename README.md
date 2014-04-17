@@ -2,7 +2,7 @@
 
 A data collection system that aims to be simple, malleable, and scalable.
 
-[![Build Status](https://secure.travis-ci.org/akwire/akwire.png)](https://travis-ci.org/akwire/akwire)
+[![Build Status](https://secure.travis-ci.org/littlenag/akwire.png)](https://travis-ci.org/littlenag/akwire)
 
 ## Documentation
   Please refer to the [Akwire Docs](http://docs.akwireapp.org/).
