@@ -22,9 +22,8 @@ module Akwire
       base.setup_process
       @collectors.configure_from_settings(@settings[:collectors].to_hash)
 
-      @waiting_for_token = true
-      @token = nil
-      @token_requester = nil
+      @session_worker = nil
+      @lastping = nil
 
       @timers = Array.new
       @checks_in_progress = Array.new
@@ -53,18 +52,17 @@ module Akwire
       end
 
       @amq = @rabbitmq.channel
-
     end
 
-    def request_token
+    def broadcast_hello
       payload = {
         :version => 1,
         :timestamp => Time.now.to_i,
         :agent_id => @settings[:daemon][:id],
-        :command => "issue-session-token"
+        :hello => true
       }
 
-      @logger.debug('requesting session token', {
+      @logger.debug('broadcasting hello', {
         :payload => payload
       })
 
@@ -78,7 +76,10 @@ module Akwire
       end
     end
 
-    def pong
+    # Manager is asking for a 'pong' message back as part of a keepalive strategy
+    def pong(properties,msg)
+      @lastping = Time.now
+
       payload = {
         :version => 1,
         :timestamp => Time.now.to_i,
@@ -91,7 +92,7 @@ module Akwire
       })
 
       begin
-        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload))
+        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
       rescue AMQ::Client::ConnectionClosedError => error
         @logger.error('error sending message', {
           :payload => payload,
@@ -100,72 +101,97 @@ module Akwire
       end
     end
 
-    def process_message(msg)
-      @logger.debug('received message', {
-                      :msg => msg
-                    })
-
-
-      if @token.nil?
-        handle_token(msg)
-        return
-      end
-
-      # Process as if is command
-      case msg[:command]
-      
-        # Manager is asking for a 'pong' message back as part of a keepalive strategy
-      when "ping" then pong
-      else
-        @logger.info('could not process message', {
-                       :msg => msg
-                     })
-      end
-    end
-
-    def handle_token(response)
-      case response[:result] 
-      when "registration-accepted" then
-            
-        @logger.info('session established with manager', {
-                       :response => response
-                     })
+    def hello_agent(properties,msg)
+      hello_manager = lambda do
+        payload = {
+          :version => 1,
+          :timestamp => Time.now.to_i,
+          :agent_id => @settings[:daemon][:id],
+          :response => "hello-manager"
+        }
         
-        # this point we might validate the token and the manager's
-        # identity, or if this is our very first run we might
-        # auto-accept the identity and save it in a file under var
-        
-        # to save:
-        #  - pid, own identity, manager's identity
-        # use ssh public keys for identities?
-        # ssl certs?
-        
-        # support a list of local commands to run (like munin)
-        
-        
-        #        @timers << EM::PeriodicTimer.new(60) do
-        #          if @rabbitmq.connected?
-        #            check_heartbeat
-        #          end
-        #        end
-        
-        @token = response[:token]
-        
-        @token_requestor.cancel
-        
-      when "registration-denied" then
-        @logger.error('manager denied registration attempt', {
-                        :manager => response[:manager_id]
+        @logger.debug('sending hello-manager response', {
+                        :payload => payload
                       })
-            stop
-      else
-        @logger.info('malformed message', {
-                       :manager => response
-                     })
+
+        begin
+          @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
+        rescue AMQ::Client::ConnectionClosedError => error
+          @logger.error('error sending message', {
+                          :payload => payload,
+                          :error => error.to_s
+                        })
+        end
       end
       
-    end
+      check_lastping = lambda do
+        if (Time.now - @lastping) > 30
+          @logger.warn('session ended; agent has unexpectedly ceased pinging the agent; reverting to un-managed mode', {
+                         :lastping => @lastping
+                       })
+          
+          # Cancel the old worker
+          @session_worker.cancel
+          
+          @session_worker = EM::PeriodicTimer.new(60) do
+            if @rabbitmq.connected?
+              broadcast_hello
+            end
+          end
+        end
+      end
+
+      # this point we should validate the manager's identity, or if
+      # this is our very first run we might auto-accept the identity
+      # and save it in a file under var
+      
+      # to save:
+      #  - pid, own identity, manager's identity
+      # use ssh public keys for identities?
+      # ssl certs?
+      
+      # support a list of local commands to run (like munin)
+      
+      @logger.info('session established with manager', {
+                       :command => msg
+                     })
+      
+      # Cancel our current session worker which is busy broadcasting
+        # hello's and replace it with one that check's for new pings
+      # from the manager
+
+      @lastping = Time.now
+      
+      @session_worker.cancel
+      
+      @session_worker = EM::PeriodicTimer.new(5) do
+        if @rabbitmq.connected?
+            check_lastping.call
+          end
+      end
+      
+      hello_manager.call
     
+    end
+
+    def process_command(properties, msg)
+      # Process as if is command
+      if (msg[:command].nil?)
+        @logger.error('malformed command', {
+                       :malformed => msg
+                     })
+      else
+        case msg[:command]
+        when "hello-agent" then hello_agent(properties,msg)
+        when "ping" then pong(properties,msg)
+        else
+          @logger.info('unrecognized command', {
+                         :unrecognized => msg
+                       })
+        end
+      end
+    end
+
     # Establish a session with the manager
     def setup_session
       @logger.debug('binding to hub.to.agent exchange')
@@ -182,19 +208,20 @@ module Akwire
         # Drop stale messages
 #        queue.purge
 
-        request_token
+        broadcast_hello
 
-        @token_requestor = EM::PeriodicTimer.new(30) do
+        # Have the session worker broadcast hello messages until a manager responds
+        @session_worker = EM::PeriodicTimer.new(60) do
           if @rabbitmq.connected?
-            request_token
+            broadcast_hello
           end
         end
 
-        queue.subscribe do |headers,payload|
-          message = Oj.load(payload)
+        queue.subscribe do |properties,payload|
+          @logger.debug("received message: #{payload}")
 
-          @logger.debug("message received: ", message)
-          process_message(message)
+          message = Oj.load(payload)
+          process_command(properties, message)
         end
       end
     end
@@ -289,6 +316,7 @@ module Akwire
 
     def stop
       @logger.warn('stopping')
+      @session_worker.cancel
       @timers.each do |timer|
         timer.cancel
       end

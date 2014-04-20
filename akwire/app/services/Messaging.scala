@@ -11,9 +11,17 @@ import javax.annotation.PostConstruct
 import javax.inject.Named
 import play.api.libs.json._
 
-import models.AgentId
+import com.rabbitmq.client.AMQP.BasicProperties
 import org.joda.time.DateTime
 import models.AgentId
+
+import scala.concurrent.{Future, Await}
+import java.util.UUID
+import com.rabbitmq.client.QueueingConsumer.Delivery
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 @Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
@@ -51,119 +59,122 @@ class Messaging {
     val supervisor = actorSystem.actorOf(Props[Supervisor], "Supervisor")
 
     // Start the supervisor.
-    supervisor ! ('start, factory)
+    supervisor ! StartWithFactory(factory)
   }
-
 }
+
+case class StartWithFactory(factory:ConnectionFactory)
+case class Restart(factory:ConnectionFactory)
 
 class Supervisor extends Actor {
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Supervisor])
 
   def receive = {
-    case ('start, factory : ConnectionFactory) =>
+    case StartWithFactory(factory) =>
+      logger.info("Connecting to RabbitMQ")
       val sessionBroker = context.actorOf(Props[SessionBroker], "SessionBroker")
+      sessionBroker ! Connect(factory.newConnection())
 
-      try {
-        logger.info("Connecting to RabbitMQ")
-
-        sessionBroker ! ('connect, factory.newConnection())
-
-      } catch {
-        case e: Exception =>
-          logger.error("Error connecting to RabbitMQ: " + e)
-          if (sessionBroker != null) {
-            sessionBroker ! 'disconnect
-          }
-          self ! 'reconnect
-      }
-
-    case 'reconnect =>
+    case Restart(factory) =>
       Thread.sleep(30 * 1000)
-      self ! 'connect
+      self ! StartWithFactory(factory)
+
     case m => logger.error("Bad message: " + m)
   }
 }
+
+case class CommandInfo(corrId: UUID, handler: (JsValue => Unit), started: DateTime = new DateTime)
+
+
+case class Execute(agentId: AgentId, command: JsValue, handler: (JsValue => Unit))
+case class Connect(connection: Connection)
+case class Consume()
+case class Process(delivery:Delivery)
+case class CheckForStaleCommands()
+case class Disconnect()
+
+// agentHandler messages
+case class Start(agentId: AgentId)
+case class ReleaseAgent(agentId: AgentId)
 
 // Listens for new Agents to start broadcasting, registers them, establishes a session,
 // and creates a persistent heartbeat between the agent and the manager
 class SessionBroker extends Actor with DefaultWrites {
   private final val logger: Logger = LoggerFactory.getLogger(classOf[SessionBroker])
 
-  var incomingMessages : QueueingConsumer = null;
+  var consumer : QueueingConsumer = null;
 
-  var incomingChannel : Channel = null;
+  var channel : Channel = null;
 //  var outgoingChannel : Channel = null;
 
   var connected = false;
 
+  // Agents we have observed and registered
   var registeredAgents : Map[AgentId, ActorRef] = new collection.immutable.HashMap
+
+  // Commands currently in-flight
+  var commandsInFlight : Map[UUID, CommandInfo] = new collection.immutable.HashMap
 
   val HUB_TO_AGENT_EXCH = "akwire.hub.to.agent"
   val AGENT_TO_HUB_EXCH = "akwire.agent.to.hub"
 
-  var nextSessionToken = 0
-
   var latched = false
 
+  var staleCommands : Cancellable = null;
+
   def receive = {
-    case ('connect, connection : Connection) =>
+    case Connect(connection) =>
       try {
-        logger.info("Connecting to RabbitMQ")
+        logger.info("SessionBroker starting...")
 
-        incomingChannel = connection.createChannel()
-        //outgoingChannel = connection.createChannel()
+        // Watch for commands that have gone stale
+        staleCommands = context.system.scheduler.schedule(1 seconds, 1 seconds, self, CheckForStaleCommands)
 
-        incomingChannel.exchangeDeclare(AGENT_TO_HUB_EXCH, "direct")
+        channel = connection.createChannel()
 
-        incomingChannel.queueDeclare(AGENT_TO_HUB_EXCH, false, true, true, null)
-        incomingChannel.queueBind(AGENT_TO_HUB_EXCH, AGENT_TO_HUB_EXCH, "")
+        channel.exchangeDeclare(AGENT_TO_HUB_EXCH, "direct")
 
-        incomingMessages = new QueueingConsumer(incomingChannel);
+        channel.queueDeclare(AGENT_TO_HUB_EXCH, false, true, true, null)
+        channel.queueBind(AGENT_TO_HUB_EXCH, AGENT_TO_HUB_EXCH, "")
 
-        incomingChannel.basicConsume(AGENT_TO_HUB_EXCH, true, incomingMessages);
+        consumer = new QueueingConsumer(channel);
+
+        channel.basicConsume(AGENT_TO_HUB_EXCH, true, consumer);
 
         connected = true
 
+        logger.info("SessionBroker started")
+
         // Start consuming messages
-        self ! 'consume
+        self ! Consume
 
       } catch {
         case e: Exception =>
           logger.error("Error connecting to RabbitMQ: " + e)
-          self ! 'disconnect
+          self ! Disconnect
       }
 
-    case ('publish, agentId : AgentId, msg : JsValue) =>
-      self ! ('publish, agentId, msg.toString())
-
-    case ('publish, agentId : AgentId, msg : String) =>
-
-      // use the agentId as the routing key
-      // Set mandatory true (message must find a home in some queue)
-
-      incomingChannel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true,
-        MessageProperties.PERSISTENT_TEXT_PLAIN,
-        msg.getBytes);
-
-    case 'consume =>
+    case Consume =>
       try {
         if (!latched) { logger.info("Waiting for messages") }
 
-        val request = incomingMessages.nextDelivery(10);
-        if (request != null) {
+        val delivery = consumer.nextDelivery(10);
+        if (delivery != null) {
           latched = false
-          self ! ('process, Json.parse(request.getBody()))
+          self ! Process(delivery)
         } else {
           latched = true
-          self ! 'consume
+          self ! Consume
         }
       } catch {
         case e: Exception =>
           logger.error("Error with RabbitMQ: " + e)
-          self ! 'disconnect
+          self ! Disconnect
       }
 
-    case ('process, msg : JsValue) =>
+    case Process(delivery : Delivery) =>
+      val msg = Json.parse(delivery.getBody)
+
       logger.info("Received message: " + msg)
 
       // route to agent
@@ -171,80 +182,107 @@ class SessionBroker extends Actor with DefaultWrites {
 
       val agentId = new AgentId((msg\"agent_id").as[String])
 
-      if (registeredAgents.contains(agentId) && (msg\"command").as[String] != "issue-session-token") {
+      if (registeredAgents.contains(agentId) && (msg\"hello").asOpt[Boolean].isEmpty) {
 
-        // Route the message to the agent handler
-        logger.info("Processing message: " + msg)
-        registeredAgents(agentId) ! ('process, msg)
+        val corrId = UUID.fromString(delivery.getProperties.getCorrelationId)
 
-      } else if (registeredAgents.contains(agentId) && (msg\"command").as[String] == "issue-session-token") {
+        val c = commandsInFlight.get(corrId)
 
-        logger.info("Agent already registered: " + msg)
-        self ! ('publish, agentId, Json.toJson( Map.apply("result" -> "registration-denied")))
-
-      } else {
-
-        logger.info("command: " + (msg\"command").as[String])
-
-        // Is this a registration request?
-        if ((msg\"command").as[String].equals("issue-session-token")) {
-          logger.info("Received registration request")
-
-          // assume the request is valid
-
-          val newAgentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
-          registeredAgents += (agentId -> newAgentHandler);
-
-          newAgentHandler ! ('start, agentId)
-
-          // send the session token back to the agent
-
-          nextSessionToken += 1
-
-          self ! ('publish, agentId, Json.toJson( Map.apply("result" -> "registration-accepted", "token" -> nextSessionToken.toString)))
-
-          logger.info("Accepted and registered agent:" + agentId)
-
+        if (c.isDefined) {
+          // Route the message to the agent handler
+          logger.info("Received response: " + msg)
+          c.get.handler(msg)
         } else {
-          logger.info("Message received from unregistered agent")
+          logger.info("Received response but initial command not found: " + msg)
         }
 
+      } else if (registeredAgents.contains(agentId) && (msg\"hello").asOpt[Boolean].isDefined) {
+
+        // Agent out of sync with manager
+        logger.info("Agent out of sync with manager, already registered, attempting re-register: " + msg)
+
+        registeredAgents(agentId) ! Start(agentId)
+
+      } else {
+        // Agent not registered with manager, process as new agent
+
+        logger.info("Processing un-managed agent")
+
+        // assume the request is valid, would need to check the agent-id etc
+
+        val newAgentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
+        registeredAgents += (agentId -> newAgentHandler);
+
+        newAgentHandler ! Start(agentId)
+
+        logger.info("Accepted and registered agent:" + agentId)
       }
 
       // Delivery is done, go back to consuming
-      self ! 'consume
+      self ! Consume
 
-    case ('releaseAgent, agentId: AgentId) =>
+    case Execute(agentId, command, handler) =>
+      logger.info("Executing Command: " + agentId + " command: " + command)
+
+      val corrId = java.util.UUID.randomUUID();
+
+      val props = new BasicProperties.Builder()
+        .correlationId(corrId.toString)
+        .replyTo(AGENT_TO_HUB_EXCH)
+        .build();
+
+      // use the agentId as the routing key
+      // Set mandatory true (message must find a home in some queue)
+      channel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true, props, Json.stringify(command).getBytes);
+
+      commandsInFlight += (corrId -> CommandInfo(corrId, handler))
+
+    case CheckForStaleCommands =>
+      commandsInFlight = commandsInFlight.filter { case (uuid, ci) =>
+        if (ci.started.plusSeconds(30).isBeforeNow()) {
+          // Pass a null value indicating failure
+          ci.handler(null)
+          true
+        } else {
+          false
+        }
+    }
+
+    case ReleaseAgent(agentId) =>
       logger.info("Releasing agent: " + agentId)
 
-      registeredAgents(agentId) ! 'stop
+      registeredAgents.get(agentId) match {
+        case Some(agent) =>
+          agent ! Stop
 
-      context.stop(registeredAgents(agentId))
-      registeredAgents = registeredAgents - agentId
+          context.stop(registeredAgents(agentId))
+          registeredAgents = registeredAgents - agentId
 
-      logger.info("Released agent: " + agentId)
+          logger.info("Released agent: " + agentId)
+        case None =>
+          logger.info("No agent to release: " + agentId)
+      }
 
-    case 'disconnect =>
+    case Disconnect =>
+      logger.info("Disconnecting from RabbitMQ")
       connected = false
-      incomingChannel.close
+      staleCommands.cancel()
+      channel.close
       context.stop(self)
 
     case a => logger.error("Bad message: " + a)
   }
 }
 
-import scala.concurrent.duration._
+case class Stop()
+case class Ping()
 
 // This Actor handles all communication with an agent
 class AgentHandler extends Actor {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   private final val logger: Logger = LoggerFactory.getLogger(classOf[AgentHandler])
 
   var agentId: AgentId = null
-
-  val Ping = "ping"
 
   var lastHeard: DateTime = null
 
@@ -253,16 +291,32 @@ class AgentHandler extends Actor {
   var heartbeat : Cancellable = null
 
   def receive = {
-    case ('start, agentId: AgentId) =>
-      logger.info("Managing agent:" + agentId)
+    case Start(agentId) =>
+      logger.info("Starting agent manager:" + agentId)
       this.sessionBroker = sender
       this.agentId = agentId;
 
-      // Ensure that we ping the agent's in order to ensure they are alive
-      this.lastHeard = new DateTime()
-      heartbeat = context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping)
+      sessionBroker ! Execute(agentId, Json.obj("command" -> "hello-agent"), (msg:JsValue) => {
+        if (msg == null) {
+          // Release the agent upon error
+          logger.info("Timeout on 'hello-agent' cmd:" + agentId)
+          sessionBroker ! ReleaseAgent(agentId)
+        } else {
+          // Needs to respond with 'hello-manager'
+          (msg\"response").asOpt[String] match {
+            case Some("hello-manager") =>
+              logger.info("Managing agent:" + agentId)
+              // Ensure that we ping the agent's in order to ensure they are alive
+              this.lastHeard = new DateTime()
+              heartbeat = context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping)
+            case _ =>
+              logger.error("Malformed response to command 'hello-agent':" + agentId)
+              sessionBroker ! ReleaseAgent(agentId)
+          }
+        }
+      })
 
-    case 'stop =>
+    case Stop =>
       logger.info("Manager stopping for agent:" + agentId)
       if (!heartbeat.isCancelled) {
         heartbeat.cancel()
@@ -270,23 +324,33 @@ class AgentHandler extends Actor {
 
     case Ping =>
       if (lastHeard.plusSeconds(10).isBeforeNow) {
+
         // missed too many pings, kill the handler and release the agent
-        logger.debug("Agent not responding:" + agentId)
+        logger.warn("Agent not responding, considered failed: " + agentId)
         heartbeat.cancel()
-        sessionBroker ! ('releaseAgent, agentId)
+        sessionBroker ! ReleaseAgent(agentId)
+
       } else {
         logger.debug("Sending heartbeat:" + agentId)
-        sessionBroker ! ('publish, agentId, Json.toJson( Map.apply("command" -> "ping")))
+
+        sessionBroker ! Execute(agentId, Json.obj("command" -> "ping"), (msg:JsValue) => {
+          if (msg == null) {
+            // Release the agent upon error
+            logger.info("Timeout on command 'ping':" + agentId)
+            sessionBroker ! ReleaseAgent(agentId)
+          } else {
+            // Needs to respond with 'pong'
+            (msg\"response").asOpt[String] match {
+              case Some("pong") =>
+                logger.debug("Heartbeat received:" + agentId)
+                lastHeard = new DateTime()
+              case _ =>
+                logger.error("Malformed response to command 'ping':" + agentId)
+                sessionBroker ! ReleaseAgent(agentId)
+            }
+          }
+        })
       }
-
-    case ('process, msg: JsValue) =>
-
-      if ((msg\"response").as[String] == "pong") {
-        logger.debug("Heartbeat received:" + agentId)
-        lastHeard = new DateTime()
-      }
-
-    case ('send, msg : JsValue) =>
 
     case a => logger.error("Bad message: " + a)
   }
