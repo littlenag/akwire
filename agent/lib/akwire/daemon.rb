@@ -69,22 +69,103 @@ module Akwire
       })
 
       begin
-        @amq.direct('agent.to.hub').publish(Oj.dump(payload))
+        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload))
       rescue AMQ::Client::ConnectionClosedError => error
-        @logger.error('failed to request session token', {
+        @logger.error('error sending message', {
           :payload => payload,
           :error => error.to_s
         })
       end
     end
 
-    def process_command(command)
-      @logger.info('received command', {
-                     :command => command
-                   })
-      
+    def pong
+      payload = {
+        :version => 1,
+        :timestamp => Time.now.to_i,
+        :agent_id => @settings[:daemon][:id],
+        :response => "pong"
+      }
+
+      @logger.debug('sending heartbeat response', {
+        :payload => payload
+      })
+
+      begin
+        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload))
+      rescue AMQ::Client::ConnectionClosedError => error
+        @logger.error('error sending message', {
+          :payload => payload,
+          :error => error.to_s
+        })
+      end
     end
 
+    def process_message(msg)
+      @logger.debug('received message', {
+                      :msg => msg
+                    })
+
+
+      if @token.nil?
+        handle_token(msg)
+        return
+      end
+
+      # Process as if is command
+      case msg[:command]
+      
+        # Manager is asking for a 'pong' message back as part of a keepalive strategy
+      when "ping" then pong
+      else
+        @logger.info('could not process message', {
+                       :msg => msg
+                     })
+      end
+    end
+
+    def handle_token(response)
+      case response[:result] 
+      when "registration-accepted" then
+            
+        @logger.info('session established with manager', {
+                       :response => response
+                     })
+        
+        # this point we might validate the token and the manager's
+        # identity, or if this is our very first run we might
+        # auto-accept the identity and save it in a file under var
+        
+        # to save:
+        #  - pid, own identity, manager's identity
+        # use ssh public keys for identities?
+        # ssl certs?
+        
+        # support a list of local commands to run (like munin)
+        
+        
+        #        @timers << EM::PeriodicTimer.new(60) do
+        #          if @rabbitmq.connected?
+        #            check_heartbeat
+        #          end
+        #        end
+        
+        @token = response[:token]
+        
+        @token_requestor.cancel
+        
+      when "registration-denied" then
+        @logger.error('manager denied registration attempt', {
+                        :manager => response[:manager_id]
+                      })
+            stop
+      else
+        @logger.info('malformed message', {
+                       :manager => response
+                     })
+      end
+      
+    end
+    
     # Establish a session with the manager
     def setup_session
       @logger.debug('binding to hub.to.agent exchange')
@@ -96,71 +177,24 @@ module Akwire
                       })
 
         # No other agents should receive commands directed to this agent
-        queue.bind(@amq.fanout("hub.to.agent"), :routing_key => @settings[:daemon][:id])
+        queue.bind(@amq.fanout("akwire.hub.to.agent"), :routing_key => @settings[:daemon][:id])
 
         # Drop stale messages
-        queue.purge
+#        queue.purge
 
         request_token
 
-        token_requestor = EM::PeriodicTimer.new(30) do
+        @token_requestor = EM::PeriodicTimer.new(30) do
           if @rabbitmq.connected?
             request_token
           end
         end
 
-        handle_token = EM.spawn do |response|
-          case response[:result] 
-          when "registration-accepted" then
-            
-            @logger.info('session established with manager', {
-                           :response => response
-                         })
-            
-            # this point we might validate the token and the manager's
-            # identity, or if this is our very first run we might
-            # auto-accept the identity and save it in a file under var
-            
-            # to save:
-            #  - pid, own identity, manager's identity
-            # use ssh public keys for identities?
-            # ssl certs?
-
-            # support a list of local commands to run (like munin)
-
-            
-#        @timers << EM::PeriodicTimer.new(60) do
-#          if @rabbitmq.connected?
-#            check_heartbeat
-#          end
-#        end
-
-            @token = response[:token]
-            
-          when "registration-denied" then
-            @logger.error('manager denied registration attempt', {
-                            :manager => response[:manager_id]
-                          })
-            stop
-          else
-            @logger.info('malformed message', {
-                           :manager => response
-                         })
-          end
-
-        end
-
-        handle_command = EM.spawn do |command|
-          process_command(command)
-        end
-
         queue.subscribe do |headers,payload|
-          command = Oj.load(payload)
-          if @token.nil?
-            handle_token.notify command
-          else
-            handle_command.notify command
-          end
+          message = Oj.load(payload)
+
+          @logger.debug("message received: ", message)
+          process_message(message)
         end
       end
     end
