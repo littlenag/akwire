@@ -9,6 +9,7 @@ import org.slf4j.{LoggerFactory, Logger}
 import javax.inject.{Named, Singleton}
 import play.api.mvc._
 import play.api.libs.json._
+import models._
 
 /**
  * The Agents controllers encapsulates the Rest endpoints and the interaction with the MongoDB, via ReactiveMongo
@@ -33,10 +34,7 @@ class Agents extends Controller with MongoController {
   // Using case classes + Json Writes and Reads //
   // ------------------------------------------ //
 
-  import models._
-  import models.JsonFormats._
-
-  def findAgents = Action.async(parse.json) {
+  def updateAgent = Action.async(parse.json) {
     request =>
     /*
      * request.body is a JsValue.
@@ -50,11 +48,11 @@ class Agents extends Controller with MongoController {
       }.getOrElse(Future.successful(BadRequest("invalid json")))
   }
 
-  def updateAgent = Action.async {
+  def findAgents = Action.async {
     // let's do our query
     val cursor: Cursor[Agent] = collection.
       // find all
-      find(Json.obj("active" -> true)).
+      find(Json.obj()).
       // sort them by creation date
       sort(Json.obj("created" -> -1)).
       // perform the query and get a cursor of JsObject

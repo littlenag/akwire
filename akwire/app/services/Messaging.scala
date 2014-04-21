@@ -1,5 +1,6 @@
 package services
 
+import _root_.util.SpringExtentionImpl
 import com.rabbitmq.client._
 import akka.actor._
 import play.api.Configuration
@@ -13,15 +14,20 @@ import play.api.libs.json._
 
 import com.rabbitmq.client.AMQP.BasicProperties
 import org.joda.time.DateTime
-import models.AgentId
 
-import scala.concurrent.{Future, Await}
 import java.util.UUID
 import com.rabbitmq.client.QueueingConsumer.Delivery
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import akka.util.Timeout
+import reactivemongo.api.{Cursor, Collection, DB}
+import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.ReactiveMongoPlugin
+
+import play.api.Play.current
+
+import models._
+import scala.concurrent.Await
 
 @Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
@@ -85,7 +91,6 @@ class Supervisor extends Actor {
 
 case class CommandInfo(corrId: UUID, handler: (JsValue => Unit), started: DateTime = new DateTime)
 
-
 case class Execute(agentId: AgentId, command: JsValue, handler: (JsValue => Unit))
 case class Connect(connection: Connection)
 case class Consume()
@@ -105,7 +110,6 @@ class SessionBroker extends Actor with DefaultWrites {
   var consumer : QueueingConsumer = null;
 
   var channel : Channel = null;
-//  var outgoingChannel : Channel = null;
 
   var connected = false;
 
@@ -197,11 +201,7 @@ class SessionBroker extends Actor with DefaultWrites {
         }
 
       } else if (registeredAgents.contains(agentId) && (msg\"hello").asOpt[Boolean].isDefined) {
-
-        // Agent out of sync with manager
-        logger.info("Agent out of sync with manager, already registered, attempting re-register: " + msg)
-
-        registeredAgents(agentId) ! Start(agentId)
+        logger.warn("Agent out of sync with manager, already registered: " + agentId)
 
       } else {
         // Agent not registered with manager, process as new agent
@@ -210,10 +210,10 @@ class SessionBroker extends Actor with DefaultWrites {
 
         // assume the request is valid, would need to check the agent-id etc
 
-        val newAgentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
-        registeredAgents += (agentId -> newAgentHandler);
+        val agentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
+        registeredAgents += (agentId -> agentHandler);
 
-        newAgentHandler ! Start(agentId)
+        agentHandler ! Start(agentId)
 
         logger.info("Accepted and registered agent:" + agentId)
       }
@@ -290,11 +290,37 @@ class AgentHandler extends Actor {
 
   var heartbeat : Cancellable = null
 
+  /** The agents collection */
+  private def col = ReactiveMongoPlugin.db.collection[JSONCollection]("agents")
+
+  def get : Agent = {
+    // let's do our query
+    val result = Await.result(col.find(Json.obj("agentId" -> agentId.value)).one[Agent], 5 seconds)
+
+    if (result.isDefined) {
+      return result.get
+    } else {
+      val agent = Agent(agentId.value, "", true, true);
+      col.save(agent).map {
+        case ok if ok.ok =>
+        case error => throw new RuntimeException(error.message)
+      }
+      return agent
+    }
+  }
+
+  def markAgentConnected(value : Boolean = true) = {
+    col.save(get.copy(connected = value))
+  }
+
   def receive = {
     case Start(agentId) =>
       logger.info("Starting agent manager:" + agentId)
       this.sessionBroker = sender
       this.agentId = agentId;
+
+      get
+      markAgentConnected(false)
 
       sessionBroker ! Execute(agentId, Json.obj("command" -> "hello-agent"), (msg:JsValue) => {
         if (msg == null) {
@@ -309,6 +335,7 @@ class AgentHandler extends Actor {
               // Ensure that we ping the agent's in order to ensure they are alive
               this.lastHeard = new DateTime()
               heartbeat = context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping)
+              markAgentConnected()
             case _ =>
               logger.error("Malformed response to command 'hello-agent':" + agentId)
               sessionBroker ! ReleaseAgent(agentId)
@@ -318,9 +345,12 @@ class AgentHandler extends Actor {
 
     case Stop =>
       logger.info("Manager stopping for agent:" + agentId)
+
       if (!heartbeat.isCancelled) {
         heartbeat.cancel()
       }
+
+      markAgentConnected(false)
 
     case Ping =>
       if (lastHeard.plusSeconds(10).isBeforeNow) {

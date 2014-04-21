@@ -7,6 +7,8 @@ import util.SpringExtentionImpl
 
 import org.slf4j.{LoggerFactory, Logger}
 import reactivemongo.api.MongoDriver
+import org.springframework.beans.factory.config.BeanDefinition
+import services.AgentHandler
 
 class AppConfiguration extends FunctionalConfiguration with ContextSupport {
 
@@ -51,4 +53,10 @@ class AppConfiguration extends FunctionalConfiguration with ContextSupport {
     new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
   }
 
-}
+//  val agentHandler = bean("agentHandler",  scope = BeanDefinition.SCOPE_PROTOTYPE) {
+//    val ah = new AgentHandler
+//    //ah.db = akwireDb()
+//    ah
+//  }
+
+  }
