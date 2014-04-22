@@ -28,6 +28,7 @@ import play.api.Play.current
 
 import models._
 import scala.concurrent.Await
+import reactivemongo.bson.BSONObjectID
 
 @Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
@@ -300,7 +301,7 @@ class AgentHandler extends Actor {
     if (result.isDefined) {
       return result.get
     } else {
-      val agent = Agent(agentId.value, "", true, true);
+      val agent = Agent(BSONObjectID.generate, agentId.value, "", true, true);
       col.save(agent).map {
         case ok if ok.ok =>
         case error => throw new RuntimeException(error.message)

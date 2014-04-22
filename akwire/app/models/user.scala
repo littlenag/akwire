@@ -1,5 +1,8 @@
 package models
 
+import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json.BSONFormats._
+
 case class User( age: Int,
                  firstName: String,
                  lastName: String,
@@ -7,7 +10,8 @@ case class User( age: Int,
 
 case class AgentId(value: String)
 
-case class Agent( agentId: String,
+case class Agent( _id : BSONObjectID,
+                  agentId: String,
                   hostName: String,
                   connected: Boolean,         // currently connected?
                   managed: Boolean)           // expected to send data and respond normally?
