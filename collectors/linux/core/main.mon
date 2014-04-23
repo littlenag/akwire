@@ -6,6 +6,10 @@ version '0.0.1'
 description "Collect core cpu metrics for a given server."
 
 measurement "uptime" do
+  description "Uptime of the server"
+  units "seconds"
+  # type (counter, gauge, delta, absolute, timer)
+  type :timer
   collect { File.read("/proc/uptime").split[0] }
 end
 

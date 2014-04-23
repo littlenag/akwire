@@ -1,0 +1,43 @@
+name 'fs'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Collects file-system metrics."
+
+
+#pattern :mount do
+#end
+# type (counter, gauge, delta, absolute, timer)
+
+# groups are like patterns but have their measurements listed out inside
+# collect {} <= :guard_func is always true
+# collect :guard_func {}
+
+# group like measurements
+#group "{mount}" do
+  #description ""
+  # not enumerated
+
+  #measurement {:name => "percent-used", :mount => nil } do
+
+measurement "{mount}/percent-used" do
+  description "Filesystem stats as percentages"
+  units "percentage"
+  collect {
+    # Drop the header that df prints
+    `df -lP`.lines.drop(1).each { |line|
+      parts = line.split
+      observe(parts[4].gsub("%", ""), :mount => parts[5].gsub("/", "_"))
+    }
+  }
+end
+
+measurement "{mount}/bytes-[free,used,total]" do
+  description "Filesystem stats as raw byte values"
+  units "bytes"
+  collect { File.read("/proc/uptime").split[0] }
+end
+
+#end
+

@@ -1,0 +1,33 @@
+name 'net'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Collects network interface metrics."
+
+#configuration {
+  # Simple boolean option
+#  toggle :collect_loopback {
+#    desc "Collect stats on the loopback device?"
+#    default false
+#  }
+#}
+
+measurement "{mount}/percent-used" do
+  description "Filesystem stats as percentages"
+  units "percentage"
+  collect {
+    # Drop the header that df prints
+    `df -lP`.lines.drop(1).each { |line|
+      parts = line.split
+      observe(parts[4].gsub("%", ""), :mount => parts[5].gsub("/", "_"))
+    }
+  }
+end
+
+measurement "lo/bytes-[free,used,total]" do
+  description "Filesystem stats as raw byte values"
+  units "bytes"
+#  only_when :collect_loopback is true
+  collect { File.read("/proc/uptime").split[0] }
+end

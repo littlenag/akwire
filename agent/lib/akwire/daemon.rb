@@ -205,9 +205,6 @@ module Akwire
         # No other agents should receive commands directed to this agent
         queue.bind(@amq.fanout("akwire.hub.to.agent"), :routing_key => @settings[:daemon][:id])
 
-        # Drop stale messages
-#        queue.purge
-
         broadcast_hello
 
         # Have the session worker broadcast hello messages until a manager responds

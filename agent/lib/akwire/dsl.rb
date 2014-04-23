@@ -114,6 +114,18 @@ module Akwire
       @props[:callback] = block
     end
 
+    def description(val)
+      @props[:description] = val
+    end
+
+    def units(val)
+      @props[:units] = val
+    end
+
+    def type(val)
+      @props[:type] = val
+    end
+
     # accessor
 
     def prop(p)

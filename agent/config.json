@@ -12,7 +12,20 @@
     "mode": "managed"
   },
 
-  "collectors": {
+  "collectors-auto": {
+    "load": "auto"
+  },
 
+  "collectors": {
+    "*": { "load" : true},
+    "core": { "load" : true},
+    "proc": {
+      "instances" : { 
+        "emacs" : { 
+          "load" : true 
+        }
+      }
+    }
   }
 }
+

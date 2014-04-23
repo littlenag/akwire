@@ -1,0 +1,23 @@
+name 'proc'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Collect process stats."
+
+# each instance should have a name
+# 
+
+var :name
+
+measurement "runtime" do
+  description "Uptime of the server"
+  units "seconds"
+  # type (counter, gauge, delta, absolute, timer)
+  type :timer
+  collect { File.read("/proc/uptime").split[0] }
+end
+
+measurement "cputime" do
+
+end
