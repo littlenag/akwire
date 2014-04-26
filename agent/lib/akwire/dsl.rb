@@ -145,6 +145,7 @@ module Akwire
     def initialize
       @logger = Logger.get
       @props = {}
+      @props[:options] = {}
       @props[:measurements] = {}
       @props[:version] = ""
       @props[:author] = ""
@@ -177,14 +178,72 @@ module Akwire
       m.instance_eval(&block)
       @props[:measurements][name] = m
     end
+
+    # option :data_points,
+    #        :description => "Number of data points to include in average check (smooths out spikes)",
+    #        :default => 1
+    def option(name, opts)
+      unless name.is_a?(Symbol)
+        raise "Option name #{name} must be a Symbol"
+      end
+      @props[:options][name] = opts
+    end
   end
 
   class Collector
     def initialize(file)
       @logger = Logger.get
       @logger.debug("Loading collector: #{file}")
-      @wrapper = CollectorDsl.new
-      @wrapper.instance_eval(File::read(file), file)
+      @name, @version = get_meta(file)
+      @instances = {}
+      @configured = false
+    end
+
+    def get_meta(file)
+      fd = File::new(file)
+      name = nil
+      version = nil
+
+      while (true)
+        if (name and version)
+          return name, version
+        end
+
+        line = fd.gets
+        raise "Malformed collector, did not find name and version" if line.nil?
+
+        # Skip comments
+        next if (/^[[:blank:]]*#.*$/.match(line))
+
+        # Look for the 'name' property
+        name_match = /^[[:blank:]]*name[[:blank:]]+['"](\w*)['"].*$/.match(line)
+        if (name_match and name.nil?)
+          name = name_match[1]
+          next
+        elsif (name_match and name)
+          raise "Duplicate name property in collector!"
+        end
+
+        # Look for the 'version' property
+        version_match = /^[[:blank:]]*version[[:blank:]]+['"]([\w\.]*)['"].*$/.match(line)
+        if (version_match and version.nil?)
+          version = version_match[1]
+          next
+        elsif (version_match and version)
+          raise "Duplicate version property in collector!"
+        end
+      end
+    end
+
+    def create_instance(name, settings)
+      instance = CollectorDsl.new
+      instance.instance_eval(File::read(file), file)
+      @settings = settings
+      @instances[name] = instance
+    end
+
+    def configured?
+      @configured
     end
 
     def collect
@@ -198,7 +257,11 @@ module Akwire
     # Meta-data provided by the plugin
 
     def name
-      @wrapper[:name]
+      @name
+    end
+
+    def version
+      @version
     end
 
     def description

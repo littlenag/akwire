@@ -111,14 +111,9 @@ module Akwire
 
     def validate
       @logger.debug('validating settings')
-      SETTINGS_CATEGORIES.each do |category|
-        unless @settings[category].is_a?(Hash)
-          invalid(category.to_s + ' must be a hash')
-        end
-        send(category).each do |details|
-          send(('validate_' + category.to_s.chop).to_sym, details)
-        end
-      end
+
+      validate_collectors
+
       case File.basename($0)
       when 'akwire-daemon'
         validate_daemon
@@ -136,6 +131,18 @@ module Akwire
       }.merge(data))
       @logger.fatal('AKWIRE NOT RUNNING!')
       exit 2
+    end
+
+    def validate_collectors
+      unless @settings[:collectors].is_a?(Hash)
+        invalid('collectors must be a hash')
+      end
+
+      @settings[:collectors].each { |key,value|
+        unless value.is_a?(Hash)
+          invalid('config for collector #{key} must be a hash')
+        end
+      }
     end
 
     def validate_daemon

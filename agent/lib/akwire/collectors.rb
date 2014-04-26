@@ -20,9 +20,8 @@ module Akwire
       Dir[@collector_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
         @collectors[c.name] = c
-        @logger.info('loaded collector', {
-                       :name => c.name,
-                       :description => c.description
+        @logger.info('found collector', {
+                       :name => c.name
                      })
       end
     end
@@ -37,6 +36,8 @@ module Akwire
     def configure_from_settings(settings={})
       @instances = {}
       all_collectors.each do |collector|
+
+
         if collector.needs_config?
           if settings.has_key?(collector.name)
             collector.configure(settings[collector.name])
@@ -46,7 +47,7 @@ module Akwire
                          })
           end
         else
-          @instance[collector.name] = collectors
+          @instances[collector.name] = collector
         end
       end
     end

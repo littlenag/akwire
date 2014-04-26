@@ -9,10 +9,10 @@
     
     "daemon": {
 	"id": "12345-12345",
-	"mode": "managed"
-        "autoload": true,
+	"mode": "managed",
+        "autoload": true
     },
-    
+
     "collectors": {
         "core": {
             "load" : true
