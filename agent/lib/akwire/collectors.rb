@@ -56,7 +56,7 @@ module Akwire
     end
 
     def collect_observations
-      all_collectors.select {|c| c.active? }.each do |collector|
+      all_collectors.each do |collector|
         obs = collector.collect
         yield collector, obs
       end
@@ -65,8 +65,8 @@ module Akwire
     def stop_all(&when_done)
       EM::Iterator.new(all_collectors)
         .each(
-              foreach = proc { |instance,iter|
-                instance.stop {
+              foreach = proc { |collector,iter|
+                collector.stop_all {
                   @logger.warn("stopped collector: #{collector}")
                   iter.next
                 }

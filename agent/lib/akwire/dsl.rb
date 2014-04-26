@@ -126,6 +126,9 @@ module Akwire
       @props[:type] = val
     end
 
+    def observe(m,opts={})
+    end
+
     # accessor
 
     def prop(p)
@@ -142,23 +145,29 @@ module Akwire
   end
 
   class CollectorDsl
-    def initialize
+    def initialize(defaults={})
       @logger = Logger.get
+
       @props = {}
       @props[:options] = {}
       @props[:measurements] = {}
       @props[:version] = ""
       @props[:author] = ""
       @props[:description] = ""
-      @props[:interval] = 5
+      @props[:platform] = ""
+      @props[:arch] = ""
+
+      @settings = {}
     end
 
-    def [](key)
-      @props[key]
-    end
-
+    # Properties set by the author of the collector
     def props
       @props
+    end
+
+    # Configuration settings specified by the user
+    def settings
+      @settings
     end
 
     def name(v)
@@ -196,6 +205,9 @@ module Akwire
       @logger.debug("Loading collector: #{file}")
       @file = file
       @name, @version = get_meta(file)
+      @description = nil
+      @platform = nil
+      @os = nil
       @instances = {}
       @singleton = false
     end
@@ -240,12 +252,19 @@ module Akwire
       instance = CollectorDsl.new
       instance.instance_eval(File::read(@file), @file)
       raise "Duplicate instance with name #{instance_name}" unless @instances[instance_name].nil?
-      apply_settings(instance,instance_name, settings)
+
+      apply_settings(instance,instance_name,settings)
+
       @instances[instance_name] = instance
+
+      @description = instance.props[:description] if @description.nil?
     end
 
     def apply_settings(instance,instance_name,settings)
-
+      settings = {} if settings.nil?
+      instance.settings[:instance_name] = instance_name
+      instance.settings[:mode] = settings[:mode] || :passive
+      instance.settings[:interval] = settings[:interval] || 5
     end
 
     def configured?
@@ -255,9 +274,13 @@ module Akwire
     def collect
       obs = []
       @instances.each_pair { |instance_name, instance|
-        instance.props[:measurements].each_pair { |measurement_name,measurement_def|
-          obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
-        }
+        case instance.props[:mode]
+          when :passive then next
+          when :active then 
+          instance.props[:measurements].each_pair { |measurement_name,measurement_def|
+            obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
+          }
+        end
       }
       return obs
     end
@@ -273,18 +296,26 @@ module Akwire
     end
 
     def description
-      @wrapper[:description]
+      @description
     end
 
     # Life-cycle hooks
-    def stop(&block)
+    def stop_all(&block)
       block.call if block_given?
     end
 
     # Configured values
 
-    def active?
-      false
+    def mode_is_active?
+      @mode == :active
+    end
+
+    def mode_is_passive?
+      @mode == :passive
+    end
+
+    def mode
+      @mode
     end
 
     def configured_interval
