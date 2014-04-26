@@ -11,18 +11,18 @@ description "Collect process stats."
 # auto infer a long-value for the command line tester
 # :long => "--data_points VALUE",
 # access via config[:data_points]
-option :data_points,
-       :description => "Number of data points to include in average check (smooths out spikes)",
-       :default => 1
+option :exe_path,
+       :description => "Path to the executable (e.g. /bin/bash)"
 
-measurement "runtime" do
-  description "Uptime of the server"
-  units "seconds"
-  # type (counter, gauge, delta, absolute, timer)
-  type :timer
-  collect { File.read("/proc/uptime").split[0] }
+# type (counter, gauge, delta, absolute, timer)
+#  type :timer
+
+measurement "count" do
+  description "Number of running processes whose exe is :exe_path"
+  units "process"
+  type :absolute
+  collect { `ls -l /proc/*/exe | grep -- "-> #{option(:exe_path)}" | wc -l`.strip }
 end
 
-measurement "cputime" do
-
-end
+#measurement "cputime" do end
+#measurement "runtime" do end

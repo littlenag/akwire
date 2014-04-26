@@ -202,7 +202,7 @@ module Akwire
   class Collector
     def initialize(file)
       @logger = Logger.get
-      @logger.debug("Loading collector: #{file}")
+      @logger.debug("collector script: #{file}")
       @file = file
       @name, @version = get_meta(file)
       @description = nil
@@ -258,6 +258,20 @@ module Akwire
       @instances[instance_name] = instance
 
       @description = instance.props[:description] if @description.nil?
+
+      if (instance_name.nil?)
+        @logger.info("configured collector singleton",
+                     {
+                       :collector => @name
+                     })
+      else
+        @logger.info("configured collector instance", 
+                     {
+                       :collector => @name,
+                       :instance => instance_name
+                     })
+      end
+
     end
 
     def apply_settings(instance,instance_name,settings)

@@ -20,7 +20,7 @@ module Akwire
       Dir[@collector_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
         @collectors[c.name] = c
-        @logger.info('found collector', {:name => c.name})
+        @logger.info('collector loaded', {:name => c.name})
       end
     end
 
