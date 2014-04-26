@@ -194,9 +194,10 @@ module Akwire
     def initialize(file)
       @logger = Logger.get
       @logger.debug("Loading collector: #{file}")
+      @file = file
       @name, @version = get_meta(file)
       @instances = {}
-      @configured = false
+      @singleton = false
     end
 
     def get_meta(file)
@@ -235,21 +236,28 @@ module Akwire
       end
     end
 
-    def create_instance(name, settings)
+    def configure_instance(instance_name, settings)
       instance = CollectorDsl.new
-      instance.instance_eval(File::read(file), file)
-      @settings = settings
-      @instances[name] = instance
+      instance.instance_eval(File::read(@file), @file)
+      raise "Duplicate instance with name #{instance_name}" unless @instances[instance_name].nil?
+      apply_settings(instance,instance_name, settings)
+      @instances[instance_name] = instance
+    end
+
+    def apply_settings(instance,instance_name,settings)
+
     end
 
     def configured?
-      @configured
+      @instances.size > 0
     end
 
     def collect
       obs = []
-      @wrapper.props[:measurements].each_pair { |name,measDef|
-        obs << Measurement.new(measDef, measDef.prop(:callback).call())
+      @instances.each_pair { |instance_name, instance|
+        instance.props[:measurements].each_pair { |measurement_name,measurement_def|
+          obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
+        }
       }
       return obs
     end

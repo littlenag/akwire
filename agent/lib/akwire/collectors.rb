@@ -20,9 +20,7 @@ module Akwire
       Dir[@collector_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
         @collectors[c.name] = c
-        @logger.info('found collector', {
-                       :name => c.name
-                     })
+        @logger.info('found collector', {:name => c.name})
       end
     end
 
@@ -33,34 +31,39 @@ module Akwire
     # collectors are either configured or not,
     # if configured they get a name and a config object
     # though if they have defaults for everything then they can be 'default' loaded
-    def configure_from_settings(settings={})
-      @instances = {}
-      all_collectors.each do |collector|
-
-
-        if collector.needs_config?
-          if settings.has_key?(collector.name)
-            collector.configure(settings[collector.name])
-          else
-            @logger.info('collector requires configuration', {
-                           :collector => collector.name
-                         })
-          end
+    def load_instances(settings={})
+      settings.each do |key,settings|
+        collector_name, instance_name = key.to_s.split("!")
+        if (collector_exists?(collector_name))
+          self[collector_name].configure_instance(instance_name, settings)
         else
-          @instances[collector.name] = collector
+          @logger.warn('no collector found for configuration', {
+                         :key => key,
+                         :collector => collector_name,
+                         :settings => settings
+                       })
         end
       end
+
+      # do we try to default load singleton or defaultable collectors?
+      all_collectors.each do |collector|
+        unless collector.configured?
+          collector.configure_instance(nil,nil)
+        end
+      end
+
+      # are any left unconfigured? remove them? do we care?
     end
 
     def collect_observations
-      all_instances.select {|c| c.active? }.each do |instance|
-        obs = instance.collect
-        yield instance, obs
+      all_collectors.select {|c| c.active? }.each do |collector|
+        obs = collector.collect
+        yield collector, obs
       end
     end
 
     def stop_all(&when_done)
-      EM::Iterator.new(all_instances)
+      EM::Iterator.new(all_collectors)
         .each(
               foreach = proc { |instance,iter|
                 instance.stop {
@@ -78,10 +81,6 @@ module Akwire
 
     def all_collectors
       @collectors.values
-    end
-
-    def all_instances
-      @instances.values
     end
 
     def loaded(name, description)

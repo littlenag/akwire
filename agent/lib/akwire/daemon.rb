@@ -18,9 +18,8 @@ module Akwire
       base = Base.new(options)
       @logger = base.logger
       @settings = base.settings
-      @collectors = base.collectors
+      @collectors = base.collectors(@settings)
       base.setup_process
-      @collectors.configure_from_settings(@settings[:collectors].to_hash)
 
       @session_worker = nil
       @lastping = nil
