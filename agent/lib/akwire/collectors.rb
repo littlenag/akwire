@@ -15,15 +15,8 @@ module Akwire
       @collectors.has_key?(name)
     end
 
-    def load_directory(dir) 
+    def load_directory(dir)
       @collector_dir = dir
-    end
-
-    def load_gems(val) 
-      @collector_gems = val
-    end
-
-    def load_all
       Dir[@collector_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
         @collectors[c.name] = c
@@ -32,10 +25,17 @@ module Akwire
                        :description => c.description
                      })
       end
-        
     end
 
+    def load_gems(gems)
+      @collector_gems = gems
+    end
+
+    # collectors are either configured or not,
+    # if configured they get a name and a config object
+    # though if they have defaults for everything then they can be 'default' loaded
     def configure_from_settings(settings={})
+      @instances = {}
       all_collectors.each do |collector|
         if collector.needs_config?
           if settings.has_key?(collector.name)
@@ -45,35 +45,42 @@ module Akwire
                            :collector => collector.name
                          })
           end
+        else
+          @instance[collector.name] = collectors
         end
       end
     end
 
     def collect_observations
-      all_collectors.select {|c| c.active? }.each do |collector|
-        obs = collector.collect
-        yield collector, obs
+      all_instances.select {|c| c.active? }.each do |instance|
+        obs = instance.collect
+        yield instance, obs
       end
     end
 
     def stop_all(&when_done)
-      EM::Iterator.new(all_collectors).each(
-                                           foreach = proc { |collector,iter|
-                                             collector.stop {
-                                               @logger.warn("stopped collector: #{collector}")
-                                               iter.next
-                                             }
-                                           }, 
-                                           after = proc { |results|
-                                             @logger.warn("stopped all collectors")
-                                             when_done.call if block_given?
-                                           })
+      EM::Iterator.new(all_instances)
+        .each(
+              foreach = proc { |instance,iter|
+                instance.stop {
+                  @logger.warn("stopped collector: #{collector}")
+                  iter.next
+                }
+              }, 
+              after = proc { |results|
+                @logger.warn("stopped all collectors")
+                when_done.call if block_given?
+              })
     end
-
+    
     private
 
     def all_collectors
       @collectors.values
+    end
+
+    def all_instances
+      @instances.values
     end
 
     def loaded(name, description)

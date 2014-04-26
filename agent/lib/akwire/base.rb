@@ -66,7 +66,6 @@ module Akwire
         collectors.load_gems(@options[:load_gem_collectors])
       end
 
-      collectors.load_all
       collectors
     end
 

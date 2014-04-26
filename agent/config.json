@@ -1,31 +1,25 @@
 {
-  "rabbitmq": {
-    "host": "localhost",
-    "port": 5672,
-    "user": "guest",
-    "password": "guest",
-    "vhost": "/"
-  },
-
-  "daemon": {
-    "id": "12345-12345",
-    "mode": "managed"
-  },
-
-  "collectors-auto": {
-    "load": "auto"
-  },
-
-  "collectors": {
-    "*": { "load" : true},
-    "core": { "load" : true},
-    "proc": {
-      "instances" : { 
-        "emacs" : { 
-          "load" : true 
-        }
-      }
+    "rabbitmq": {
+	"host": "localhost",
+	"port": 5672,
+	"user": "guest",
+	"password": "guest",
+	"vhost": "/"
+    },
+    
+    "daemon": {
+	"id": "12345-12345",
+	"mode": "managed"
+        "autoload": true,
+    },
+    
+    "collectors": {
+        "core": {
+            "load" : true
+        },
+        "proc!emacs": {
+	    "load" : true
+	}
     }
-  }
 }
 

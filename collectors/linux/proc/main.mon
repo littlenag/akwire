@@ -8,7 +8,12 @@ description "Collect process stats."
 # each instance should have a name
 # 
 
-var :name
+# auto infer a long-value for the command line tester
+# :long => "--data_points VALUE",
+# access via config[:data_points]
+option :data_points,
+       :description => "Number of data points to include in average check (smooths out spikes)",
+       :default => 1
 
 measurement "runtime" do
   description "Uptime of the server"
