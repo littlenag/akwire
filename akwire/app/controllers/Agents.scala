@@ -6,10 +6,11 @@ import scala.concurrent.Future
 import reactivemongo.api.Cursor
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.{Named, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 import play.api.mvc._
 import play.api.libs.json._
 import models._
+import services.Messaging
 
 /**
  * The Agents controllers encapsulates the Rest endpoints and the interaction with the MongoDB, via ReactiveMongo
@@ -17,7 +18,7 @@ import models._
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
 @Named
-class Agents extends Controller with MongoController {
+class Agents @Inject() (messaging: Messaging) extends Controller with MongoController {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Agents])
 
@@ -48,7 +49,22 @@ class Agents extends Controller with MongoController {
       }.getOrElse(Future.successful(BadRequest("invalid json")))
   }
 
-  def findAgents = Action.async {
+  def findOneAgent(agentId:String) = Action.async {
+    val cursor: Future[Option[Agent]] = collection.
+      // find all
+      find(Json.obj("agentId" -> agentId)).
+      // sort them by creation date
+      sort(Json.obj("created" -> -1)).
+      // perform the query and get a cursor of JsObject
+      one[Agent]
+
+    cursor.map {
+      case Some(agent) => Ok(Json.toJson(agent))
+      case None => NotFound("No agent with id: " + agentId)
+    }
+  }
+
+  def findAllAgents = Action.async {
     // let's do our query
     val cursor: Cursor[Agent] = collection.
       // find all
@@ -70,6 +86,10 @@ class Agents extends Controller with MongoController {
       agents =>
         Ok(agents(0))
     }
+  }
+
+  def queryAgent(agentId:String) = Action {
+    Ok("not implemented")
   }
 
 }

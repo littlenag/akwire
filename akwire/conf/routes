@@ -8,13 +8,11 @@
 GET     /                           @controllers.Application.index
 GET     /randomUUID                 @controllers.Application.randomUUID
 
-# User management API
-GET     /users                      @controllers.Users.findUsers
-POST    /user                       @controllers.Users.createUser
-
 # Agent management API
-GET     /agents                     @controllers.Agents.findAgents
-PUT     /agent                      @controllers.Agents.updateAgent
+GET     /agents                     @controllers.Agents.findAllAgents
+GET     /agents/:agentId            @controllers.Agents.findOneAgent(agentId:String)
+GET     /agents/:agentId/query      @controllers.Agents.queryAgent(agentId:String)
+PUT     /agents                     @controllers.Agents.updateAgent
 
 # Plugin management API
 ##GET     /plugins                    @controllers.Plugins.findPlugins
