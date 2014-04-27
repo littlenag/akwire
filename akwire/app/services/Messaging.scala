@@ -32,6 +32,7 @@ import scala.concurrent.{Promise, Future, Await}
 import reactivemongo.bson.BSONObjectID
 import java.util.concurrent.TimeoutException
 import scala.concurrent.TimeoutException
+import scala.util.{Failure, Success}
 
 @Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
@@ -120,6 +121,13 @@ class SessionBroker extends Actor with DefaultWrites {
 
   var staleCommands : Cancellable = null;
 
+  import akka.actor.SupervisorStrategy._
+
+  override val supervisorStrategy =
+      OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+        case _ => logger.error("major fault"); Escalate
+      }
+
   def receive = {
     case Connect(connection) =>
       try {
@@ -173,7 +181,7 @@ class SessionBroker extends Actor with DefaultWrites {
     case Process(delivery : Delivery) =>
       val msg = Json.parse(delivery.getBody)
 
-      logger.info("Received message: " + msg)
+      logger.info("Processing message: " + msg)
 
       // route to agent
       // is registration request
@@ -184,13 +192,15 @@ class SessionBroker extends Actor with DefaultWrites {
 
         val corrId = UUID.fromString(delivery.getProperties.getCorrelationId)
 
-        val c = commandsInFlight.get(corrId)
+        val cmd = commandsInFlight.get(corrId)
 
-        if (c.isDefined) {
+        if (cmd.isDefined) {
           // Route the message to the agent handler
           logger.info("Received response: " + msg)
-          //c.get.handler(msg)
-          c.get.promise success CommandResult(msg)
+          cmd.get.promise.success(CommandResult(msg))
+          if (!cmd.get.promise.isCompleted) throw new RuntimeException("what!")
+          commandsInFlight = commandsInFlight - corrId
+          logger.info("Routed response: " + msg)
         } else {
           logger.info("Received response but wasn't promised: " + msg)
         }
@@ -233,10 +243,10 @@ class SessionBroker extends Actor with DefaultWrites {
 
       channel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true, props, Json.stringify(toSend).getBytes);
 
-      val p = Promise[CommandResult]
-      commandsInFlight += (corrId -> CommandInfo(corrId, p))
+      val resultPromise = Promise[CommandResult]
+      commandsInFlight += (corrId -> CommandInfo(corrId, resultPromise))
 
-      p.future
+      sender ! (resultPromise.future)
 
     case CheckForStaleCommands =>
       commandsInFlight = commandsInFlight.filter { case (uuid, ci) =>
@@ -254,7 +264,7 @@ class SessionBroker extends Actor with DefaultWrites {
 
       registeredAgents.get(agentId) match {
         case Some(agent) =>
-          agent ! Stop
+          agent ! AgentStop
 
           context.stop(registeredAgents(agentId))
           registeredAgents = registeredAgents - agentId
@@ -275,7 +285,7 @@ class SessionBroker extends Actor with DefaultWrites {
   }
 }
 
-case class Stop()
+case class AgentStop()
 case class Ping()
 
 // This Actor handles all communication with an agent
@@ -289,21 +299,21 @@ class AgentHandler extends Actor {
 
   var sessionBroker: ActorRef = null
 
-  var heartbeat : Cancellable = null
+  var heartbeat : Option[Cancellable] = None
 
   implicit val timeout = akka.util.Timeout(30 seconds)
 
   /** The agents collection */
   private def col = ReactiveMongoPlugin.db.collection[JSONCollection]("agents")
 
-  def get : Agent = {
+  def ensureAgent : Agent = {
     // let's do our query
     val result = Await.result(col.find(Json.obj("agentId" -> agentId.value)).one[Agent], 5 seconds)
 
     if (result.isDefined) {
       return result.get
     } else {
-      val agent = Agent(BSONObjectID.generate, agentId.value, "", true, true);
+      val agent = Agent(BSONObjectID.generate, agentId.value, "", false, false);
       col.save(agent).map {
         case ok if ok.ok =>
         case error => throw new RuntimeException(error.message)
@@ -312,8 +322,8 @@ class AgentHandler extends Actor {
     }
   }
 
-  def markAgentConnected(value : Boolean = true) = {
-    col.save(get.copy(connected = value))
+  def markAgentConnected(value : Boolean) = {
+    for (x <- col.save(ensureAgent.copy(connected = value))) yield x
   }
 
   // needs a become statement
@@ -324,13 +334,14 @@ class AgentHandler extends Actor {
       this.sessionBroker = sender
       this.agentId = agentId;
 
-      get
+      ensureAgent
       markAgentConnected(false)
 
-      val result: Future[CommandResult] = ask(sessionBroker, ExecuteCommand(agentId, "hello-agent")).mapTo[CommandResult]
+      val result: Future[Future[CommandResult]] = ask(sessionBroker, ExecuteCommand(agentId, "hello-agent")).mapTo[Future[CommandResult]]
 
-      result.onSuccess {
-        case cr:CommandResult =>
+      result.flatMap(x=>x).onComplete {
+        case Success(cr) =>
+          logger.error("Processing response:" + cr)
           // Needs to respond with 'hello-manager'
           val msg = cr.result
           (msg\"response").asOpt[String] match {
@@ -338,26 +349,24 @@ class AgentHandler extends Actor {
               logger.info("Managing agent:" + agentId)
               // Ensure that we ping the agent's in order to ensure they are alive
               this.lastHeard = new DateTime()
-              heartbeat = context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping)
-              markAgentConnected()
+              heartbeat = Some(context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping))
+              markAgentConnected(true)
             case _ =>
               logger.error("Malformed response to command 'hello-agent':" + agentId)
               sessionBroker ! ReleaseAgent(agentId)
           }
-      }
-
-      result.onFailure {
-        case _:TimeoutException =>
+        case Failure(t) =>
           // Release the agent upon error
           logger.info("Timeout on 'hello-agent' cmd:" + agentId)
           sessionBroker ! ReleaseAgent(agentId)
       }
 
-    case Stop =>
+    case AgentStop =>
       logger.info("Manager stopping for agent:" + agentId)
 
-      if (!heartbeat.isCancelled) {
-        heartbeat.cancel()
+      heartbeat match {
+        case Some(timer) if !timer.isCancelled => timer.cancel()
+        case _ =>
       }
 
       markAgentConnected(false)
@@ -367,15 +376,17 @@ class AgentHandler extends Actor {
 
         // missed too many pings, kill the handler and release the agent
         logger.warn("Agent not responding, considered failed: " + agentId)
-        heartbeat.cancel()
+        heartbeat match {
+          case Some(timer) if !timer.isCancelled => timer.cancel()
+        }
         sessionBroker ! ReleaseAgent(agentId)
 
       } else {
         logger.debug("Sending heartbeat:" + agentId)
 
-        val result: Future[CommandResult] = ask(sessionBroker, ExecuteCommand(agentId, "ping")).mapTo[CommandResult]
+        val result: Future[Future[CommandResult]] = ask(sessionBroker, ExecuteCommand(agentId, "ping")).mapTo[Future[CommandResult]]
 
-        result.onSuccess {
+        result.flatMap(x=>x).onSuccess {
           case cr:CommandResult =>
             val msg = cr.result
             // Needs to respond with 'pong'
