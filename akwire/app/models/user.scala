@@ -1,6 +1,7 @@
 package models
 
 import reactivemongo.bson.BSONObjectID
+// Provides a Writer for BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 
 case class User( age: Int,

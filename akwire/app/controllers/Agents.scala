@@ -6,11 +6,14 @@ import scala.concurrent.Future
 import reactivemongo.api.Cursor
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Named}
 import play.api.mvc._
 import play.api.libs.json._
 import models._
-import services.Messaging
+import services.{CommandResult, Messaging}
+import scala.concurrent.duration._
+import play.api.http.DefaultWriteables
+import scala.util.{Success, Failure}
 
 /**
  * The Agents controllers encapsulates the Rest endpoints and the interaction with the MongoDB, via ReactiveMongo
@@ -18,7 +21,7 @@ import services.Messaging
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
 @Named
-class Agents @Inject() (messaging: Messaging) extends Controller with MongoController {
+class Agents @Inject() (messaging: Messaging) extends Controller with MongoController with DefaultWriteables {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Agents])
 
@@ -88,8 +91,28 @@ class Agents @Inject() (messaging: Messaging) extends Controller with MongoContr
     }
   }
 
-  def queryAgent(agentId:String) = Action {
-    Ok("not implemented")
+  implicit val timeout = akka.util.Timeout(30 seconds)
+  implicit val crFormat = play.api.libs.json.Json.format[CommandResult]
+
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
+  import scala.concurrent.duration._
+
+  def queryAgentX(agentId:String, command:String) = Action.async {
+    val f = messaging.invokeCommand(AgentId(agentId),command)
+
+    val timeoutFuture = play.api.libs.concurrent.Promise.timeout(InternalServerError("timeout"), 1.second)
+
+    Future.firstCompletedOf(Seq(f, timeoutFuture)).map {
+      case cr:CommandResult => Ok(Json.toJson(cr))
+      case st:Status => st
+    }
   }
 
+  def queryAgent(agentId:String, command:String) = Action.async {
+    val f = messaging.invokeCommand(AgentId(agentId),command)
+
+    f.transform(c => Ok(Json.toJson(c)), t => t)
+
+//      case Failure(t) => return InternalServerError("")
+  }
 }

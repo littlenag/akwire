@@ -30,7 +30,6 @@ import play.api.Play.current
 import models._
 import scala.concurrent.{Promise, Future, Await}
 import reactivemongo.bson.BSONObjectID
-import java.util.concurrent.TimeoutException
 import scala.concurrent.TimeoutException
 import scala.util.{Failure, Success}
 
@@ -76,8 +75,8 @@ class Messaging {
   }
 
   // take arguments at some point, kind of like NRPE
-  def invokeCommand(agentId:AgentId, command:String, duration:FiniteDuration) : Future[CommandResult] = {
-    ask(sessionBroker, ExecuteCommand(agentId,command))(duration).mapTo[CommandResult]
+  def invokeCommand(agentId:AgentId, command:String)(implicit timeout : akka.util.Timeout) : Future[CommandResult] = {
+    ask(sessionBroker, ExecuteCommand(agentId,command))(timeout).mapTo[Future[CommandResult]].flatMap(x=>x)
   }
 }
 
@@ -249,12 +248,15 @@ class SessionBroker extends Actor with DefaultWrites {
       sender ! (resultPromise.future)
 
     case CheckForStaleCommands =>
+      logger.trace("Checking for stale commands: " + commandsInFlight.size)
       commandsInFlight = commandsInFlight.filter { case (uuid, ci) =>
-        if (ci.started.plusSeconds(30).isBeforeNow()) {
-          // Pass a null value indicating failure
-          ci.promise failure new TimeoutException
+        if (ci.started.plusSeconds(30).isAfterNow()) {
+          logger.trace("Not stale: " + ci)
           true
         } else {
+          // Pass a null value indicating failure
+          logger.debug("Flushing stale command: " + ci)
+          ci.promise.failure(new TimeoutException("Stale command"))
           false
         }
     }
@@ -301,6 +303,7 @@ class AgentHandler extends Actor {
 
   var heartbeat : Option[Cancellable] = None
 
+  // length of time to wait for Futures
   implicit val timeout = akka.util.Timeout(30 seconds)
 
   /** The agents collection */
@@ -386,8 +389,8 @@ class AgentHandler extends Actor {
 
         val result: Future[Future[CommandResult]] = ask(sessionBroker, ExecuteCommand(agentId, "ping")).mapTo[Future[CommandResult]]
 
-        result.flatMap(x=>x).onSuccess {
-          case cr:CommandResult =>
+        result.flatMap(x=>x).onComplete {
+          case Success(cr) =>
             val msg = cr.result
             // Needs to respond with 'pong'
             (msg\"response").asOpt[String] match {
@@ -398,10 +401,7 @@ class AgentHandler extends Actor {
                 logger.error("Malformed response to command 'ping':" + agentId)
                 sessionBroker ! ReleaseAgent(agentId)
             }
-        }
-
-        result.onFailure {
-          case _:TimeoutException =>
+          case Failure(t) =>
             // Release the agent upon error
             logger.info("Timeout on command 'ping':" + agentId)
             sessionBroker ! ReleaseAgent(agentId)

@@ -11,7 +11,7 @@ GET     /randomUUID                 @controllers.Application.randomUUID
 # Agent management API
 GET     /agents                     @controllers.Agents.findAllAgents
 GET     /agents/:agentId            @controllers.Agents.findOneAgent(agentId:String)
-GET     /agents/:agentId/query      @controllers.Agents.queryAgent(agentId:String)
+GET     /agents/:agentId/query      @controllers.Agents.queryAgent(agentId:String,command:String)
 PUT     /agents                     @controllers.Agents.updateAgent
 
 # Plugin management API

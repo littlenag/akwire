@@ -100,6 +100,31 @@ module Akwire
       end
     end
 
+    # Manager is asking for a 'pong' message back as part of a keepalive strategy
+    def error(properties,msg,err)
+
+      payload = {
+        :version => 1,
+        :timestamp => Time.now.to_i,
+        :agent_id => @settings[:daemon][:id],
+        :response => "error",
+        :error => err
+      }
+
+      @logger.debug('sending ERROR response', {
+        :payload => payload
+      })
+
+      begin
+        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
+      rescue AMQ::Client::ConnectionClosedError => error
+        @logger.error('error sending message', {
+          :payload => payload,
+          :error => error.to_s
+        })
+      end
+    end
+
     def hello_agent(properties,msg)
       hello_manager = lambda do
         payload = {
@@ -187,6 +212,7 @@ module Akwire
           @logger.info('unrecognized command', {
                          :unrecognized => msg
                        })
+          error(properties,msg,"Unrecognized command: #{msg[:command]}")
         end
       end
     end
