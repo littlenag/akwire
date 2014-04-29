@@ -53,99 +53,61 @@ module Akwire
       @amq = @rabbitmq.channel
     end
 
-    def broadcast_hello
-      payload = {
-        :version => 1,
-        :timestamp => Time.now.to_i,
-        :agent_id => @settings[:daemon][:id],
-        :hello => true
-      }
+    def respond(payload, properties=nil)
 
-      @logger.debug('broadcasting hello', {
+      payload[:version] = 1
+      payload[:timestamp] = Time.now.to_i
+      payload[:agent_id] = @settings[:daemon][:id]
+
+      @logger.debug('sending response', {
         :payload => payload
       })
 
       begin
-        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload))
+        if properties
+          @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
+        else
+          @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload))
+        end          
       rescue AMQ::Client::ConnectionClosedError => error
         @logger.error('error sending message', {
           :payload => payload,
           :error => error.to_s
         })
       end
+    end
+
+    def broadcast_hello
+      respond({:hello => true})
     end
 
     # Manager is asking for a 'pong' message back as part of a keepalive strategy
     def pong(properties,msg)
       @lastping = Time.now
-
-      payload = {
-        :version => 1,
-        :timestamp => Time.now.to_i,
-        :agent_id => @settings[:daemon][:id],
-        :response => "pong"
-      }
-
-      @logger.debug('sending heartbeat response', {
-        :payload => payload
-      })
-
-      begin
-        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
-      rescue AMQ::Client::ConnectionClosedError => error
-        @logger.error('error sending message', {
-          :payload => payload,
-          :error => error.to_s
-        })
-      end
+      respond({:response => "pong"}, properties)
     end
 
     # Manager is asking for a 'pong' message back as part of a keepalive strategy
-    def error(properties,msg,err)
+    def list_collectors(properties,msg)
+      respond({
+        :response => "collectors",
+        :collectors => @collectors.keys
+      },properties)
+    end
 
-      payload = {
-        :version => 1,
-        :timestamp => Time.now.to_i,
-        :agent_id => @settings[:daemon][:id],
+    # Respond with an error message when the command couldn't be processed
+    def error(properties,msg,err)
+      respond({
         :response => "error",
         :error => err
-      }
-
-      @logger.debug('sending ERROR response', {
-        :payload => payload
-      })
-
-      begin
-        @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
-      rescue AMQ::Client::ConnectionClosedError => error
-        @logger.error('error sending message', {
-          :payload => payload,
-          :error => error.to_s
-        })
-      end
+      },properties)
     end
 
     def hello_agent(properties,msg)
       hello_manager = lambda do
-        payload = {
-          :version => 1,
-          :timestamp => Time.now.to_i,
-          :agent_id => @settings[:daemon][:id],
+        respond({
           :response => "hello-manager"
-        }
-        
-        @logger.debug('sending hello-manager response', {
-                        :payload => payload
-                      })
-
-        begin
-          @amq.direct('akwire.agent.to.hub').publish(Oj.dump(payload), :correlation_id => properties.correlation_id)
-        rescue AMQ::Client::ConnectionClosedError => error
-          @logger.error('error sending message', {
-                          :payload => payload,
-                          :error => error.to_s
-                        })
-        end
+        }, properties)
       end
       
       check_lastping = lambda do
@@ -195,7 +157,6 @@ module Akwire
       end
       
       hello_manager.call
-    
     end
 
     def process_command(properties, msg)
@@ -206,8 +167,9 @@ module Akwire
                      })
       else
         case msg[:command]
-        when "hello-agent" then hello_agent(properties,msg)
-        when "ping" then pong(properties,msg)
+        when "hello-agent"     then hello_agent(properties,msg)
+        when "ping"            then pong(properties,msg)
+        when "list-collectors" then list_collectors(properties,msg)
         else
           @logger.info('unrecognized command', {
                          :unrecognized => msg

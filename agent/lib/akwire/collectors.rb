@@ -11,6 +11,18 @@ module Akwire
       @collectors[key]
     end
 
+    def keys
+      @collectors.keys
+    end
+
+    def instances
+      i = []
+      @collectors.keys.each { |name, collector|
+        i << collector.instances
+      }
+      i
+    end
+
     def collector_exists?(name)
       @collectors.has_key?(name)
     end
