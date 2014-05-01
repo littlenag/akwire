@@ -8,6 +8,13 @@ description "Collect process stats."
 # each instance should have a name
 # 
 
+# option callback functions:
+#  - enumerate
+#  - validate
+#  - complete prefix, suggest completion(s)
+#  - required/optional
+#  - default value(s)
+
 # auto infer a long-value for the command line tester
 # :long => "--data_points VALUE",
 # access via config[:data_points]
@@ -17,7 +24,8 @@ option :exe_path,
 # type (counter, gauge, delta, absolute, timer)
 #  type :timer
 
-measurement "count" do
+# every observation will always have a "name"
+measurement :count do
   description "Number of running processes whose exe is :exe_path"
   units "process"
   type :absolute

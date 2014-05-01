@@ -1,33 +1,60 @@
 name 'net'
+#os family "Redhat"
 #platform :linux
 #arch :noarch
 version '0.0.1'
 
 description "Collects network interface metrics."
 
-#configuration {
-  # Simple boolean option
-#  toggle :collect_loopback {
-#    desc "Collect stats on the loopback device?"
-#    default false
-#  }
-#}
+option :collect_loopback,
+       :description => "When true will collect stats for the loopback device",
+       :type => Boolean,
+       :default => false
 
-measurement "{mount}/percent-used" do
-  description "Filesystem stats as percentages"
-  units "percentage"
+# other options: extended stats?
+# specify which interfaces
+
+# bytes, packets
+# percent used
+
+# errors
+
+# auto -> counter to gauge conversion?
+# would need a data bag in order to calculate rates
+
+pattern :interface do
+  description "Interface name, e.g. 'eth1' or 'lo'"
+end
+
+measurement :core_stats, :interface => "{}", :direction => "[tx,rx]" do
+  description "Basic network interface stats"
+  units "bytes", :include_in_key => true
+  type :counter
   collect {
-    # Drop the header that df prints
-    `df -lP`.lines.drop(1).each { |line|
+    # Drop the header that the kernel includes
+    File.read("/proc/net/dev").lines.drop(2).each { |line|
       parts = line.split
-      observe(parts[4].gsub("%", ""), :mount => parts[5].gsub("/", "_"))
+      interface, bytes_rx = parts[0].split(":")
+      bytes_tx = parts[8]
+      observe(bytes_rx, :interface => interface, :direction => "rx")
+      observe(bytes_tx, :interface => interface, :direction => "tx")
     }
   }
 end
 
-measurement "lo/bytes-[free,used,total]" do
-  description "Filesystem stats as raw byte values"
-  units "bytes"
-#  only_when :collect_loopback is true
-  collect { File.read("/proc/uptime").split[0] }
+measurement :core_stats, :interface => "{}", :direction => "[tx,rx]" do
+  description "Basic network interface stats"
+  units "packets", :include_in_key => true
+  type :counter
+  collect {
+    # Drop the header that the kernel includes
+    File.read("/proc/net/dev").lines.drop(2).each { |line|
+      parts = line.split
+      interface, bytes_rx = parts[0].split(":")
+      packets_rx = parts[1]
+      packets_tx = parts[9]
+      observe(bytes_rx, :interface => interface, :direction => "rx")
+      observe(bytes_tx, :interface => interface, :direction => "tx")
+    }
+  }
 end
