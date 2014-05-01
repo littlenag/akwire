@@ -38,6 +38,8 @@ Still need to be able to speak:
  - JMX
  - nagios
  - shell over ssh
+ - NRPE for remote nagios
+ - Zabbix agent for remote zabbix
 
 Backends:
  - zeromq
