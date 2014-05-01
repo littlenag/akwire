@@ -1,4 +1,8 @@
 module Akwire
+  module Boolean; end
+  class TrueClass; include Boolean; end
+  class FalseClass; include Boolean; end
+
   class Observation
     def initialize(defn)
       @logger = Logger.get
@@ -182,10 +186,30 @@ module Akwire
       @props[:description] = v
     end
 
-    def measurement(name, &block)
+    def measurement(name, opts = {}, &block)
       m = MeasurementDsl.new(name,self)
       m.instance_eval(&block)
       @props[:measurements][name] = m
+    end
+
+    # status or health check
+    def report(name, opts = {}, &block)
+      r = ReportDsl.new(name,self)
+      r.instance_eval(&block)
+      @props[:reports][name] = r
+    end
+
+    # status or health check
+    def check(name, opts = {}, &block)
+      c = CheckDsl.new(name,self)
+      c.instance_eval(&block)
+      @props[:checks][name] = c
+    end
+
+    def pattern(name, &block)
+      p = PatternDsl.new(name,self)
+      p.instance_eval(&block)
+      @props[:patterns][name] = p
     end
 
     # option :data_points,

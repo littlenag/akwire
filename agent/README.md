@@ -10,4 +10,5 @@ An agent-based data collection framework that aims to be simple, malleable, and 
 ## License
   Akwire is released under the [MIT license](https://raw.github.com/littlenag/akwire/master/MIT-LICENSE.txt).
 
-./akwire-daemon -v -c /home/mark/proj/akwire/agent/config.json -e ../../collectors/linux
+./akwire-daemon -v -c $HOME/proj/akwire/agent/config.json -e ../../collectors/linux
+
