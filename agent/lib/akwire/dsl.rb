@@ -73,8 +73,6 @@ module Akwire
     end
   end
 
-# aperiodic data types: event, log, alert
-
   class PatternDsl
     def initialize(name, mod)
       @logger = Logger.get
@@ -102,6 +100,11 @@ module Akwire
     def mod
       @module
     end
+  end
+
+  class AsyncDataCollectorsDsl
+    # event, log, alert
+    # aperiodic data types: event, log, alert
   end
 
   class MeasurementDsl
