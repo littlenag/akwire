@@ -205,8 +205,8 @@ class SessionBroker extends Actor with DefaultWrites {
         }
 
       } else if (registeredAgents.contains(agentId) && (msg\"hello").asOpt[Boolean].isDefined) {
-        logger.warn("Agent out of sync with manager, already registered: " + agentId)
-
+        // Ignore these so that we prevent mis-configured agent from DOSing correctly configured ones
+        logger.warn("Agent already registered, check config?: " + agentId)
       } else {
         // Agent not registered with manager, process as new agent
 

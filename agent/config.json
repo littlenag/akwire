@@ -10,14 +10,16 @@
     "daemon": {
 	"id": "12345-12345",
 	"mode": "managed",
-        "autoload": true
+        "autoload": true,
+	"collector_mode_default" : "passive"
     },
 
     "collectors": {
         "core": {
-            "load" : true
+            "mode" : "active"
         },
         "proc!emacs": {
+            "mode" : "active",
 	    "exe_path" : "/usr/bin/emacs"
 	}
     }

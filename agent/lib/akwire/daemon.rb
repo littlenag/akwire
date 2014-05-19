@@ -54,7 +54,6 @@ module Akwire
     end
 
     def respond(payload, properties=nil)
-
       payload[:version] = 1
       payload[:timestamp] = Time.now.to_i
       payload[:agent_id] = @settings[:daemon][:id]
@@ -211,6 +210,7 @@ module Akwire
     end
 
     def publish_observations
+      @logger.debug('harvesting from collectors')
       @collectors.collect_observations do |collector, obs|
         obs.each do |o|
           begin

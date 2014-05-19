@@ -155,6 +155,16 @@ module Akwire
       unless @settings[:daemon][:mode] =~ /^independent|managed$/
         invalid('daemon must have a unique id and it cannot contain spaces or special characters')
       end
+      unless @settings[:collectors].is_a?(Hash)
+        invalid('collectors must be a hash')
+      end
+
+      @settings[:collectors].each_pair { |name, settings|
+        unless settings[:mode] =~ /^active|passive|hybrid$/
+          invalid('#{inst}: invalid mode (#{inst[:mode]}) must be one of (active, passive, hybrid)')
+        end
+        settings[:mode] = settings[:mode].to_sym
+      }
     end
 
   end

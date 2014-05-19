@@ -331,9 +331,9 @@ module Akwire
     def collect
       obs = []
       @instances.each_pair { |instance_name, instance|
-        case instance.props[:mode]
+        case instance.settings[:mode]
           when :passive then next
-          when :active then 
+          when :active then
           instance.props[:measurements].each_pair { |measurement_name,measurement_def|
             obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
           }
