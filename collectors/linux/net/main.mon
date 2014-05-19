@@ -1,10 +1,14 @@
 name 'net'
-#os family "Redhat"
-#platform :linux
-#arch :noarch
-version '0.0.1'
+version '0.1'
+author "Mark Kegel", "mark.kegel@gmail.com"
 
 description "Collects network interface metrics."
+
+# Any Redhat RHEL 6.x compatible
+#os_family "Redhat"
+#os_version "6.x"
+#platform :linux
+#arch :noarch
 
 option :collect_loopback,
        :description => "When true will collect stats for the loopback device",
@@ -26,9 +30,9 @@ pattern :interface do
   description "Interface name, e.g. 'eth1' or 'lo'"
 end
 
-measurement :core_stats, :interface => "{}", :direction => "[tx,rx]" do
+measurement :core_stats, :interface => :interface, :direction => [:tx,:rx] do
   description "Basic network interface stats"
-  units "bytes", :include_in_key => true
+  units "bytes", include_in_key = true
   type :counter
   collect {
     # Drop the header that the kernel includes
@@ -42,9 +46,9 @@ measurement :core_stats, :interface => "{}", :direction => "[tx,rx]" do
   }
 end
 
-measurement :core_stats, :interface => "{}", :direction => "[tx,rx]" do
+measurement :core_stats, :interface => {}, :direction => [:tx,:rx] do
   description "Basic network interface stats"
-  units "packets", :include_in_key => true
+  units "packets", include_in_key = true
   type :counter
   collect {
     # Drop the header that the kernel includes

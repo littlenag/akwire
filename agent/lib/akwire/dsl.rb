@@ -87,6 +87,10 @@ module Akwire
       @props[:callback] = block
     end
 
+    def description(val)
+      @props[:description] = val
+    end
+
     # accessor
 
     def prop(p)
@@ -125,8 +129,9 @@ module Akwire
       @props[:description] = val
     end
 
-    def units(val)
+    def units(val, included_in_key=false)
       @props[:units] = val
+      @props[:units_included_in_key] = included_in_key
     end
 
     def type(val)
@@ -157,9 +162,14 @@ module Akwire
 
       @props = {}
       @props[:options] = {}
+      @props[:patterns] = {}
+
       @props[:measurements] = {}
+      @props[:reports] = {}
+      @props[:checks] = {}
+
       @props[:version] = ""
-      @props[:author] = ""
+      @props[:authors] = []
       @props[:description] = ""
       @props[:platform] = ""
       @props[:arch] = ""
@@ -183,6 +193,10 @@ module Akwire
 
     def version(v)
       @props[:version] = v
+    end
+
+    def author(name, email=nil)
+      @props[:authors] = [name, email]
     end
 
     def description(v)
@@ -232,6 +246,7 @@ module Akwire
       @logger.debug("collector script: #{file}")
       @file = file
       @name, @version = get_meta(file)
+      @authors = []
       @description = nil
       @platform = nil
       @os = nil
@@ -285,6 +300,7 @@ module Akwire
       @instances[instance_name] = instance
 
       @description = instance.props[:description] if @description.nil?
+      @authors = instance.props[:authors] if @authors.nil?
 
       if (instance_name.nil?)
         @logger.info("configured collector singleton",
@@ -334,6 +350,10 @@ module Akwire
 
     def version
       @version
+    end
+
+    def authors
+      @authors
     end
 
     def description
