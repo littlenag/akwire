@@ -14,23 +14,18 @@ describe 'Akwire::Base' do
   end
 
   it 'can load settings from configuration files' do
-    ENV['SENSU_CONFIG_FILES'] = nil
-    settings = @base.settings
+    ENV['AKWIRE_CONFIG_FILES'] = nil
+    @settings = @base.settings
+    settings = @settings
     settings.should respond_to(:validate, :[])
-    settings[:checks][:merger][:command].should eq('echo -n merger')
-    settings[:checks][:merger][:subscribers].should eq(['test'])
-    settings[:checks][:merger][:interval].should eq(60)
-    ENV['SENSU_CONFIG_FILES'].should include(File.expand_path(options[:config_file]))
+    settings[:collectors][:core][:mode].should eq(:active)
+    ENV['AKWIRE_CONFIG_FILES'].should include(File.expand_path(options[:config_file]))
   end
 
-  it 'can load extensions' do
-    extensions = @base.extensions
-    extensions.should respond_to(:[])
-    extensions[:mutators].should be_kind_of(Hash)
-    extensions[:handlers].should be_kind_of(Hash)
-    extensions[:mutators]['only_check_output'].should be_an_instance_of(Akwire::Extension::OnlyCheckOutput)
-    extensions[:mutators]['opentsdb'].should be_an_instance_of(Akwire::Extension::OpenTSDB)
-    extensions[:handlers]['debug'].should be_an_instance_of(Akwire::Extension::Debug)
+  it 'can load collectors' do
+    collectors = @base.collectors
+    collectors.should respond_to(:[])
+    collectors["basic"].should be_an_instance_of(Akwire::Collector)
   end
 
   it 'can setup the current process' do

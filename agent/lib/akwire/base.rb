@@ -54,12 +54,12 @@ module Akwire
       settings
     end
 
-    def collectors(settings)
+    def collectors
       # This will instantiate the Collectors but they will have to wait for 
       # their configurations to create runnable instances
       collectors = Collectors.new
-      if @options[:collector_dir]
-        collectors.load_directory(@options[:collector_dir])
+      if @options[:collectors_dir]
+        collectors.load_directory(@options[:collectors_dir])
       end
 
       if @options[:load_gem_collectors]
@@ -67,7 +67,7 @@ module Akwire
       end
 
       # Return only the configured and runnable collectors that have instances
-      collectors.load_instances(settings[:collectors].to_hash)
+#      collectors.load_instances(settings[:collectors].to_hash)
       collectors
     end
 

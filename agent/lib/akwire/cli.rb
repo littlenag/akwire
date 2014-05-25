@@ -19,8 +19,8 @@ module Akwire
         opts.on('-d', '--config_dir DIR[,DIR]', 'DIR or comma-delimited DIR list for Akwire JSON config files') do |dir|
           options[:config_dirs] = dir.split(',')
         end
-        opts.on('-e', '--collector_dir DIR', 'DIR for Akwire collectors') do |dir|
-          options[:collector_dir] = dir
+        opts.on('-e', '--collectors_dir DIR', 'DIR for Akwire collectors') do |dir|
+          options[:collectors_dir] = dir
         end
         opts.on('-g', '--gem_collectors', 'Akwire will load gem-based collectors') do
           options[:load_gem_collectors] = true

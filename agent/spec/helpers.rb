@@ -6,7 +6,7 @@ module Helpers
     @options = {
       :config_file => File.join(File.dirname(__FILE__), 'config.json'),
       :config_dirs => [File.join(File.dirname(__FILE__), 'conf.d')],
-      :extension_dir => File.join(File.dirname(__FILE__), 'extensions'),
+      :collectors_dir => File.join(File.dirname(__FILE__), 'collectors'),
       :log_level => :fatal
     }
   end

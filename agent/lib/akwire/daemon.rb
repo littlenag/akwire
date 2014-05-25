@@ -4,8 +4,6 @@ module Akwire
   class Daemon
     include Utilities
 
-    attr_accessor :safe_mode
-
     def self.run(options={})
       daemon = self.new(options)
       EM::run do
@@ -26,11 +24,10 @@ module Akwire
 
       @timers = Array.new
       @checks_in_progress = Array.new
-      @safe_mode = @settings[:daemon][:safe_mode] || false
     end
 
     def setup_rabbitmq
-      @logger.debug('connecting to rabbitmq', {
+      @logger.info('connecting to rabbitmq', {
         :settings => @settings[:rabbitmq]
       })
       @rabbitmq = RabbitMQ.connect(@settings[:rabbitmq])
