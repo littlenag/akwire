@@ -133,6 +133,13 @@ module Akwire
       exit 2
     end
 
+    def validate_plugin_settings(name, settings)
+      unless settings[:mode] =~ /^active|passive|hybrid$/
+        invalid('#{name}: invalid mode (#{settings[:mode]}) must be one of (active, passive, hybrid)')
+      end
+      settings[:mode] = settings[:mode].to_sym
+    end
+
     def validate_collectors
       unless @settings[:collectors].is_a?(Hash)
         invalid('collectors must be a hash')
@@ -159,11 +166,15 @@ module Akwire
         invalid('collectors must be a hash')
       end
 
-      @settings[:collectors].each_pair { |name, settings|
-        unless settings[:mode] =~ /^active|passive|hybrid$/
-          invalid('#{inst}: invalid mode (#{inst[:mode]}) must be one of (active, passive, hybrid)')
+      @settings[:collectors].each_pair { |name, plugin_settings|
+        if plugin_settings[:mode].nil?
+          # treat as an instanced plugin
+          plugin_settings.each_pair { |instance_name, instance_settings|
+            validate_plugin_settings("#{name}/#{instance_name}", instance_settings)
+          }
+        else
+          validate_plugin_settings(name, plugin_settings)
         end
-        settings[:mode] = settings[:mode].to_sym
       }
     end
 

@@ -8,7 +8,7 @@ module Akwire
     end
 
     def [](key)
-      @collectors[key]
+      @collectors[key.to_sym]
     end
 
     def keys
@@ -24,14 +24,14 @@ module Akwire
     end
 
     def collector_exists?(name)
-      @collectors.has_key?(name)
+      @collectors.has_key?(name.to_sym)
     end
 
     def load_directory(dir)
       @collector_dir = dir
       Dir[@collector_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
-        @collectors[c.name] = c
+        @collectors[c.name.to_sym] = c
         @logger.info('collector loaded', {:name => c.name})
       end
     end
@@ -40,31 +40,50 @@ module Akwire
       @collector_gems = gems
     end
 
-    # collectors are either configured or not,
-    # if configured they get a name and a config object
+    # collectors are always configured, but their configuration may be {}
+    # if configured they must be assigned a name and a config object
     # though if they have defaults for everything then they can be 'default' loaded
-    def load_instances(settings={})
-      settings.each do |key,settings|
-        collector_name, instance_name = key.to_s.split("!")
-        if (collector_exists?(collector_name))
-          self[collector_name].configure_instance(instance_name, settings)
-        else
+    def load_instances(collector_settings={})
+      collector_settings.each do |collector_name,plugin_settings|
+        unless collector_exists?(collector_name)
           @logger.warn('no collector found for configuration', {
-                         :key => key,
                          :collector => collector_name,
-                         :settings => settings
+                         :settings => plugin_settings
                        })
+          next
+        end
+
+        if plugin_settings[:mode].nil?
+          # Treat as instances
+          plugin_settings.each do |instance_name, instance_settings|
+            self[collector_name].configure_instance(instance_name, instance_settings)
+          end
+        else
+          # Treat as singleton
+          self[collector_name].configure_instance(nil, plugin_settings)
+        end
+
+      end
+
+      # default load singleton and defaultable collectors, but only if autoload is set
+      if collector_settings[:autoload]
+        all_collectors.each do |collector|
+          unless collector.configured?
+            collector.configure_instance(nil,nil)
+          end
         end
       end
 
-      # do we try to default load singleton or defaultable collectors?
-      all_collectors.each do |collector|
-        unless collector.configured?
-          collector.configure_instance(nil,nil)
+      # remove the ones lacking a config
+      all_collectors.keep_if do |collector| 
+        if collector.configured?
+          true
+        else
+          @logger.warn("dropping unconfigured collector: #{collector}")
+          false
         end
       end
-
-      # are any left unconfigured? remove them? do we care?
+      
     end
 
     def collect_observations

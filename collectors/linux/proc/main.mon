@@ -18,8 +18,8 @@ description "Collect process stats."
 # auto infer a long-value for the command line tester
 # :long => "--data_points VALUE",
 # access via config[:data_points]
-option :exe_path,
-       :description => "Path to the executable (e.g. /bin/bash)"
+option :command,
+       :description => "Command name (e.g. bash, httpd)"
 
 # type (counter, gauge, delta, absolute, timer)
 #  type :timer
@@ -29,7 +29,9 @@ measurement :count do
   description "Number of running processes whose exe is :exe_path"
   units "process"
   type :absolute
-  collect { `ls -l /proc/*/exe | grep -- "-> #{option(:exe_path)}" | wc -l`.strip }
+  collect { 
+    `ps -e -o comm= | grep -- #{option(:command)} | wc -l`.strip
+  }
 end
 
 #measurement "cputime" do end

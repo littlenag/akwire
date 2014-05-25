@@ -17,23 +17,26 @@ module Akwire
       @def.prop(:name)
     end
 
+    def defn
+      @def
+    end
+
   end
 
   class Measurement < Observation
     def initialize(defn, value)
       super defn
-      @def = defn
       @value = Float(value)
     end
 
     def to_s
-      "#{@def.mod.prop(:name)}/#{@def.prop(:name)} => #{@value}"
+      "#{defn.mod.prop(:name)}/#{defn.prop(:name)} => #{@value}"
     end
 
     def to_hash
       {
         :type => "m",
-        :collector => collector,
+#        :collector => collector,
         :key => key,
         :value => @value
       }
@@ -111,6 +114,16 @@ module Akwire
     # aperiodic data types: event, log, alert
   end
 
+  class Option
+    def initialize(params)
+#option :collect_loopback,
+#       :description => "When true will collect stats for the loopback device",
+#       :type => Boolean,
+#       :default => false
+      @params = params
+    end
+  end
+
   class MeasurementDsl
     def initialize(name, mod)
       @logger = Logger.get
@@ -139,6 +152,12 @@ module Akwire
     end
 
     def observe(m,opts={})
+    end
+
+    def option(opt)
+      # get the configured value of some option
+      raise "Missing option: #{opt} from settings #{mod.settings}" if mod.settings[opt.to_s].nil?
+      mod.settings[opt.to_s]
     end
 
     # accessor
@@ -201,6 +220,12 @@ module Akwire
 
     def description(v)
       @props[:description] = v
+    end
+
+    def option(name, opts={})
+      raise "Option name must be a Symbol" unless name.is_a?(Symbol)
+      raise "Option name must be unique" unless @props[:options].nil?
+      @props[:options][name] = Option.new(opts)
     end
 
     def measurement(name, opts = {}, &block)
@@ -335,6 +360,11 @@ module Akwire
           when :passive then next
           when :active then
           instance.props[:measurements].each_pair { |measurement_name,measurement_def|
+            @logger.debug("collecting measurements",
+                         {
+                           :collector => @name,
+                           :instance => instance_name
+                         })
             obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
           }
         end
