@@ -63,7 +63,7 @@ module Helpers
 
   def api_test(&block)
     async_wrapper do
-      Sensu::API.test(options)
+      Akwire::API.test(options)
       timer(0.5) do
         block.call
       end

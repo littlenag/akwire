@@ -1,11 +1,11 @@
-require File.dirname(__FILE__) + '/../lib/sensu/base.rb'
+require File.dirname(__FILE__) + '/../lib/akwire/base.rb'
 require File.dirname(__FILE__) + '/helpers.rb'
 
-describe 'Sensu::Base' do
+describe 'Akwire::Base' do
   include Helpers
 
   before do
-    @base = Sensu::Base.new(options)
+    @base = Akwire::Base.new(options)
   end
 
   it 'can setup the logger' do
@@ -28,9 +28,9 @@ describe 'Sensu::Base' do
     extensions.should respond_to(:[])
     extensions[:mutators].should be_kind_of(Hash)
     extensions[:handlers].should be_kind_of(Hash)
-    extensions[:mutators]['only_check_output'].should be_an_instance_of(Sensu::Extension::OnlyCheckOutput)
-    extensions[:mutators]['opentsdb'].should be_an_instance_of(Sensu::Extension::OpenTSDB)
-    extensions[:handlers]['debug'].should be_an_instance_of(Sensu::Extension::Debug)
+    extensions[:mutators]['only_check_output'].should be_an_instance_of(Akwire::Extension::OnlyCheckOutput)
+    extensions[:mutators]['opentsdb'].should be_an_instance_of(Akwire::Extension::OpenTSDB)
+    extensions[:handlers]['debug'].should be_an_instance_of(Akwire::Extension::Debug)
   end
 
   it 'can setup the current process' do

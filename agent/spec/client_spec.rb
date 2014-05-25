@@ -1,11 +1,11 @@
-require File.dirname(__FILE__) + '/../lib/sensu/client.rb'
+require File.dirname(__FILE__) + '/../lib/akwire/client.rb'
 require File.dirname(__FILE__) + '/helpers.rb'
 
-describe 'Sensu::Client' do
+describe 'Akwire::Client' do
   include Helpers
 
   before do
-    @client = Sensu::Client.new(options)
+    @client = Akwire::Client.new(options)
   end
 
   it 'can connect to rabbitmq' do
@@ -98,7 +98,7 @@ describe 'Sensu::Client' do
       result_queue do |queue|
         @client.setup_rabbitmq
         check = {
-          :name => 'sensu_gc_metrics'
+          :name => 'akwire_gc_metrics'
         }
         @client.run_check_extension(check)
         queue.subscribe do |payload|
@@ -170,7 +170,7 @@ describe 'Sensu::Client' do
       result_queue do |queue|
         @client.setup_rabbitmq
         @client.setup_standalone
-        expected = ['standalone', 'sensu_gc_metrics']
+        expected = ['standalone', 'akwire_gc_metrics']
         queue.subscribe do |payload|
           result = Oj.load(payload)
           result[:client].should eq('i-424242')

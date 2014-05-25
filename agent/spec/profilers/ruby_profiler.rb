@@ -1,6 +1,6 @@
 require 'ruby-prof'
 
-module Sensu
+module Akwire
   module Extension
     class RubyProfiler < Generic
       def name
@@ -8,7 +8,7 @@ module Sensu
       end
 
       def description
-        'uses ruby-prof to profile sensu'
+        'uses ruby-prof to profile akwire'
       end
 
       def post_init
