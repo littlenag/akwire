@@ -63,11 +63,7 @@ module Helpers
   end
 
   def async_done
-    # Give some time to print logs
-    timer(1.5) do
-      EM::stop_event_loop
-#      EM::stop
-    end
+    EM::stop_event_loop
   end
 
   def with_stdout_redirect(&block)

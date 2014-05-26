@@ -50,35 +50,27 @@ describe 'Akwire::Daemon' do
         @daemon.setup_rabbitmq
         @daemon.setup_session
 
-        puts "timer 1"
+        timer(1) do
+          command_from_hub({"command" => "hello-agent"})
+        end
 
         queue.subscribe(:block => false) do |payload|
-          case count
-          when 1 then
-            puts "payload 1 #{payload}"
-            payload.should_not be_nil
-            hello = Oj.load(payload)
-            hello[:agent_id].should eq('12345-12345')
-            hello[:version].should eq(1)
-            hello[:hello].should eq(true)
-            command_from_hub({"command" => "hello-agent"})
-            
-            count = 2
-          when 2 then
-            puts "payload 2 #{payload}"
-            
-            payload.should_not be_nil
-            hello_manager = Oj.load(payload)
-            hello_manager[:agent_id].should eq('12345-12345')
-            hello_manager[:version].should eq(1)
-            hello_manager[:response].should eq('hello-manager')
+          payload.should_not be_nil
+          msg = Oj.load(payload)
+
+          if msg[:hello]
+            msg[:agent_id].should eq('12345-12345')
+            msg[:version].should eq(1)
+            msg[:hello].should eq(true)
+          else
+            msg[:agent_id].should eq('12345-12345')
+            msg[:version].should eq(1)
+            msg[:response].should eq('hello-manager')
             async_done
           end
         end
       end
-      puts "end of wrapper body"
     end
-    puts "end of test body"
   end
 
 #  it 'can send a check result' do
