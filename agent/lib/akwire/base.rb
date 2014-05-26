@@ -26,15 +26,13 @@ module Akwire
       @options = options
     end
 
-    def logger
-      logger = Logger.get
-      if @options[:log_level]
-        logger.level = @options[:log_level]
+    def logger(options={})
+      if options[:reset].nil?
+        logger = Logger.get(options)
+      else
+        logger = Logger.setup(options)
       end
-      if @options[:log_file]
-        logger.reopen(@options[:log_file])
-      end
-      logger.setup_traps
+      logger.setup_signal_traps
       logger
     end
 
@@ -67,7 +65,6 @@ module Akwire
       end
 
       # Return only the configured and runnable collectors that have instances
-#      collectors.load_instances(settings[:collectors].to_hash)
       collectors
     end
 

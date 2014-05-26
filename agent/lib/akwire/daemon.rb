@@ -12,12 +12,23 @@ module Akwire
       end
     end
 
+    def flush_logs
+      @logger.flush_logs
+    end
+
+    def log_msg(msg)
+      @logger.info(msg)
+    end
+
     def initialize(options={})
-      base = Base.new(options)
-      @logger = base.logger
-      @settings = base.settings
-      @collectors = base.collectors(@settings)
-      base.setup_process
+      @options = options
+      @base = Base.new(options)
+      @logger = @base.logger(options)
+      @settings = @base.settings
+      @collectors = @base.collectors
+      @base.setup_process
+
+      @collectors.load_instances(@settings[:collectors].to_hash)
 
       @session_worker = nil
       @lastping = nil
@@ -27,13 +38,15 @@ module Akwire
     end
 
     def setup_rabbitmq
+      @logger.info('rabbitmq')
       @logger.info('connecting to rabbitmq', {
         :settings => @settings[:rabbitmq]
       })
       @rabbitmq = RabbitMQ.connect(@settings[:rabbitmq])
       @rabbitmq.on_error do |error|
         @logger.fatal('rabbitmq connection error', {
-          :error => error.to_s
+          :error => error.to_s,
+          :error_o => error
         })
         stop
       end
@@ -74,6 +87,7 @@ module Akwire
     end
 
     def broadcast_hello
+      @logger.info('broadcast hello')
       respond({:hello => true})
     end
 
@@ -177,15 +191,16 @@ module Akwire
 
     # Establish a session with the manager
     def setup_session
-      @logger.debug('binding to hub.to.agent exchange')
-      
+      @logger.info('binding to hub.to.agent exchange')
+
+      # Create to a local queue named for our agent's id
       @command_queue = @amq.queue(@settings[:daemon][:id], :auto_delete => true) do |queue|
         
         @logger.debug('binding agent queue to (hub -> agent) exchange', {
                         :queue_name => queue.name
                       })
 
-        # No other agents should receive commands directed to this agent
+        # Bind that queue to the central hub to agent exchange
         queue.bind(@amq.fanout("akwire.hub.to.agent"), :routing_key => @settings[:daemon][:id])
 
         broadcast_hello
@@ -236,10 +251,12 @@ module Akwire
     def unsubscribe
       @logger.warn('unsubscribing from client subscriptions')
       if @rabbitmq.connected?
-        @command_queue.unsubscribe
+        @command_queue.unsubscribe if @command_queue
       else
-        @command.before_recovery do
-          @command.unsubscribe
+        if @command_queue
+          @command_queue.before_recovery do
+            @command_queue.unsubscribe
+          end
         end
       end
     end

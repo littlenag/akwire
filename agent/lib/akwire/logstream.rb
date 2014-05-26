@@ -1,93 +1,221 @@
 module Akwire
   class LogStream
+
+    LEVELS = [:debug, :info, :warn, :error, :fatal]
+
+    # @!attribute [rw] level
+    # @return level [Symbol] current log level.
+    attr_accessor :level
+    
+    # Initialize a log stream, redirect STDERR to STDOUT, create log
+    # level methods, and setup the reactor log event writer.
     def initialize
-      @log_stream = EM::Queue.new
-      @log_level = :info
+      @stream = []
+      @stream_callbacks = []
+      @level = :info
       STDOUT.sync = true
       STDERR.reopen(STDOUT)
+      self.class.create_level_methods
       setup_writer
     end
-
-    def level=(level)
-      @log_level = level
-    end
-
-    def level_filtered?(level)
-      LOG_LEVELS.index(level) < LOG_LEVELS.index(@log_level)
-    end
-
-    def add(level, *arguments)
-      unless level_filtered?(level)
-        log_event = create_log_event(level, *arguments)
-        if EM::reactor_running?
-          @log_stream << log_event
-        else
-          puts log_event
+    
+    # Create a method for each of the log levels, they call add() to
+    # add log events to the log stream.
+    def self.create_level_methods
+      LEVELS.each do |level|
+        define_method(level) do |*args|
+          add(level, *args)
         end
       end
     end
-
-    LOG_LEVELS.each do |level|
-      define_method(level) do |*arguments|
-        add(level, *arguments)
+    
+    # Check to see if a log level is currently being filtered.
+    #
+    # @param level [Symbol] log event level.
+    # @return [TrueClass, FalseClass]
+    def level_filtered?(level)
+      LEVELS.index(level) < LEVELS.index(@level)
+    end
+    
+    # Add a log event to the log stream.
+    #
+    # @param level [Symbol] log event level.
+      # @param args [Array] to pass to create_log_event().
+    # @return [TrueClass, FalseClass] if the log event was added.
+    def add(level, *args)
+      unless level_filtered?(level)
+        event = create_log_event(level, *args)
+        if EM.reactor_running?
+          schedule_write(event)
+        else
+          safe_write(event)
+        end
+        true
+      else
+        false
       end
     end
-
-    def reopen(file)
-      @log_file = file
-      if File.writable?(file) || !File.exist?(file) && File.writable?(File.dirname(file))
-        STDOUT.reopen(file, 'a')
+    
+    # Reopen the log stream output, write log events to a file.
+    #
+    # @param target [IO, String] IO stream or file path.
+    def reopen(target)
+      @reopen = target
+      case target
+      when IO
+        STDOUT.reopen(target)
         STDOUT.sync = true
         STDERR.reopen(STDOUT)
-      else
-        error('log file is not writable', {
-          :log_file => file
-        })
-      end
-    end
-
-    def setup_traps
-      if Signal.list.include?('USR1')
-        Signal.trap('USR1') do
-          @log_level = @log_level == :info ? :debug : :info
+      when String
+        if File.writable?(target) || !File.exist?(target) && File.writable?(File.dirname(target))
+          STDOUT.reopen(target, "a")
+          STDOUT.sync = true
+          STDERR.reopen(STDOUT)
+        else
+          error("log file is not writable", {
+                  :log_file => target
+                })
         end
       end
-      if Signal.list.include?('USR2')
-        Signal.trap('USR2') do
-          if @log_file
-            reopen(@log_file)
+    end
+    
+    # Setup signal traps for the log stream.
+    # Signals:
+    # TRAP: toggle debug logging.
+    # USR2: reopen the log file.
+    def setup_signal_traps
+      if Signal.list.include?("TRAP")
+        Signal.trap("TRAP") do
+          @level = case @level
+                   when :debug
+                     @previous_level || :info
+                   else
+                     @previous_level = @level
+                     :debug
+                   end
+        end
+      end
+      if Signal.list.include?("USR2")
+        Signal.trap("USR2") do
+          if @reopen
+            reopen(@reopen)
           end
         end
       end
     end
 
-    private
-
-    def create_log_event(level, message, data=nil)
-      log_event = Hash.new
-      log_event[:timestamp] = Time.now.strftime("%Y-%m-%dT%H:%M:%S.%6N%z")
-      log_event[:level] = level
-      log_event[:message] = message
-      if data.is_a?(Hash)
-        log_event.merge!(data)
+    def flush_logs
+      @stream.size.times do
+        safe_write(@stream.shift)
       end
-      Oj.dump(log_event)
     end
-
-    def setup_writer
-      writer = Proc.new do |log_event|
-        puts log_event
-        EM::next_tick do
-          @log_stream.pop(&writer)
+      
+    private
+    
+    # Create a JSON log event.
+    #
+    # @param level [Symbol] log event level.
+    # @param message [String] log event message.
+    # @param data [Hash] log event data.
+    # @return [String] JSON log event.
+    def create_log_event(level, message, data=nil)
+      event = {}
+      event[:timestamp] = Time.now.strftime("%Y-%m-%dT%H:%M:%S.%6N%z")
+      event[:level] = level
+      event[:message] = message
+      if data.is_a?(Hash)
+        event.merge!(data)
+      end
+#      MultiJson.dump(event)
+      Oj.dump(event)
+    end
+    
+    # Schedule a log event write, pushing the JSON log event into
+    # the stream.
+    #
+    # @param event [String] JSON log event.
+    def schedule_write(event)
+      EM.schedule do
+        @stream << event
+        unless @stream_callbacks.empty?
+          @stream_callbacks.shift.call(@stream.shift)
         end
       end
-      @log_stream.pop(&writer)
+    end
+    
+    # Write a JSON log event to STDOUT, which may be redirected to a
+    # log file. This method will take no action if the storage
+    # device has no space remaining.
+    def safe_write(event)
+      begin
+        puts event
+      rescue Errno::ENOSPC
+      end
+    end
+    
+    # Register a log stream callback (a write operation).
+    #
+    # @param [Proc] callback to register, it will eventually be
+    # called and passed a JSON log event as a parameter.
+    def register_callback(&callback)
+      EM.schedule do
+        if @stream.empty?
+          @stream_callbacks << callback
+        else
+          callback.call(@stream.shift)
+        end
+      end
+    end
+    
+    # Setup reactor log event writer. On shutdown, remaining log
+    # events will be written/flushed.
+    def setup_writer
+      writer = Proc.new do |log_event|
+        safe_write(log_event)
+        EM.next_tick do
+          register_callback(&writer)
+        end
+      end
+      register_callback(&writer)
+      EM.add_shutdown_hook do
+        flush_logs
+      end
     end
   end
+#  class Logger
+#    def self.get
+#      @logger ||= LogStream.new
+#    end
+#  end
 
-  class Logger
-    def self.get
-      @logger ||= LogStream.new
+  module Logger
+    class << self
+      # Setup a log stream.
+      #
+      # @param [Hash] options to create the log stream with.
+      # @option options [String] :log_level to use.
+      # @option options [String] :log_file to use.
+      # @return [Stream] instance of a log stream.
+      def setup(options={})
+        @stream = LogStream.new
+        if options[:log_level]
+          @stream.level = options[:log_level]
+        end
+        if options[:log_file]
+          @stream.reopen(options[:log_file])
+        end
+        @stream
+      end
+      
+      # Retrieve the current log stream or set one up if there isn't
+      # one. Note: We may need to add a mutex for thread safety.
+      #
+      # @param [Hash] options to pass to setup().
+      # @return [Stream] instance of a log stream.
+      def get(options={})
+        @stream || setup(options)
+      end
     end
   end
+  
 end

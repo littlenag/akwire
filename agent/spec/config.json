@@ -14,9 +14,6 @@
     },
 
     "collectors": {
-      "core" : { "mode" : "active" },
-      "proc" : {
-        "emacs" : { "mode" : "active", "command" : "emacs" } 
-      }
+      "basic" : { "mode" : "passive" }
     }
 }
