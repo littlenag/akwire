@@ -25,6 +25,24 @@ module Helpers
     @amq ? @amq : setup_amq
   end
 
+  class SimpleProps
+    def initialize(id)
+      @id = id
+    end
+    
+    def correlation_id
+      @id
+    end
+  end
+
+  def setup_props
+    @props = SimpleProps.new("abcdef")
+  end
+
+  def props
+    @props ? @props : setup_props
+  end
+
   def agent_tx_queue(&block)
     amq.queue('akwire.agent.to.hub', :auto_delete => true) do |queue|
       queue.bind(amq.direct('akwire.agent.to.hub')) do

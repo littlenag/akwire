@@ -20,9 +20,9 @@ module Akwire
     end
 
     def instances
-      i = []
-      @collectors.keys.each { |name, collector|
-        i << collector.instances
+      i = {}
+      @collectors.each { |name, collector|
+        i[name] = collector.instances
       }
       i
     end

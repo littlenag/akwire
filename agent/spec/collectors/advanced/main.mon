@@ -1,0 +1,42 @@
+name 'advanced'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Advanced collector"
+
+option :basic_number,
+       :description => "Some integer value"
+
+option :basic_string,
+       :description => "Some string value"
+
+# Boolean, Integer, Float, String
+# Array of the above, plus Json blob
+
+option :defaulted_number,
+       :description => "Defaulted number",
+       :type => Integer,
+       :default => 5
+
+pattern :unbounded
+
+pattern :bounded_by_regex, /foo|bar/ do
+  description "Bounded pattern by regex"
+end
+
+pattern :bounded_by_enum, ["tx", "rx"] do
+  description "Bounded pattern by enum"
+end
+
+measurement :test_value do
+#  it's ok if these are left out
+#  description "Description"
+#  units "none"
+#  type :absolute
+  collect { 1 }
+end
+
+measurement :test_observe do
+  collect { observe(1) }
+end

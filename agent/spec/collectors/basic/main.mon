@@ -8,7 +8,7 @@ description "Basic collector"
 measurement :test_value do
 #  it's ok if these are left out
 #  description "Description"
-#  units "none"
+#  units "unit"
 #  type :absolute
   collect { 1 }
 end

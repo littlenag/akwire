@@ -1,19 +1,26 @@
 {
-    "rabbitmq": {
-	"host": "localhost",
-	"port": 5672,
-	"user": "guest",
-	"password": "guest",
-	"vhost": "/"
-    },
-    
-    "daemon": {
-	"id": "12345-12345",
-	"mode": "managed",
-        "autoload": false
-    },
-
-    "collectors": {
-      "basic" : { "mode" : "passive" }
+  "rabbitmq": {
+    "host": "localhost",
+    "port": 5672,
+    "user": "guest",
+    "password": "guest",
+    "vhost": "/"
+  },
+  
+  "daemon": {
+    "id": "12345-12345",
+    "mode": "managed",
+    "autoload": false
+  },
+  
+  "collectors": {
+    "basic" : { "mode" : "passive" },
+    "advanced" : {
+      "test1" : {
+	"mode" : "passive",
+	"basic_number" : "1",
+	"basic_string" : "foo"
+      }
     }
+  }
 }

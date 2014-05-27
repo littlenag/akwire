@@ -16,10 +16,6 @@ module Akwire
       @logger.flush_logs
     end
 
-    def log_msg(msg)
-      @logger.info(msg)
-    end
-
     def initialize(options={})
       @options = options
       @base = Base.new(options)
@@ -38,7 +34,6 @@ module Akwire
     end
 
     def setup_rabbitmq
-      @logger.info('rabbitmq')
       @logger.info('connecting to rabbitmq', {
         :settings => @settings[:rabbitmq]
       })
@@ -63,6 +58,139 @@ module Akwire
       @amq = @rabbitmq.channel
     end
 
+    ##################
+
+    class Ok
+      def self.[](response, opts={})
+        raise "Response cannot be empty" if response.nil?
+        Ok.new(opts.merge({:response => response}))
+      end
+
+      def initialize(payload)
+        @payload = payload
+      end
+
+      def payload
+        @payload
+      end
+    end
+
+    class Error
+      def self.[](msg, opts={})
+        raise "Error message cannot be empty" if reponse.nil?
+        Error.new(opts.merge({:response => "error", :error => msg}))
+      end
+
+      def initialize(payload)
+        @payload = payload
+      end
+
+      def payload
+        @payload
+      end
+    end
+
+    # Manager is asking for a 'pong' message back as part of a keepalive strategy
+    def pong
+      @lastping = Time.now
+      Ok["pong"]
+    end
+
+    # Manager is asking for a list of loaded collectors
+    def list_collectors
+      Ok["collectors", :collectors => @collectors.keys]
+    end
+
+    def list_instances
+      Ok["instances", :instances => @collectors.instances]
+    end
+
+    def describe_collector(msg)
+      Ok["collector-description", :meta => @collectors[msg[:collector]].describe]
+    end
+
+    def invoke_collector(msg)
+      Ok["collector-observations", :data => @collectors[msg[:collector]].collect]
+    end
+
+    def hello_agent(msg)
+      # this point we should validate the manager's identity, or if
+      # this is our very first run we might auto-accept the identity
+      # and save it in a file under var
+      
+      # to save:
+      #  - pid, own identity, manager's identity
+      # use ssh public keys for identities?
+      # ssl certs?
+      
+      # support a list of local commands to run (like munin)
+      
+      @logger.info('session established with manager', {:command => msg})
+      
+      # Cancel our current session worker which is busy broadcasting
+        # hello's and replace it with one that check's for new pings
+      # from the manager
+
+      @lastping = Time.now
+      
+      @session_worker.cancel
+      
+      @session_worker = EM::PeriodicTimer.new(5) do
+        if @rabbitmq.connected?
+          
+          if (Time.now - @lastping) > 30
+            @logger.warn('session ended; agent has unexpectedly ceased pinging the agent; reverting to un-managed mode', {
+                           :lastping => @lastping
+                         })
+            
+            # Cancel the old worker
+            @session_worker.cancel
+            
+            @session_worker = EM::PeriodicTimer.new(60) do
+              if @rabbitmq.connected?
+                broadcast_hello
+              end
+            end
+          end
+        end
+      end
+      
+      Ok["hello-manager"]
+    end
+
+    def process_command(properties, msg)
+      # Process as if is command
+      if (msg[:command].nil?)
+        @logger.error('malformed command', {
+                       :malformed => msg
+                     })
+      else
+        response = case msg[:command]
+        when "hello-agent"     then hello_agent(msg)
+        when "ping"            then pong
+        when "list-collectors" then list_collectors
+        end
+
+        if response
+          respond(response.payload, properties)
+        else
+          @logger.info('unrecognized command', {
+                         :unrecognized => msg
+                       })
+          respond({
+                    :response => "error",
+                    :error => err
+                  },properties)
+          error(properties,msg,"Unrecognized command: #{msg[:command]}")
+        end
+      end
+    end
+
+    def broadcast_hello
+      @logger.info('broadcast hello')
+      respond({:hello => true})
+    end
+
     def respond(payload, properties=nil)
       payload[:version] = 1
       payload[:timestamp] = Time.now.to_i
@@ -83,109 +211,6 @@ module Akwire
           :payload => payload,
           :error => error.to_s
         })
-      end
-    end
-
-    def broadcast_hello
-      @logger.info('broadcast hello')
-      respond({:hello => true})
-    end
-
-    # Manager is asking for a 'pong' message back as part of a keepalive strategy
-    def pong(properties,msg)
-      @lastping = Time.now
-      respond({:response => "pong"}, properties)
-    end
-
-    # Manager is asking for a 'pong' message back as part of a keepalive strategy
-    def list_collectors(properties,msg)
-      respond({
-        :response => "collectors",
-        :collectors => @collectors.keys
-      },properties)
-    end
-
-    # Respond with an error message when the command couldn't be processed
-    def error(properties,msg,err)
-      respond({
-        :response => "error",
-        :error => err
-      },properties)
-    end
-
-    def hello_agent(properties,msg)
-      hello_manager = lambda do
-        respond({
-          :response => "hello-manager"
-        }, properties)
-      end
-      
-      check_lastping = lambda do
-        if (Time.now - @lastping) > 30
-          @logger.warn('session ended; agent has unexpectedly ceased pinging the agent; reverting to un-managed mode', {
-                         :lastping => @lastping
-                       })
-          
-          # Cancel the old worker
-          @session_worker.cancel
-          
-          @session_worker = EM::PeriodicTimer.new(60) do
-            if @rabbitmq.connected?
-              broadcast_hello
-            end
-          end
-        end
-      end
-
-      # this point we should validate the manager's identity, or if
-      # this is our very first run we might auto-accept the identity
-      # and save it in a file under var
-      
-      # to save:
-      #  - pid, own identity, manager's identity
-      # use ssh public keys for identities?
-      # ssl certs?
-      
-      # support a list of local commands to run (like munin)
-      
-      @logger.info('session established with manager', {
-                       :command => msg
-                     })
-      
-      # Cancel our current session worker which is busy broadcasting
-        # hello's and replace it with one that check's for new pings
-      # from the manager
-
-      @lastping = Time.now
-      
-      @session_worker.cancel
-      
-      @session_worker = EM::PeriodicTimer.new(5) do
-        if @rabbitmq.connected?
-            check_lastping.call
-          end
-      end
-      
-      hello_manager.call
-    end
-
-    def process_command(properties, msg)
-      # Process as if is command
-      if (msg[:command].nil?)
-        @logger.error('malformed command', {
-                       :malformed => msg
-                     })
-      else
-        case msg[:command]
-        when "hello-agent"     then hello_agent(properties,msg)
-        when "ping"            then pong(properties,msg)
-        when "list-collectors" then list_collectors(properties,msg)
-        else
-          @logger.info('unrecognized command', {
-                         :unrecognized => msg
-                       })
-          error(properties,msg,"Unrecognized command: #{msg[:command]}")
-        end
       end
     end
 

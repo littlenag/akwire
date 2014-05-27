@@ -11,6 +11,7 @@ describe 'Akwire::Daemon' do
   end
 
   after do
+    # Just to make sure we get all the logs
     @daemon.flush_logs
   end
 
@@ -42,10 +43,8 @@ describe 'Akwire::Daemon' do
   #   hub upon seeing an unregistered agent sends a "hello-agent"
   #   agent responds with "hello-manager", stops broadcasting "hello"
 
-  it 'can create a session with hub' do
-    count = 1
+  it 'can create a session with the hub' do
     async_wrapper do
-
       agent_tx_queue do |queue|
         @daemon.setup_rabbitmq
         @daemon.setup_session
@@ -54,7 +53,7 @@ describe 'Akwire::Daemon' do
           command_from_hub({"command" => "hello-agent"})
         end
 
-        queue.subscribe(:block => false) do |payload|
+        queue.subscribe do |payload|
           payload.should_not be_nil
           msg = Oj.load(payload)
 
@@ -71,6 +70,31 @@ describe 'Akwire::Daemon' do
         end
       end
     end
+  end
+
+  it 'can load collectors' do
+    c = @daemon.list_collectors.payload
+    c[:collectors].should_not be_nil
+    c[:collectors].should include(:basic)
+    c[:collectors].should include(:advanced)
+  end
+
+  it 'can load instances from collectors' do
+    c = @daemon.list_instances.payload
+    c[:instances].should_not be_nil
+    c[:instances].should include(:basic)
+    c[:instances][:basic].should include(nil)
+    c[:instances][:advanced].should include(:test1)
+  end
+
+  it 'can publish collector metadata (basic)' do
+    c = @daemon.describe_collector({:collector => "basic"}).payload
+    puts c
+  end
+
+  it 'can publish collector metadata (advanced)' do
+    c = @daemon.describe_collector({:collector => "advanced"}).payload
+    puts c
   end
 
 #  it 'can send a check result' do

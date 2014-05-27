@@ -130,6 +130,18 @@ module Akwire
       @module = mod
       @props = {}
       @props[:name] = name
+      @props[:description] = "no description provided"
+      @props[:units] = "unit"
+      @props[:type] = :absolute
+    end
+    
+    def describe__
+      {
+        :name => @props[:name],
+        :description => @props[:description],
+        :units => @props[:units],
+        :type => @props[:type],
+      }
     end
 
     # dsl methods
@@ -148,6 +160,7 @@ module Akwire
     end
 
     def type(val)
+      raise "Bad type: #{val}" unless [:gauge, :rate, :absolute, :timer, :delta, :counter].include?(val)
       @props[:type] = val
     end
 
@@ -187,13 +200,41 @@ module Akwire
       @props[:reports] = {}
       @props[:checks] = {}
 
-      @props[:version] = ""
+      @props[:name] = nil
+      @props[:version] = nil
       @props[:authors] = []
-      @props[:description] = ""
-      @props[:platform] = ""
-      @props[:arch] = ""
+      @props[:description] = nil
+      @props[:platform] = nil
+      @props[:arch] = nil
 
       @settings = {}
+    end
+
+    def describe__
+      def describe_measurements
+        i = []
+        @props[:measurements].each { |name,m|
+          i << m.describe__
+        }
+        i
+      end
+
+      def describe_options
+        i = {}
+      end
+
+      def describe_patterns
+        i = {}
+      end
+
+      {
+        :name => @props[:name],
+        :version => @props[:version],
+        :description => @props[:description],
+        :measurements => describe_measurements,
+        :options => describe_options,
+        :patterns => describe_patterns,
+      }
     end
 
     # Properties set by the author of the collector
@@ -248,9 +289,11 @@ module Akwire
       @props[:checks][name] = c
     end
 
-    def pattern(name, &block)
+    def pattern(name, matcher=nil, &block)
       p = PatternDsl.new(name,self)
-      p.instance_eval(&block)
+      if block
+        p.instance_eval(&block)
+      end
       @props[:patterns][name] = p
     end
 
@@ -328,18 +371,28 @@ module Akwire
       @authors = instance.props[:authors] if @authors.nil?
 
       if (instance_name.nil?)
-        @logger.info("configured collector singleton",
+        @logger.info("configured collector",
                      {
-                       :collector => @name
+                       :collector => @name,
+                       :singleton => true
                      })
       else
-        @logger.info("configured collector instance", 
+        @logger.info("configured collector", 
                      {
                        :collector => @name,
                        :instance => instance_name
                      })
       end
+    end
 
+    def instances
+      @instances.keys
+    end
+
+    def describe
+      instance = CollectorDsl.new
+      instance.instance_eval(File::read(@file), @file)
+      instance.describe__
     end
 
     def apply_settings(instance,instance_name,settings)
