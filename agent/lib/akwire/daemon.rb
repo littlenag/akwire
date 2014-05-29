@@ -106,11 +106,15 @@ module Akwire
     end
 
     def describe_collector(msg)
-      Ok["collector-description", :meta => @collectors[msg[:collector]].describe]
+      Ok["collector-description", 
+         :collector => msg[:collector], 
+         :meta => @collectors[msg[:collector]].describe]
     end
 
-    def invoke_collector(msg)
-      Ok["collector-observations", :data => @collectors[msg[:collector]].collect]
+    def collect_all_measurements(msg)
+      Ok["collector-measurements", 
+         :collector => msg[:collector], 
+         :measurements => @collectors[msg[:collector]].collect]
     end
 
     def hello_agent(msg)

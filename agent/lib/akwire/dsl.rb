@@ -144,6 +144,10 @@ module Akwire
       }
     end
 
+    def collect__
+Measurement.new(m_def, m_def.prop(:callback).call())
+    end
+
     # dsl methods
 
     def collect(&block)
@@ -409,18 +413,14 @@ module Akwire
     def collect
       obs = []
       @instances.each_pair { |instance_name, instance|
-        case instance.settings[:mode]
-          when :passive then next
-          when :active then
-          instance.props[:measurements].each_pair { |measurement_name,measurement_def|
-            @logger.debug("collecting measurements",
-                         {
-                           :collector => @name,
-                           :instance => instance_name
-                         })
-            obs << Measurement.new(measurement_def, measurement_def.prop(:callback).call())
-          }
-        end
+        @logger.debug("collecting measurements",
+                      {
+                        :collector => @name,
+                        :instance => instance_name
+                      })
+        instance.props[:measurements].each_pair { |m_name,m_def|
+          obs << m_def.collect
+        }
       }
       return obs
     end
