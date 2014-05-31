@@ -87,11 +87,11 @@ describe 'Akwire::Daemon' do
     c[:instances][:advanced].should include(:test1)
   end
 
-  it 'can publish collector metadata (basic)' do
-    c = @daemon.describe_collector({:collector => "basic"}).payload
-    puts c
-    puts @daemon.collect_all_measurements({:collector => "basic"}).payload
-  end
+#  it 'can publish collector metadata (basic)' do
+#    c = @daemon.describe_collector({:collector => "basic"}).payload
+#    puts c
+#    puts @daemon.collect_all_measurements({:collector => "basic"}).payload
+#  end
 
   it 'can publish collector metadata (advanced)' do
     c = @daemon.describe_collector({:collector => "advanced"}).payload

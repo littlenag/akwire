@@ -77,11 +77,20 @@ module Akwire
   end
 
   class PatternDsl
-    def initialize(name, mod)
+    def initialize(base_name, matcher, mod)
       @logger = Logger.get
       @module = mod
       @props = {}
-      @props[:name] = name
+      @props[:id] = base_name
+      @props[:matcher] = matcher
+      # inject a new method into the class that captures this pattern object so that
+      # it can be referred to by other definitions
+      the_pattern = self
+      mod.define_singleton_method(base_name, lambda{the_pattern})
+    end
+
+    def id
+      @props[:id]
     end
 
     # dsl methods
@@ -125,19 +134,40 @@ module Akwire
   end
 
   class MeasurementDsl
-    def initialize(name, mod)
+    def initialize(base_name, opts, mod)
       @logger = Logger.get
       @module = mod
       @props = {}
-      @props[:name] = name
+      @props[:id] = id__(base_name, opts)
       @props[:description] = "no description provided"
       @props[:units] = "unit"
       @props[:type] = :absolute
     end
+
+    def id
+      @props[:id]
+    end
+
+    def id__(base_name, opts)
+      case
+        when (base_name.is_a?(Array) and opts.empty?) then
+        base_name
+        when (base_name.is_a?(Symbol) and opts.empty?) then
+        [base_name]
+        when (base_name.is_a?(Symbol) and not opts.empty?) then
+        i = {base_name => true}
+        opts.each { |k,v|
+          i.merge!(k=>v.id)
+        }
+        i
+      else
+        raise "Invalid measurement name."
+      end
+    end
     
     def describe__
       {
-        :name => @props[:name],
+        :id => @props[:id],
         :description => @props[:description],
         :units => @props[:units],
         :type => @props[:type],
@@ -145,7 +175,7 @@ module Akwire
     end
 
     def collect__
-Measurement.new(m_def, m_def.prop(:callback).call())
+      Measurement.new(m_def, m_def.prop(:callback).call())
     end
 
     # dsl methods
@@ -273,32 +303,32 @@ Measurement.new(m_def, m_def.prop(:callback).call())
       @props[:options][name] = Option.new(opts)
     end
 
-    def measurement(name, opts = {}, &block)
-      m = MeasurementDsl.new(name,self)
+    def measurement(base_name, opts = {}, &block)
+      m = MeasurementDsl.new(base_name,opts,self)
       m.instance_eval(&block)
-      @props[:measurements][name] = m
+      @props[:measurements][m.id] = m
     end
 
     # status or health check
     def report(name, opts = {}, &block)
       r = ReportDsl.new(name,self)
       r.instance_eval(&block)
-      @props[:reports][name] = r
+      @props[:reports][r.id] = r
     end
 
     # status or health check
     def check(name, opts = {}, &block)
       c = CheckDsl.new(name,self)
       c.instance_eval(&block)
-      @props[:checks][name] = c
+      @props[:checks][c.id] = c
     end
 
-    def pattern(name, matcher=nil, &block)
-      p = PatternDsl.new(name,self)
+    def pattern(base_name, matcher=nil, &block)
+      p = PatternDsl.new(base_name,matcher,self)
       if block
         p.instance_eval(&block)
       end
-      @props[:patterns][name] = p
+      @props[:patterns][p.id] = p
     end
 
     # option :data_points,
