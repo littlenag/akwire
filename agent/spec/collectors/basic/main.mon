@@ -10,9 +10,9 @@ measurement :test_value do
 #  description "Description"
 #  units "unit"
 #  type :absolute
-  collect { 1 }
+  collect { observe(1) }
 end
 
 measurement :test_observe do
-  collect { observe(1) }
+  collect { observe(2) }
 end

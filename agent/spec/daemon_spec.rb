@@ -87,16 +87,25 @@ describe 'Akwire::Daemon' do
     c[:instances][:advanced].should include(:test1)
   end
 
-#  it 'can publish collector metadata (basic)' do
+#  it 'can describe collector metadata (basic)' do
 #    c = @daemon.describe_collector({:collector => "basic"}).payload
 #    puts c
-#    puts @daemon.collect_all_measurements({:collector => "basic"}).payload
 #  end
 
-  it 'can publish collector metadata (advanced)' do
-    c = @daemon.describe_collector({:collector => "advanced"}).payload
-    puts c
+  it 'can publish collector measurements (basic)' do
+    c = @daemon.collect_all_measurements({:collector => "basic"}).payload
+    c[:measurements].should_not be_nil
   end
+
+  it 'can publish collector measurements (advanced)' do
+    c = @daemon.collect_all_measurements({:collector => "advanced"}).payload
+    c[:measurements].should_not be_nil
+  end
+
+#  it 'can publish collector metadata (advanced)' do
+#    puts @daemon.describe_collector({:collector => "advanced"}).payload
+#    puts @daemon.collect_all_measurements({:collector => "basic"}).payload
+#  end
 
 #  it 'can send a check result' do
 #    async_wrapper do

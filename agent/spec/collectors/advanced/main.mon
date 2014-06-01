@@ -29,22 +29,16 @@ pattern :bounded_by_enum, ["tx", "rx"] do
   description "Bounded pattern by enum"
 end
 
-# Multi-measurement def
-measurement [:test_value_rx, :test_value_tx] do
-  collect {
-    observe(1, :test_value_rx)
-    observe(2, :test_value_tx)
-  }
-end
-
 # Templated-measurement def
-measurement :test_value, :regex => bounded_by_regex do
+measurement :test_value,
+            :regex => bounded_by_regex, 
+            :enum => bounded_by_enum  do
 #  it's ok if these are left out
 #  description "Description"
 #  units "none"
 #  type :absolute
   collect { 
-    observe(1, :regex => "foo")
+    observe(1, :regex => "bar", :enum => "tx")
   }
 end
 

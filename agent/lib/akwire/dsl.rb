@@ -21,23 +21,28 @@ module Akwire
       @def
     end
 
+    def to_hash
+      raise "must override"
+    end
+
   end
 
   class Measurement < Observation
-    def initialize(defn, value)
+    def initialize(defn, id, value)
       super defn
+      @id = id
       @value = Float(value)
     end
 
     def to_s
-      "#{defn.mod.prop(:name)}/#{defn.prop(:name)} => #{@value}"
+      "#{@id} => #{@value}"
     end
 
     def to_hash
       {
         :type => "m",
 #        :collector => collector,
-        :key => key,
+        :id => @id,
         :value => @value
       }
     end
@@ -93,6 +98,20 @@ module Akwire
       @props[:id]
     end
 
+    def validate__(v)
+      if not v.is_a?(String)
+        false
+      elsif @props[:matcher].nil?
+        true
+      elsif @props[:matcher].is_a?(Regexp) and @props[:matcher].match(v)
+        true
+      elsif @props[:matcher].is_a?(Array) and @props[:matcher].include?(v)
+        true 
+      else
+        false
+      end
+    end
+
     # dsl methods
 
     def enum(*vals)
@@ -134,40 +153,33 @@ module Akwire
   end
 
   class MeasurementDsl
-    def initialize(base_name, opts, mod)
+    def initialize(base_name, patterns, mod)
       @logger = Logger.get
       @module = mod
       @props = {}
-      @props[:id] = id__(base_name, opts)
+      @props[:name] = base_name
+      @props[:patterns] = patterns
       @props[:description] = "no description provided"
       @props[:units] = "unit"
       @props[:type] = :absolute
     end
 
     def id
-      @props[:id]
+      @props[:name]
     end
 
     def id__(base_name, opts)
-      case
-        when (base_name.is_a?(Array) and opts.empty?) then
-        base_name
-        when (base_name.is_a?(Symbol) and opts.empty?) then
-        [base_name]
-        when (base_name.is_a?(Symbol) and not opts.empty?) then
-        i = {base_name => true}
-        opts.each { |k,v|
-          i.merge!(k=>v.id)
-        }
-        i
-      else
-        raise "Invalid measurement name."
-      end
+      raise "Name must be a symbol" unless base_name.is_a?(Symbol)
+      id = {:name => base_name}
+      opts.each { |k,v|
+        id.merge!(k=>v.id)
+      }
+      id
     end
     
     def describe__
       {
-        :id => @props[:id],
+        :name => @props[:name],
         :description => @props[:description],
         :units => @props[:units],
         :type => @props[:type],
@@ -175,7 +187,44 @@ module Akwire
     end
 
     def collect__
-      Measurement.new(m_def, m_def.prop(:callback).call())
+      def m_id(opts)
+        {:name => @props[:name]}.merge(opts)
+      end
+
+      def invoke
+        @observed_values = []
+        @props[:callback].call()
+        @observed_values
+      end
+
+      @logger.debug("collecting measurements", :defn => @props[:name])
+
+      obs = []
+
+      invoke.each do |o|
+        m = Measurement.new(self, m_id(o[1]), o[0])
+        @logger.debug("observation", :obs => m.to_hash)
+        obs << m
+      end
+      
+      return obs
+    end
+
+    def validate_pattern_params__(params)
+      params.each { |k,v|
+        raise "Pattern name #{k} must be a symbol" unless k.is_a?(Symbol)
+      }
+
+      pattern_defs = @props[:patterns]
+      pattern_defs.each { |name, defn|
+        raise "Missing values for pattern param: #{name}" if params[name].nil?
+      }
+
+      params.each { |k,v|
+        raise "Value #{v} for pattern #{k} not a valid type (e.g. String)" unless v.is_a?(String)
+        raise "Value #{v} for pattern #{k} is not valid for pattern" unless pattern_defs[k].validate__(v)
+      }
+      params
     end
 
     # dsl methods
@@ -198,7 +247,8 @@ module Akwire
       @props[:type] = val
     end
 
-    def observe(m,opts={})
+    def observe(v,pattern_params={})
+      @observed_values << [v, validate_pattern_params__(pattern_params)]
     end
 
     def option(opt)
@@ -271,6 +321,14 @@ module Akwire
       }
     end
 
+    def validate_pattern_refs__(pattern_refs)
+      pattern_refs.each { |k,v|
+        raise "Pattern name #{k} must be a symbol" unless k.is_a?(Symbol)
+        raise "Pattern target #{v} must reference a valid pattern definition" unless v.is_a?(PatternDsl)
+      }
+      pattern_refs
+    end
+
     # Properties set by the author of the collector
     def props
       @props
@@ -303,8 +361,8 @@ module Akwire
       @props[:options][name] = Option.new(opts)
     end
 
-    def measurement(base_name, opts = {}, &block)
-      m = MeasurementDsl.new(base_name,opts,self)
+    def measurement(base_name, pattern_refs = {}, &block)
+      m = MeasurementDsl.new(base_name,validate_pattern_refs__(pattern_refs),self)
       m.instance_eval(&block)
       @props[:measurements][m.id] = m
     end
@@ -449,7 +507,7 @@ module Akwire
                         :instance => instance_name
                       })
         instance.props[:measurements].each_pair { |m_name,m_def|
-          obs << m_def.collect
+          obs << m_def.collect__
         }
       }
       return obs
