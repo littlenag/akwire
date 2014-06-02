@@ -18,8 +18,12 @@
     "advanced" : {
       "test1" : {
 	"mode" : "passive",
-	"basic_number" : "1",
-	"basic_string" : "foo"
+	"interval" : 5,
+	"options" : {
+	  "basic_value" : "asdf",
+	  "basic_number" : "1",
+	  "basic_string" : "foo"
+	}
       }
     }
   }

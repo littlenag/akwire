@@ -5,19 +5,25 @@ version '0.0.1'
 
 description "Advanced collector"
 
-option :basic_number,
-       :description => "Some integer value"
+option :basic_value
 
-option :basic_string,
-       :description => "Some string value"
+option :basic_number do
+  type Integer
+end
+
+option :basic_string do
+  description "Some string value"
+  type String
+end
 
 # Boolean, Integer, Float, String
 # Array of the above, plus Json blob
 
-option :defaulted_number,
-       :description => "Defaulted number",
-       :type => Integer,
-       :default => 5
+option :defaulted_number do
+  description "Defaulted number"
+  type Integer
+  default 5
+end
 
 pattern :unbounded
 
@@ -37,7 +43,10 @@ measurement :test_value,
 #  description "Description"
 #  units "none"
 #  type :absolute
-  collect { 
+  collect {
+    bv = get_option(:basic_value)
+    bn = get_option(:basic_number)
+    dn = get_option(:defaulted_number)
     observe(1, :regex => "bar", :enum => "tx")
   }
 end

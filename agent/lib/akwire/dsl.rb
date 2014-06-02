@@ -142,13 +142,76 @@ module Akwire
     # aperiodic data types: event, log, alert
   end
 
-  class Option
-    def initialize(params)
-#option :collect_loopback,
-#       :description => "When true will collect stats for the loopback device",
-#       :type => Boolean,
-#       :default => false
-      @params = params
+  class OptionDsl
+    def initialize(name, mod)
+      @logger = Logger.get
+      @module = mod
+      @props = {}
+      @props[:name] = name
+      @props[:description] = "no description provided"
+      @props[:default] = nil
+      @props[:type] = Object
+
+      # this could get a whole lot more powerful:
+      # support auto-complete methods
+      # enumerators/paging for possible values
+      # arbitary json
+    end
+
+    def props
+      @props
+    end
+
+    def defaulted__?
+      not @props[:default].nil?
+    end
+
+    def validate__(v)
+      case @props[:type]
+      when String then
+        true
+      when Object then 
+        true
+      when Boolean then
+        v.is_a?(TrueClass) or v.is_a?(FalseClass)
+      when Integer then
+        begin
+          puts "fo"
+          Integer(v)
+          return true
+        rescue
+          puts "foff"
+          return false
+        end
+      when Float then
+        begin
+          Float(v)
+          true
+        rescue
+          false
+        end
+      end
+    end
+
+    # dsl methods
+
+    def default(val)
+      raise "Default value #{val} does not match type #{@props[:type]}" unless validate__(val)
+      @props[:default] = val
+    end
+
+    def description(val)
+      @props[:description] = val
+    end
+
+    def type(val)
+      raise "Bad type: #{val}" unless [String, Float, Integer, Boolean].include?(val)
+      @props[:type] = val
+    end
+
+    def units(val, included_in_key=false)
+      @props[:units] = val
+      @props[:units_included_in_key] = included_in_key
     end
   end
 
@@ -251,10 +314,9 @@ module Akwire
       @observed_values << [v, validate_pattern_params__(pattern_params)]
     end
 
-    def option(opt)
-      # get the configured value of some option
-      raise "Missing option: #{opt} from settings #{mod.settings}" if mod.settings[opt.to_s].nil?
-      mod.settings[opt.to_s]
+    def get_option(opt)
+      raise "Missing option: #{opt} from settings #{mod.settings}" if mod.settings[:options][opt].nil?
+      mod.settings[:options][opt]
     end
 
     # accessor
@@ -358,17 +420,19 @@ module Akwire
     def option(name, opts={})
       raise "Option name must be a Symbol" unless name.is_a?(Symbol)
       raise "Option name must be unique" unless @props[:options].nil?
-      @props[:options][name] = Option.new(opts)
+      @props[:options][name] = Option.new(name, opts)
     end
 
-    def measurement(base_name, pattern_refs = {}, &block)
-      m = MeasurementDsl.new(base_name,validate_pattern_refs__(pattern_refs),self)
+    def measurement(name, pattern_refs = {}, &block)
+      raise "Measurement name #{name} must be a Symbol" unless name.is_a?(Symbol)
+      m = MeasurementDsl.new(name,validate_pattern_refs__(pattern_refs),self)
       m.instance_eval(&block)
       @props[:measurements][m.id] = m
     end
 
     # status or health check
     def report(name, opts = {}, &block)
+      raise "Report name #{name} must be a Symbol" unless name.is_a?(Symbol)
       r = ReportDsl.new(name,self)
       r.instance_eval(&block)
       @props[:reports][r.id] = r
@@ -376,27 +440,28 @@ module Akwire
 
     # status or health check
     def check(name, opts = {}, &block)
+      raise "Check name #{name} must be a Symbol" unless name.is_a?(Symbol)
       c = CheckDsl.new(name,self)
       c.instance_eval(&block)
       @props[:checks][c.id] = c
     end
 
-    def pattern(base_name, matcher=nil, &block)
-      p = PatternDsl.new(base_name,matcher,self)
+    def pattern(name, matcher=nil, &block)
+      raise "Pattern name #{name} must be a Symbol" unless name.is_a?(Symbol)
+      p = PatternDsl.new(name,matcher,self)
       if block
         p.instance_eval(&block)
       end
       @props[:patterns][p.id] = p
     end
 
-    # option :data_points,
-    #        :description => "Number of data points to include in average check (smooths out spikes)",
-    #        :default => 1
-    def option(name, opts)
-      unless name.is_a?(Symbol)
-        raise "Option name #{name} must be a Symbol"
+    def option(name, &block)
+      raise "Option name #{name} must be a Symbol" unless name.is_a?(Symbol)
+      o = OptionDsl.new(name,self)
+      if block
+        o.instance_eval(&block)
       end
-      @props[:options][name] = opts
+      @props[:options][name] = o
     end
   end
 
@@ -466,13 +531,15 @@ module Akwire
         @logger.info("configured collector",
                      {
                        :collector => @name,
-                       :singleton => true
+                       :singleton => true,
+                       :settings => settings
                      })
       else
         @logger.info("configured collector", 
                      {
                        :collector => @name,
-                       :instance => instance_name
+                       :instance => instance_name,
+                       :settings => settings
                      })
       end
     end
@@ -487,11 +554,28 @@ module Akwire
       instance.describe__
     end
 
-    def apply_settings(instance,instance_name,settings)
-      settings = {} if settings.nil?
-      instance.settings[:instance_name] = instance_name
-      instance.settings[:mode] = settings[:mode] || :passive
-      instance.settings[:interval] = settings[:interval] || 5
+    def apply_settings(instance,instance_name,settings={})
+      settings[:instance_name] = instance_name
+      settings[:mode] = settings[:mode] || :passive
+      settings[:interval] = settings[:interval] || 5
+      settings[:options] = settings[:options] || {}
+
+      options = instance.props[:options]
+      options.each { |n,o|
+        # Each option had best appear or be defaulted
+        if settings[:options][n].nil?
+          if o.defaulted__?
+            # Is there a default value?
+            @logger.info("Applying default option value", :instance => instance_name, :value => o.props[:default], :option => n)
+            settings[:options][n] = o.props[:default]
+          else
+            # Nope, error out here
+            raise "Missing required value for option #{n}"
+          end
+        end
+      }
+
+      instance.settings.merge!(settings)
     end
 
     def configured?
