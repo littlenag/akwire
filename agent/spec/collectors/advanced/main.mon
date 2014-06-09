@@ -19,6 +19,12 @@ end
 # Boolean, Integer, Float, String
 # Array of the above, plus Json blob
 
+# better way to think
+# write 'plugins'
+# a 'collector' is an instance of a 'plugin'
+# can have collector plugins and collector instances
+# collector can then just be a more general name
+
 option :defaulted_number do
   description "Defaulted number"
   type Integer
@@ -37,7 +43,7 @@ end
 
 # Templated-measurement def
 measurement :test_value,
-            :regex => bounded_by_regex, 
+            :regex => bounded_by_regex,
             :enum => bounded_by_enum  do
 #  it's ok if these are left out
 #  description "Description"
