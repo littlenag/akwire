@@ -2,6 +2,7 @@ import akka.actor.ActorSystem
 import conf.AppConfiguration
 import org.springframework.scala.context.function.FunctionalConfigApplicationContext
 import play.api.GlobalSettings
+import play.api.Application
 import org.slf4j.{LoggerFactory, Logger}
 
 /**
@@ -33,9 +34,20 @@ object Global extends GlobalSettings {
   // get hold of the actor system
   val system = ctx.getBean(classOf[ActorSystem])
 
+  override def onStart(app: Application) {
+    logger.info("Application has started")
+  }
+
   //val prop = SpringExtentionImpl(system).props("countingActor")
 
   // use the Spring Extension to create props for a named actor bean
   //val counter = system.actorOf(prop, "counter")
+
+  // Load the self-health engine
+
+  // Ensure that we're using GMT, makes Joda happy
+  //TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+  //DateTimeZone.setDefault(DateTimeZone.UTC);
+
 
 }

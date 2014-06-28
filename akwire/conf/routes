@@ -4,6 +4,9 @@
 # Note: @controllers syntax signifies the actual controller instance, retrieved via GlobalSettings.getController().
 # ~~~~
 
+POST    /ingest                     @controllers.Ingest.submitObservations
+PUT     /ingest                     @controllers.Ingest.submitObservations
+
 # Single endpoint for serving AngularJS
 GET     /                           @controllers.Application.index
 GET     /randomUUID                 @controllers.Application.randomUUID
