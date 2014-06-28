@@ -1,7 +1,7 @@
-require File.dirname(__FILE__) + '/../lib/sensu/utilities.rb'
+require File.dirname(__FILE__) + '/../lib/akwire/utilities.rb'
 
-describe 'Sensu::Utilities' do
-  include Sensu::Utilities
+describe 'Akwire::Utilities' do
+  include Akwire::Utilities
 
   it 'can redact sensitive info from a hash' do
     hash = {

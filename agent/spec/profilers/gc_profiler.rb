@@ -1,4 +1,4 @@
-module Sensu
+module Akwire
   module Extension
     class GCProfiler < Generic
       def name

@@ -3,7 +3,7 @@ module Akwire
     def initialize
       @logger = Logger.get
       @collectors = Hash.new
-      @collector_dir = nil
+      @collectors_dir = nil
       @collector_gems = false
     end
 
@@ -15,10 +15,14 @@ module Akwire
       @collectors.keys
     end
 
+    def to_s
+      puts @collectors
+    end
+
     def instances
-      i = []
-      @collectors.keys.each { |name, collector|
-        i << collector.instances
+      i = {}
+      @collectors.each { |name, collector|
+        i[name] = collector.instances
       }
       i
     end
@@ -28,8 +32,8 @@ module Akwire
     end
 
     def load_directory(dir)
-      @collector_dir = dir
-      Dir[@collector_dir + "/**/main.mon"].each do |file|
+      @collectors_dir = dir
+      Dir[@collectors_dir + "/**/main.mon"].each do |file|
         c = Collector.new(file)
         @collectors[c.name.to_sym] = c
         @logger.info('collector loaded', {:name => c.name})

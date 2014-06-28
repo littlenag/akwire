@@ -1,0 +1,46 @@
+
+
+    <div class="row" ng-controller="AgentCtrl as ac">
+        &NonBreakingSpace;
+
+        <div class="row">
+            <div class="form-group">
+                <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Rules...">
+                <hr>
+            </div>
+
+            <table id="agent_list" class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Host</th>
+                    <th>Observer</th>
+                    <th>Key</th>
+                    <th>Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="agt in ac.agents | filter:searchText">
+                    <td>
+                        {{ agt.agentId }}
+                    </td>
+                    <td>
+                        {{ agt.hostName }}
+                    </td>
+                    <td>
+                        {{ agt.connected }}
+                    </td>
+                </tr>
+                <tr ng-hide="ac.agents.length">
+                    <td colspan="4">
+                        <p class="text-center">No Incidents</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <hr>
+            <h4>Debug:</h4>
+            <pre>{{ ac.agents | json }}</pre>
+        </div>
+
+    </div>

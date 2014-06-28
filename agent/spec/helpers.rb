@@ -6,8 +6,8 @@ module Helpers
     @options = {
       :config_file => File.join(File.dirname(__FILE__), 'config.json'),
       :config_dirs => [File.join(File.dirname(__FILE__), 'conf.d')],
-      :extension_dir => File.join(File.dirname(__FILE__), 'extensions'),
-      :log_level => :fatal
+      :collectors_dir => File.join(File.dirname(__FILE__), 'collectors'),
+      :log_level => :debug
     }
   end
 
@@ -25,24 +25,47 @@ module Helpers
     @amq ? @amq : setup_amq
   end
 
-  def keepalive_queue(&block)
-    amq.queue('keepalives', :auto_delete => true) do |queue|
-      queue.bind(amq.direct('keepalives')) do
+  class SimpleProps
+    def initialize(id)
+      @id = id
+    end
+    
+    def correlation_id
+      @id
+    end
+  end
+
+  def setup_props
+    @props = SimpleProps.new("abcdef")
+  end
+
+  def props
+    @props ? @props : setup_props
+  end
+
+  def agent_tx_queue(&block)
+    amq.queue('akwire.agent.to.hub', :auto_delete => true) do |queue|
+      queue.bind(amq.direct('akwire.agent.to.hub')) do
         block.call(queue)
       end
     end
   end
 
-  def result_queue(&block)
-    amq.queue('results', :auto_delete => true) do |queue|
-      queue.bind(amq.direct('results')) do
+  def observations_queue(&block)
+    amq.queue('observations', :auto_delete => true) do |queue|
+      queue.bind(amq.direct('observations')) do
         block.call(queue)
       end
     end
   end
 
-  def timer(delay, &block)
-    periodic_timer = EM::PeriodicTimer.new(delay) do
+  def command_from_hub(payload)
+    ex = amq.fanout('akwire.hub.to.agent')
+    ex.publish(Oj.dump(payload), :routing_key => "12345-12345")
+  end
+
+  def timer(delay_in_seconds, &block)
+    periodic_timer = EM::PeriodicTimer.new(delay_in_seconds) do
       block.call
       periodic_timer.cancel
     end
@@ -59,15 +82,6 @@ module Helpers
 
   def async_done
     EM::stop_event_loop
-  end
-
-  def api_test(&block)
-    async_wrapper do
-      Sensu::API.test(options)
-      timer(0.5) do
-        block.call
-      end
-    end
   end
 
   def with_stdout_redirect(&block)
@@ -163,14 +177,6 @@ module Helpers
     def receive_data(data)
       data.should eq(expected)
       EM::stop_event_loop
-    end
-  end
-end
-
-RSpec::Matchers.define :contain do |block|
-  match do |actual|
-    actual.any? do |item|
-      block.call(item)
     end
   end
 end

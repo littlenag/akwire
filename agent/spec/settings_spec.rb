@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../lib/sensu/base.rb'
+require File.dirname(__FILE__) + '/../lib/akwire/base.rb'
 require File.dirname(__FILE__) + '/helpers.rb'
 
 describe 'Sensu::Settings' do

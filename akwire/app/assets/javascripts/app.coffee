@@ -18,6 +18,21 @@ angular.module('akwire.routeConfig', ['ngRoute'])
             .when('/', {
                 templateUrl: '/assets/partials/view-agents.html'
             })
+            .when('/agents', {
+                templateUrl: '/assets/partials/view-agents.html'
+            })
+            .when('/incidents', {
+                templateUrl: '/assets/partials/view-incidents.html'
+            })
+            .when('/alert-rules', {
+                templateUrl: '/assets/partials/view-rules.html'
+            })
+            .when('/admin', {
+                templateUrl: '/assets/partials/view-admin.html'
+            })
+            .when('/wiki', {
+                templateUrl: '/assets/partials/view-wiki.html'
+            })
             .when('/users/create', {
                 templateUrl: '/assets/partials/create.html'
             })

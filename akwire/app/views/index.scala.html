@@ -13,6 +13,7 @@
     <!-- Fixed navbar -->
     <header>
         <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+            <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                     <span class="sr-only">Toggle navigation</span>
@@ -20,7 +21,66 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#/">Akwire</a>
+                <a class="navbar-brand" href="/#/">Akwire</a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+
+                    <!-- the wiki! sops, special rendering plugins, etc -->
+                    <li ng-class="{ active: isActive('/wiki')}"><a href="/#/wiki">Wiki</a></li>
+
+                    <!-- agent management -->
+                    <li ng-class="{ active: isActive('/agents')}"><a href="/#/agents">Agents</a></li>
+
+                    <!--
+                      explore, sort, annotate, etc, both metrics, reports, and events
+                      charts, histograms, dashboards (GEQL)
+                      use a finder-like UI here
+                      status display & svg maps
+                    -->
+                    <li ng-class="{ active: isActive('/data')}"><a href="/#/data">Data</a></li>
+
+                    <li ng-class="{ active: isActive('/incidents')}"><a href="/#/incidents">Incidents</a></li>
+
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li role="presentation">
+                                <a href="/#/configure/tag-rules">Tagging Rules</a>
+                            </li>
+                            <li role="presentation">
+                                <a href="/#/configure/alert-rules">Alerting Rules</a>
+                            </li>
+                            <li role="presentation">
+                                <a href="/#/configure/notifications">Notifications</a>
+                            </li>
+                            <li role="presentation">
+                                <a href="/#/configure/profiles">Profiles</a>
+                            </li>
+                            <li role="presentation">
+                                <a href="/#/configure/role">Role</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">System<b class="caret"></b></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li role="presentation">
+                                <a href="/#/configure/tag-rules">Admin</a>
+                            </li>
+                            <li role="presentation">
+                                <a href="/#/configure/profiles">Account</a>
+                            </li>
+                            <li class="divider"></li>
+                            <li role="presentation">
+                                <a href="/#/configure/role">Logout</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
             </div>
         </div>
     </header>

@@ -1,0 +1,62 @@
+name 'advanced'
+#platform :linux
+#arch :noarch
+version '0.0.1'
+
+description "Advanced collector"
+
+option :basic_value
+
+option :basic_number do
+  type Integer
+end
+
+option :basic_string do
+  description "Some string value"
+  type String
+end
+
+# Boolean, Integer, Float, String
+# Array of the above, plus Json blob
+
+# better way to think
+# write 'plugins'
+# a 'collector' is an instance of a 'plugin'
+# can have collector plugins and collector instances
+# collector can then just be a more general name
+
+option :defaulted_number do
+  description "Defaulted number"
+  type Integer
+  default 5
+end
+
+pattern :unbounded
+
+pattern :bounded_by_regex, /foo|bar/ do
+  description "Bounded pattern by regex"
+end
+
+pattern :bounded_by_enum, ["tx", "rx"] do
+  description "Bounded pattern by enum"
+end
+
+# Templated-measurement def
+measurement :test_value,
+            :regex => bounded_by_regex,
+            :enum => bounded_by_enum  do
+#  it's ok if these are left out
+#  description "Description"
+#  units "none"
+#  type :absolute
+  collect {
+    bv = get_option(:basic_value)
+    bn = get_option(:basic_number)
+    dn = get_option(:defaulted_number)
+    observe(1, :regex => "bar", :enum => "tx")
+  }
+end
+
+measurement :test_observe do
+  collect { observe(1) }
+end
