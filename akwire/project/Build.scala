@@ -10,13 +10,12 @@ object ApplicationBuild extends Build {
   val appDependencies = Seq(
     /** JAVA DEPS **/
     // replace with spring
-    "com.google.inject" % "guice" % "3.0",
+    //"com.google.inject" % "guice" % "3.0",
     "javax.inject" % "javax.inject" % "1",
 
     "com.rabbitmq" % "amqp-client" % "3.3.0",
 
     "org.mockito" % "mockito-core" % "1.9.5" % "test",
-
 
     /** SCALA DEPS **/
     "org.reactivemongo" %% "reactivemongo" % "0.10.0",
@@ -27,9 +26,7 @@ object ApplicationBuild extends Build {
 
     // Update to RC1 when feasible
     "org.springframework.scala" %% "spring-scala" % "1.0.0.RC1"
-
   )
-
 
   // Add your own project settings here'
   val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
