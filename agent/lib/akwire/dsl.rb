@@ -143,6 +143,15 @@ module Akwire
   end
 
   class OptionDsl
+    def initialize(params)
+#option :collect_loopback,
+#       :description => "When true will collect stats for the loopback device",
+#       :type => Boolean,
+#       :default => false
+      @params = params
+    end
+  end
+
     def initialize(name, mod)
       @logger = Logger.get
       @module = mod
@@ -317,6 +326,12 @@ module Akwire
     def get_option(opt)
       raise "Missing option: #{opt} from settings #{mod.settings}" if mod.settings[:options][opt].nil?
       mod.settings[:options][opt]
+    end
+
+    def option(opt)
+      # get the configured value of some option
+      raise "Missing option: #{opt} from settings #{mod.settings}" if mod.settings[opt.to_s].nil?
+      mod.settings[opt.to_s]
     end
 
     # accessor
@@ -592,6 +607,8 @@ module Akwire
                       })
         instance.props[:measurements].each_pair { |m_name,m_def|
           obs << m_def.collect__
+                           :instance => instance_name
+                         })
         }
       }
       return obs
