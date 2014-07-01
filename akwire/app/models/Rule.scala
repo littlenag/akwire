@@ -1,10 +1,15 @@
 package models
 
-import reactivemongo.bson.{BSONObjectID, BSONValue}
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-abstract class Rule( id: Option[BSONObjectID],
+import com.novus.salat._
+import com.novus.salat.global._
+import com.mongodb.casbah.Imports._
+import com.novus.salat.annotations._
+
+@Salat
+abstract class Rule( id: ObjectId,
                  name: String,
                  pattern: String,
                  expression: String,
@@ -17,11 +22,11 @@ abstract class Rule( id: Option[BSONObjectID],
 
   // rule context
 
-  abstract def makeAlertingRule(): String
+  def makeAlertingRule(): String
   //abstract def handleAlertTrigger(events: List[EventBean]) : List[TriggerAlert]
 }
 
-case class BasicThreshold( id: Option[BSONObjectID],
+case class BasicThreshold( id: ObjectId,
                       name: String,
                       pattern: String,
                       expression: String,
@@ -30,11 +35,11 @@ case class BasicThreshold( id: Option[BSONObjectID],
                       active: Boolean) extends Rule(id,name,pattern,expression,sop,createdOn,active) {
 
   override def makeAlertingRule(): String = {
-    return String.format("select * from measurements where (%s) and (%s)", pattern, expression);
+    return format("select * from measurements where (%s) and (%s)", pattern, expression);
   }
 }
 
-case class CountingThreshold( id: Option[BSONObjectID],
+case class CountingThreshold( id: ObjectId,
                          name: String,
                          pattern: String,
                          expression: String,
@@ -46,7 +51,7 @@ case class CountingThreshold( id: Option[BSONObjectID],
 
   override def makeAlertingRule(): String = {
     if (triggerCount > 1) {
-      return String.format("context measurementsByStream select * from pattern [ " +
+      return format("context measurementsByStream select * from pattern [ " +
         " every ( " +
         "  firstObs = measurements( (%1$s) and (%2$s) ) -> " +
         "   (" +
@@ -55,25 +60,14 @@ case class CountingThreshold( id: Option[BSONObjectID],
         " )" +
         "]", pattern, expression, triggerCount);
     } else {
-      return String.format("select * from measurements where (%s) and (%s)", pattern, expression);
+      return format("select * from measurements where (%s) and (%s)", pattern, expression);
     }
   }
 }
 
 object Rule {
   import play.api.libs.json.Json
-
-  import play.modules.reactivemongo.json.BSONFormats._
-
-  implicit object OptionBSONObjectIDFormat extends PartialFormat[Option[BSONObjectID]] {
-    def partialReads: PartialFunction[JsValue, JsResult[Option[BSONObjectID]]] = {
-      case JsObject(("$oid", JsString(v)) +: Nil) => JsSuccess(Some(BSONObjectID(v)))
-    }
-    val partialWrites: PartialFunction[Option[BSONValue], JsValue] = {
-      case Some(oid:BSONObjectID) => Json.obj("$oid" -> oid.stringify)
-      case None => Json.obj("$oid" -> BSONObjectID.generate.stringify)
-    }
-  }
+  import JsonUtil._
 
   implicit val basicFormatter = Json.format[BasicThreshold]
   implicit val countingFormatter = Json.format[CountingThreshold]
@@ -81,9 +75,9 @@ object Rule {
   implicit object ruleFormat extends Format[Rule] {
     def writes(ts: Rule) = ts match {
       // this will get an implicit Writes[Dog] since d is a Dog
-      case r: BasicThreshold => Json.toJson(r)
+      case r: BasicThreshold => basicFormatter.writes(r)
       // this will get an implicit Writes[Cat] since c is a Cat
-      case r: CountingThreshold => Json.toJson(r)
+      case r: CountingThreshold => countingFormatter.writes(r)
       case r => throw new RuntimeException(s"Unknown rule $r")
     }
     def reads(json: JsValue) = (json \ "type").validate[String] match {

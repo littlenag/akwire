@@ -57,21 +57,25 @@ class Messaging {
 
   @PostConstruct
   def init = {
-    val factory = new ConnectionFactory()
+    try {
+      val factory = new ConnectionFactory()
 
-    factory.setHost(configuration.getString("rabbitmq.host").getOrElse("localhost"))
-    factory.setPort(configuration.getString("rabbitmq.port").getOrElse("5672").toInt)
+      factory.setHost(configuration.getString("rabbitmq.host").getOrElse("localhost"))
+      factory.setPort(configuration.getString("rabbitmq.port").getOrElse("5672").toInt)
 
-    // actors to:
-    //   - watch for new agents
-    //   - execute checks against agents
-    //   - publish recency data for each agent
-    //   - pull data and transform it
+      // actors to:
+      //   - watch for new agents
+      //   - execute checks against agents
+      //   - publish recency data for each agent
+      //   - pull data and transform it
 
-    sessionBroker = actorSystem.actorOf(Props[SessionBroker], "SessionBroker")
+      sessionBroker = actorSystem.actorOf(Props[SessionBroker], "SessionBroker")
 
-    logger.info("Connecting to RabbitMQ")
-    sessionBroker ! Connect(factory.newConnection())
+      logger.info("Connecting to RabbitMQ")
+      sessionBroker ! Connect(factory.newConnection())
+    } catch {
+      case ex:Exception =>
+    }
   }
 
   // take arguments at some point, kind of like NRPE

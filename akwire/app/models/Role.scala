@@ -1,18 +1,20 @@
 package models
 
-import reactivemongo.bson.BSONObjectID
 import org.joda.time.DateTime
 
-case class Role( id: Option[BSONObjectID],
+import com.novus.salat._
+import com.novus.salat.global._
+import com.mongodb.casbah.Imports._
+
+
+case class Role( id: ObjectId,
                  name: String,
-                 rules: Map[BSONObjectID, Rule],
+                 //rules: Map[ObjectId, Rule],
                  createdOn: DateTime,
                  active: Boolean)
 
 object Role {
   import play.api.libs.json.Json
-
-
-
+  import JsonUtil._
   implicit val roleFormatter = Json.format[Role]
 }
