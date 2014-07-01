@@ -21,7 +21,8 @@ object ApplicationBuild extends Build {
     "org.reactivemongo" %% "reactivemongo" % "0.10.0",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
 
-    "org.mongodb" %% "casbah" % "2.7.2",
+    "org.mongodb" %% "casbah" % "2.7.1",
+    "com.novus" %% "salat" % "1.9.8",
 
     /** Likely will want this eventually **/
     "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
