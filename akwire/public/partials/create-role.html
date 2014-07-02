@@ -1,0 +1,30 @@
+<div class="row">
+    <div ng-controller="CreateRoleCtrl as cuc">
+        <h1>Create Role</h1>
+
+        <form id="CreateRoleForm" name="CreateRoleForm" class="form-horizontal" role="form"
+              ng-submit="cuc.createRole()">
+            <legend class="sm-col-12">Basic Information</legend>
+
+            <div class="form-group">
+                <label id="lbl_name" for="name" class="col-sm-4 control-label" is-required="CreateRoleForm.name">Name</label>
+
+                <div class="col-sm-8">
+                    <input type="text" class="form-control" name="name" id="name" placeholder=""
+                           ng-model="cuc.role.name">
+                </div>
+            </div>
+
+            <pre>{{ cuc.role | json }}</pre>
+
+            <div class="form-group">
+                <div class="col-sm-offset-4 col-sm-8 text-right">
+                    <a ng-href="#" id="btn_cancel" class="btn btn-warning">Cancel</a>
+
+                    <button type="submit" class="btn btn-success" id="btn_create">Create Role</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+

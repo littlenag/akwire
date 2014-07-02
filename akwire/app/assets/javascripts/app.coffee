@@ -30,6 +30,9 @@ angular.module('akwire.routeConfig', ['ngRoute'])
             .when('/admin', {
                 templateUrl: '/assets/partials/view-admin.html'
             })
+            .when('/admin/roles/create', {
+                templateUrl: '/assets/partials/create-role.html'
+            })
             .when('/wiki', {
                 templateUrl: '/assets/partials/view-wiki.html'
             })
