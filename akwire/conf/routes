@@ -11,6 +11,12 @@ PUT     /ingest                     @controllers.Ingest.submitObservations
 GET     /                           @controllers.Application.index
 GET     /randomUUID                 @controllers.Application.randomUUID
 
+
+# Roles
+GET     /roles                     @controllers.Roles.findAllRoles
+POST    /roles                     @controllers.Roles.createRole
+
+
 # Agent management API
 GET     /agents                     @controllers.Agents.findAllAgents
 GET     /agents/:agentId            @controllers.Agents.findOneAgent(agentId:String)

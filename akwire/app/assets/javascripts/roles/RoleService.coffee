@@ -26,7 +26,7 @@ class RoleService
         @$log.debug "createRole #{angular.toJson(role, true)}"
         deferred = @$q.defer()
 
-        @$http.post('/role', role)
+        @$http.post('/roles', role)
         .success((data, status, headers) =>
                 @$log.info("Successfully created Role - status #{status}")
                 deferred.resolve(data)

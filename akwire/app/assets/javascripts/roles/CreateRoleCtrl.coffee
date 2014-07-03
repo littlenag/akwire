@@ -13,7 +13,7 @@ class CreateRoleCtrl
             (data) =>
                 @$log.debug "Promise returned #{data} Role"
                 @role = data
-                @$location.path("/")
+                @$location.path("/#/admin")
             ,
             (error) =>
                 @$log.error "Unable to create Role: #{error}"

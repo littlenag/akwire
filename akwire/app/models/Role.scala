@@ -10,7 +10,7 @@ import com.mongodb.casbah.Imports._
 case class Role( id: ObjectId,
                  name: String,
                  //rules: Map[ObjectId, Rule],
-                 createdOn: DateTime,
+                 created: DateTime,
                  active: Boolean)
 
 object Role {

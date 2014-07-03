@@ -8,7 +8,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
 import javax.inject.Named
 import play.api.mvc._
+import play.api.libs.json.Reads._
 import play.api.libs.json._
+//import play.api.libs.functional.syntax._
+import org.bson.types.ObjectId
+import org.joda.time.DateTime
 
 /**
  * @see
@@ -35,24 +39,35 @@ class Roles extends Controller with MongoController {
 
   def createRole = Action.async(parse.json) {
     request =>
-    /*
-     * request.body is a JsValue.
-     * There is an implicit Writes that turns this JsValue as a JsObject,
-     * so you can call insert() with this JsValue.
-     * (insert() takes a JsObject as parameter, or anything that can be
-     * turned into a JsObject using a Writes.)
-     */
-      request.body.validate[Role].map {
-        role =>
+      /*
+       * request.body is a JsValue.
+       * There is an implicit Writes that turns this JsValue as a JsObject,
+       * so you can call insert() with this JsValue.
+       * (insert() takes a JsObject as parameter, or anything that can be
+       * turned into a JsObject using a Writes.)
+       *
+       * http://www.playframework.com/documentation/2.2.2/ScalaJsonCombinators
+       */
+
+      // minLength(3) tupled
+      //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
+      val customReads: Reads[String] = (__ \ "name").read(minLength[String](3))
+
+      customReads.reads(request.body).fold(
+        invalid = { errors => Future.successful(BadRequest("invalid json")) },
+        valid = { res =>
+          val name: String = res
+          val role = new Role(ObjectId.get(), name, new DateTime(), true)
           collection.insert(role).map {
             lastError =>
               logger.debug(s"Successfully create Role with LastError: $lastError")
               Created(s"Role Created")
           }
-      }.getOrElse(Future.successful(BadRequest("invalid json")))
+        }
+      )
   }
 
-  def findRole = Action.async {
+  def findAllRoles = Action.async {
     // let's do our query
     val cursor: Cursor[Role] = collection.
       // find all
