@@ -8,17 +8,36 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
 import javax.inject.Named
 import play.api.mvc._
+import play.api.data._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
+import com.novus.salat.dao.SalatDAO
+
 //import play.api.libs.functional.syntax._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
+
+import play.api.Play.current
+import play.api.PlayException
+
+import com.mongodb.casbah.commons.Imports._
+import com.mongodb.casbah.{MongoConnection}
+
+import com.novus.salat.Context
+
+import controllers.mongoContext._
+
+import com.novus.salat._
+import com.novus.salat.global._
+import com.novus.salat.annotations._
+import com.novus.salat.dao._
+import com.mongodb.casbah.MongoConnection
 
 /**
  * @see
  */
 @Named
-class Roles extends Controller with MongoController {
+class Roles extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Roles])
 
@@ -29,13 +48,22 @@ class Roles extends Controller with MongoController {
    * the collection reference to avoid potential problems in development with
    * Play hot-reloading.
    */
-  def collection: JSONCollection = db.collection[JSONCollection]("roles")
+  //def collection: JSONCollection = db.collection[JSONCollection]("roles")
+
+//  def col = MongoConnection()(
+//    current.configuration.getString("mongodb.default.db")
+ //     .getOrElse(throw new PlayException("Configuration error",
+  //    "Could not find mongodb.default.db in settings"))
+   // )("roles")
 
   // ------------------------------------------ //
   // Using case classes + Json Writes and Reads //
   // ------------------------------------------ //
 
   import models._
+  import models.Role.roleFormatter
+
+  object RolesDAO extends SalatDAO[Role, ObjectId](MongoConnection()("akwire")("roles"))
 
   def createRole = Action.async(parse.json) {
     request =>
@@ -57,17 +85,31 @@ class Roles extends Controller with MongoController {
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { res =>
           val name: String = res
+
           val role = new Role(ObjectId.get(), name, new DateTime(), true)
-          collection.insert(role).map {
-            lastError =>
-              logger.debug(s"Successfully create Role with LastError: $lastError")
-              Created(s"Role Created")
-          }
+
+          RolesDAO.insert(role)
+          Future.successful(Created(s"Role Created"))
+
+//          collection.insert(role).map {
+//            lastError =>
+//              logger.debug(s"Successfully create Role with LastError: $lastError")
+//              Created(s"Role Created")
+//          }
         }
       )
   }
 
   def findAllRoles = Action.async {
+
+    //MongoDBObject("active" -> true, "created" -> -1)
+
+    Future {
+      val list = RolesDAO.find(MongoDBObject.empty).toList
+      Ok(Json.arr(list)(0))
+    }
+
+    /*
     // let's do our query
     val cursor: Cursor[Role] = collection.
       // find all
@@ -88,6 +130,8 @@ class Roles extends Controller with MongoController {
       roles =>
         Ok(roles(0))
     }
+    */
   }
-
 }
+
+

@@ -7,7 +7,7 @@ import com.novus.salat.global._
 import com.mongodb.casbah.Imports._
 
 
-case class Role( id: ObjectId,
+case class Role( _id: ObjectId,
                  name: String,
                  //rules: Map[ObjectId, Rule],
                  created: DateTime,
