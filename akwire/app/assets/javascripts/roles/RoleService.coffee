@@ -57,7 +57,7 @@ servicesModule.service 'RoleService', [ '$log', '$http', '$q', ($log, $http, $q)
         $log.debug "updateRole #{angular.toJson(role, true)}"
         deferred = $q.defer()
 
-        $http.post('/roles/#{role.id}', role)
+        $http.post("/roles/#{role._id}", role)
         .success((data, status, headers) =>
                 $log.info("Successfully updated Role - status #{status}")
                 deferred.resolve(data)
