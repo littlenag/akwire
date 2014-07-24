@@ -1,9 +1,6 @@
 package controllers
 
-import play.modules.reactivemongo.MongoController
-import play.modules.reactivemongo.json.collection.JSONCollection
 import scala.concurrent.Future
-import reactivemongo.api.Cursor
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
 import javax.inject.Named
@@ -41,21 +38,6 @@ class Roles extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Roles])
 
-  /*
-   * Get a JSONCollection (a Collection implementation that is designed to work
-   * with JsObject, Reads and Writes.)
-   * Note that the `collection` is not a `val`, but a `def`. We do _not_ store
-   * the collection reference to avoid potential problems in development with
-   * Play hot-reloading.
-   */
-  //def collection: JSONCollection = db.collection[JSONCollection]("roles")
-
-//  def col = MongoConnection()(
-//    current.configuration.getString("mongodb.default.db")
- //     .getOrElse(throw new PlayException("Configuration error",
-  //    "Could not find mongodb.default.db in settings"))
-   // )("roles")
-
   // ------------------------------------------ //
   // Using case classes + Json Writes and Reads //
   // ------------------------------------------ //
@@ -85,53 +67,48 @@ class Roles extends Controller {
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { res =>
           val name: String = res
-
           val role = new Role(ObjectId.get(), name, new DateTime(), true)
-
           RolesDAO.insert(role)
           Future.successful(Created(s"Role Created"))
-
-//          collection.insert(role).map {
-//            lastError =>
-//              logger.debug(s"Successfully create Role with LastError: $lastError")
-//              Created(s"Role Created")
-//          }
         }
       )
   }
 
-  def findAllRoles = Action.async {
-
-    //MongoDBObject("active" -> true, "created" -> -1)
-
+  def retrieveRoles = Action.async {
     Future {
-      val list = RolesDAO.find(MongoDBObject.empty).toList
+      //val filter = MongoDBObject.empty
+      val filter = MongoDBObject("active" -> true)
+      val sort = MongoDBObject("name" -> 1)
+      val list = RolesDAO.find(filter).sort(sort).toList
       Ok(Json.arr(list)(0))
     }
+  }
 
-    /*
-    // let's do our query
-    val cursor: Cursor[Role] = collection.
-      // find all
-      find(Json.obj("active" -> true)).
-      // sort them by creation date
-      sort(Json.obj("created" -> -1)).
-      // perform the query and get a cursor of JsObject
-      cursor[Role]
-
-    // gather all the JsObjects in a list
-    val futureRolesList: Future[List[Role]] = cursor.collect[List]()
-
-    // transform the list into a JsArray
-    val futurePersonsJsonArray: Future[JsArray] = futureRolesList.map { roles => Json.arr(roles) }
-
-    // everything's ok! Let's reply with the array
-    futurePersonsJsonArray.map {
-      roles =>
-        Ok(roles(0))
+  def retrieveRole(roleId:String) = Action.async {
+    Future {
+      val filter = MongoDBObject("_id" -> new ObjectId(roleId))
+      RolesDAO.findOne(filter) match {
+        case Some(role : Role) => Ok(Json.toJson(role))
+        case None => BadRequest(s"Invalid id $roleId")
+      }
     }
-    */
+  }
+
+  def updateRole(roleId:String) = Action.async(parse.json) {
+    request =>
+      request.body.asOpt[Role] match {
+        case Some(role: Role) =>
+          RolesDAO.save(role)
+          Future.successful(Ok(Json.toJson(role)))
+        case None =>
+          Future.successful(BadRequest(s"Could not parse role with id $roleId"))
+      }
+  }
+
+  def deleteRole(roleId:String) = Action.async {
+    Future {
+      RolesDAO.removeById(new ObjectId(roleId))
+      Ok(s"Removed role with id $roleId")
+    }
   }
 }
-
-

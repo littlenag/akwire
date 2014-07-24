@@ -13,9 +13,11 @@ GET     /randomUUID                 @controllers.Application.randomUUID
 
 
 # Roles
-GET     /roles                     @controllers.Roles.findAllRoles
 POST    /roles                     @controllers.Roles.createRole
-
+GET     /roles                     @controllers.Roles.retrieveRoles
+GET     /roles/:roleId             @controllers.Roles.retrieveRole(roleId:String)
+POST    /roles/:roleId             @controllers.Roles.updateRole(roleId:String)
+DELETE  /roles/:roleId             @controllers.Roles.deleteRole(roleId:String)
 
 # Agent management API
 GET     /agents                     @controllers.Agents.findAllAgents
