@@ -12,9 +12,6 @@ fronted with Twitter bootstrap CSS framework, because well, im not a web designe
 * **Bootstrap** - Bootstrap components written in pure AngularJS
   *  [http://angular-ui.github.io/bootstrap/](http://angular-ui.github.io/bootstrap/)
 
-* **CoffeeScript** - CoffeeScript is an attempt to expose the good parts of JavaScript in a simple way.
-  *  [http://coffeescript.org/](http://coffeescript.org/)
-
 * **PlayFramework** - currently using 2.2.1 with the scala API
   *  [PlayFramework Docs](http://www.playframework.com/documentation/2.2.x/Home)
 

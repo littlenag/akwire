@@ -85,19 +85,51 @@ also have to adapt for pull based systems:
 
 ====
 
+periodically run code:
+ - status checks
+ - measurements
+ - reports
+
+aperiodically driven code:
+ - events
+ - logs
+ - alert
+
+
+want to support a hybrid active/passive plugin system
+ - active are scheduled
+ - passive are exposed via API
+
+
+====
+
+route notifications by:
+ - severity/impact
+ - priority/urgency
+ - host/host-group
+ - service/service-group
+ - team/owner
+ - tag
+ - location
+
+====
+
 plugins should have an optional UI component that can be dropped into the server dashboard
  - list their configuration options
  - provide an intelligent UI with better JavaScript
 
 plugins are the heart and soul of the system in that they collect every form of data:
- - HTTP
+ - HTTP(S)
  - TCP/SYN
  - ICMP
+ - SNMP
  - File
  - Socket
  - JMX
  - SSH
  - WMI
+ - NRPE
+ - external: http put/post, smtp, snmp trap
 
 Along with specialized plugins for gathering metrics from:
 

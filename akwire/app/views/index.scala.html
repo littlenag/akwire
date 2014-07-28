@@ -43,6 +43,26 @@
                     <!--
                       curated service definitions
                       subscription driven by global rules and role/team rules
+
+                      services could
+                       - have their own rules
+                       - subscribe to the rules of other roles
+                       - be solely tag based for routing, that pushes tags to the edge though
+                       - could have one set of rules that feed all services, or define each service with its own set of rules
+
+                      goals
+                       - point of integration for external monitoring systems
+                       - push for tier 1, push notifications to owners
+                       - curated, defined by the business, with a real SLA and SOP
+
+                      how to share alerts
+                      avoid duplicate notifications
+                      curated rules
+                      curated tags
+
+                      global tagging
+                      global rules?
+
                     -->
                     <li ng-class="{ active: isActive('/services')}"><a href="/#/services">Services</a></li>
 
