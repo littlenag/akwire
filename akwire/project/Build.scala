@@ -1,3 +1,4 @@
+import com.google.javascript.jscomp.{CompilationLevel, CompilerOptions}
 import sbt._
 import Keys._
 import play.Project._
@@ -38,8 +39,18 @@ object ApplicationBuild extends Build {
     "org.springframework.data" % "spring-data-mongodb" % "1.3.2.RELEASE"
   )
 
+  val root = new java.io.File(".")
+  val defaultOptions = new CompilerOptions()
+  defaultOptions.closurePass = true
+  defaultOptions.setProcessCommonJSModules(true)
+  defaultOptions.setCommonJSModulePathPrefix(root.getCanonicalPath + "/app/assets/javascripts/")
+  defaultOptions.setLanguageIn(CompilerOptions.LanguageMode.ECMASCRIPT5)
+
+  CompilationLevel.WHITESPACE_ONLY.setOptionsForCompilationLevel(defaultOptions)
+
   // Add your own project settings here'
   val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
-    resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/"
+    (Seq(resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/",
+      requireJs += "main.js", requireJsShim += "main.js") ++ closureCompilerSettings(defaultOptions)): _*
   )
 }

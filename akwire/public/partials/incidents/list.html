@@ -1,6 +1,6 @@
 
 
-    <div class="row" ng-controller="AgentCtrl as ac">
+    <div class="row" ng-controller="IncidentCtrl as ac">
         &NonBreakingSpace;
 
         <div class="row">
@@ -19,7 +19,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr ng-repeat="agt in ac.agents | filter:searchText">
+                <tr ng-repeat="agt in ac.incidents | filter:searchText">
                     <td>
                         {{ agt.agentId }}
                     </td>
@@ -40,7 +40,7 @@
 
             <hr>
             <h4>Debug:</h4>
-            <pre>{{ ac.agents | json }}</pre>
+            <pre>{{ ac.incidents | json }}</pre>
         </div>
 
     </div>
