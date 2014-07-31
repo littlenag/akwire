@@ -17,7 +17,17 @@
 
     var app = angular.module('akwire', dependencies);
 
-    app.config(function($stateProvider, $urlRouterProvider) {
+    this.commonModule = angular.module('akwire.common', []);
+//    this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
+    this.controllersModule = angular.module('akwire.controllers', []);
+    this.servicesModule = angular.module('akwire.services', []);
+    this.modelsModule = angular.module('akwire.models', []);
+    this.directivesModule = angular.module('akwire.directives', []);
+    this.filtersModule = angular.module('akwire.filters', []);
+
+    app.config(
+    [ '$stateProvider', '$urlRouterProvider',
+      function($stateProvider, $urlRouterProvider) {
         $urlRouterProvider.otherwise("/agents");
 
         $stateProvider
@@ -35,7 +45,7 @@
             })
             .state('admin.role', {
               url: "/role",
-              templateUrl: "/assets/partials/roles/base.html",
+              templateUrl: "/assets/partials/roles/list.html",
             })
             .state('admin.role.edit', {
               url: "/:roleId",
@@ -45,13 +55,22 @@
               url: "/create",
               templateUrl: "/assets/partials/roles/create.html",
             });
-    });
+    }]);
 
-    this.commonModule = angular.module('akwire.common', []);
-    this.controllersModule = angular.module('akwire.controllers', []);
-    this.servicesModule = angular.module('akwire.services', []);
-    this.modelsModule = angular.module('akwire.models', []);
-    this.directivesModule = angular.module('akwire.directives', []);
-    this.filtersModule = angular.module('akwire.filters', []);
+    app.run(
+      [ '$rootScope', '$state', '$stateParams',
+      function ($rootScope, $state, $stateParams) {
+
+        // It's very handy to add references to $state and $stateParams to the $rootScope
+        // so that you can access them from any scope within your applications.For example,
+        // <li ui-sref-active="active }"> will set the <li> // to active whenever
+        // 'contacts.list' or one of its decendents is active.
+        $rootScope.$state = $state;
+        $rootScope.$stateParams = $stateParams;
+      }]);
+
+    controllersModule.controller('AdminCtrl', ['$scope', '$log', function($scope, $log) {
+      $log.debug("constructing AdminCtrl");
+    }]);
 
 }).call(this);

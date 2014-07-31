@@ -4,12 +4,13 @@
     <meta charset="utf-8">
     <title>Modern Web Template</title>
     <!-- Latest compiled and minified Bootstrap CSS -->
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
     <link rel="stylesheet" media='screen' href='@routes.Assets.at("stylesheets/main.css")'>
 </head>
 <body>
-<div class="container-fluid col-md-10 col-md-offset-1">
+
+<div class="container-fluid col-md-12">
     <!-- Fixed navbar -->
     <header>
         <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -21,7 +22,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="/#/">Akwire</a>
+                <a class="navbar-brand" ui-sref="home">Akwire</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
@@ -64,9 +65,9 @@
                       global rules?
 
                     -->
-                    <li ng-class="{ active: isActive('/services')}"><a ui-sref="/#/services">Services</a></li>
+                    <li ng-class="{ active: isActive('/services')}"><a ui-sref="services">Services</a></li>
 
-                    <li ng-class="{ active: isActive('/incidents')}"><a ui-sref="/#/incidents">Incidents</a></li>
+                    <li ng-class="{ active: isActive('/incidents')}"><a ui-sref="incidents">Incidents</a></li>
 
                     <li class="dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
@@ -111,7 +112,10 @@
         </div>
     </header>
 
-    <hr>
+    <div ui-view class="container-fluid col-md-12" style="padding-top: 20px;"></div>
+
+    <hr/>
+
     <pre>
       <!-- Here's some values to keep an eye on in the sample in order to understand $state and $stateParams -->
       $state = {{ $state.current.name }}
@@ -120,8 +124,6 @@
       <!-- $state.$current is not a public api, we are using it to
            display the full url for learning purposes-->
     </pre>
-
-    <div ui-view></div>
 
     <div>
         <footer>

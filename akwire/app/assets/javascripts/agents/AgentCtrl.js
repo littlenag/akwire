@@ -1,5 +1,5 @@
-//(function() {
-//  "use strict";
+(function() {
+  "use strict";
 
   controllersModule.controller('AgentCtrl', ['$scope', '$log', 'AgentService', function($scope, $log, AgentService) {
 
@@ -15,4 +15,4 @@
     }
   ]);
 
-//}).call(this);
+}).call(this);
