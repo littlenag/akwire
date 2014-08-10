@@ -54,6 +54,18 @@
             .state('admin.role.create', {
               url: "/create",
               templateUrl: "/assets/partials/roles/create.html",
+            })
+            .state('admin.user', {
+              url: "/user",
+              templateUrl: "/assets/partials/users/list.html",
+            })
+            .state('admin.user.edit', {
+              url: "/:userId",
+              templateUrl: "/assets/partials/users/edit.html",
+            })
+            .state('admin.user.create', {
+              url: "/create",
+              templateUrl: "/assets/partials/users/create.html",
             });
     }]);
 
