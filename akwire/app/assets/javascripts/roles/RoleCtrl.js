@@ -29,39 +29,30 @@
   ]);
 
   controllersModule.controller('EditRoleCtrl', [
-    '$log', '$location', '$routeParams', 'RoleService', function($log, $location, $routeParams, RoleService) {
-      var EditRoleCtrl;
-      return new (EditRoleCtrl = (function() {
+    '$scope', '$log', '$state', 'RoleService', function($scope, $log, $state, RoleService) {
 
-        function EditRoleCtrl() {
-          var _this = this;
-          $log.debug("constructing EditRoleController");
-          this.role = null;
-          this.roleId = $routeParams.roleId;
-          RoleService.getRole(this.roleId).then(function(data) {
-            $log.debug("Promise returned Role(" + _this.roleId + ")");
-            return _this.role = data;
-          }, function(error) {
-            return $log.error("Unable to get Role(" + _this.roleId + ": " + error);
-          });
-        }
+      $log.debug("constructing EditRoleController");
+      $scope.role = null;
+      $scope.roleId = $state.params.roleId;
 
-        EditRoleCtrl.prototype.updateRole = function() {
-          var _this = this;
-          $log.debug("updateRole()");
-          this.role.active = true;
-          return RoleService.updateRole(this.role).then(function(data) {
-            $log.debug("Promise returned " + data + " Role");
-            _this.role = data;
-            return $location.path("/admin/roles/" + _this.roleId);
-          }, function(error) {
-            return $log.error("Unable to update Role: " + error);
-          });
-        };
+      RoleService.getRole($scope.roleId).then(function(data) {
+        $log.debug("Promise returned Role(" + $scope.roleId + ")");
+        return $scope.role = data;
+      }, function(error) {
+        return $log.error("Unable to get Role(" + $scope.roleId + ": " + error);
+      });
 
-        return EditRoleCtrl;
-
-      })());
+      $scope.updateRole = function() {
+        $log.debug("updateRole()");
+        $scope.role.active = true;
+        return RoleService.updateRole($scope.role).then(function(data) {
+          $log.debug("Promise returned " + data + " Role");
+          $scope.role = data;
+          return $state.go("admin.role.list", {});
+        }, function(error) {
+          return $log.error("Unable to update Role: " + error);
+        });
+      };
     }
   ]);
 
@@ -79,10 +70,10 @@
           var _this = this;
           $log.debug("createRole()");
           this.role.active = true;
-          return this.RoleService.createRole(this.role).then(function(data) {
+          return RoleService.createRole(this.role).then(function(data) {
             $log.debug("Promise returned " + data + " Role");
             _this.role = data;
-            return $location.path("/admin");
+            return $location.path("/admin/role");
           }, function(error) {
             return $log.error("Unable to create Role: " + error);
           });
