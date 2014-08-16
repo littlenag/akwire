@@ -4,10 +4,9 @@
     console.log("Akwire Client starting. Starting AngularJS.")
 
     var dependencies = [
-//        'ngRoute',
         'ui.bootstrap',
         'ui.router',
-//        'akwire.routeConfig'
+        'akwire.ui.teams',
         'akwire.filters',
         'akwire.services',
         'akwire.controllers',
@@ -18,7 +17,7 @@
     var app = angular.module('akwire', dependencies);
 
     this.commonModule = angular.module('akwire.common', []);
-//    this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
+    this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
     this.controllersModule = angular.module('akwire.controllers', []);
     this.servicesModule = angular.module('akwire.services', []);
     this.modelsModule = angular.module('akwire.models', []);
@@ -42,24 +41,6 @@
             .state('admin', {
               url: "/admin",
               templateUrl: "/assets/partials/admin/base.html",
-            })
-
-            .state('admin.team', {
-              url: "/team",
-              abstract: true,
-              templateUrl: "/assets/partials/teams/base.html",
-            })
-            .state('admin.team.list', {
-              url: "",
-              templateUrl: "/assets/partials/teams/list.html",
-            })
-            .state('admin.team.create', {
-              url: "/create",
-              templateUrl: "/assets/partials/teams/create.html",
-            })
-            .state('admin.team.edit', {
-              url: "/edit/:teamId",
-              templateUrl: "/assets/partials/teams/edit.html",
             })
 
             .state('admin.role', {

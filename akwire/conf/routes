@@ -11,6 +11,12 @@ PUT     /ingest                     @controllers.Ingest.submitObservations
 GET     /                           @controllers.Application.index
 GET     /randomUUID                 @controllers.Application.randomUUID
 
+# Teams
+POST    /teams                     @controllers.Teams.createTeam
+GET     /teams                     @controllers.Teams.retrieveTeams
+GET     /teams/:teamId             @controllers.Teams.retrieveTeam(teamId:String)
+POST    /teams/:teamId             @controllers.Teams.updateTeam(teamId:String)
+DELETE  /teams/:teamId             @controllers.Teams.deleteTeam(teamId:String)
 
 # Roles
 POST    /roles                     @controllers.Roles.createRole
