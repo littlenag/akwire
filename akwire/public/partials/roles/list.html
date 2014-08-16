@@ -1,13 +1,13 @@
 <div class="row" ng-controller="ListRoleCtrl as ac">
         <div class="form-group">
-            <h3>
-                Roles
-                <a ng-href="#/admin/roles/create" class="btn btn-primary pull-right" id="btn_role_create">Add Role</a>
-            </h3>
-            <hr>
-        </div>
-        <div class="form-group">
-            <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Roles...">
+            <row>
+                <div class="col-md-11">
+                    <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Roles...">
+                </div>
+                <div class="col-md-1">
+                    <a ui-sref="admin.role.create" class="btn btn-primary pull-right" id="btn_role_create">Create Role</a>
+                </div>
+            </row>
             <hr>
         </div>
 
@@ -20,7 +20,7 @@
             <tbody>
             <tr ng-repeat="role in ac.roles | filter:searchText">
                 <td>
-                    <a ui-sref="admin.roles.edit({ roleId: role._id})">{{role.name}}</a>
+                    <a ui-sref="admin.role.edit({roleId: role._id})">{{role.name}}</a>
                 </td>
             </tr>
             <tr ng-hide="ac.roles.length">

@@ -1,0 +1,37 @@
+<div class="row" ng-controller="ListRoleCtrl as ac">
+        <div class="form-group">
+            <h3>
+                Roles
+                <a ui-sref="admin.role.create" class="btn btn-primary pull-right" id="btn_role_create">Add Role</a>
+            </h3>
+            <hr>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Roles...">
+            <hr>
+        </div>
+
+        <table id="role_list" class="table table-striped">
+            <thead>
+            <tr>
+                <th>Name</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="role in ac.roles | filter:searchText">
+                <td>
+                    <a ng-href="#/admin/roles/{{role._id}}">{{role.name}}</a>
+                </td>
+            </tr>
+            <tr ng-hide="ac.roles.length">
+                <td colspan="1">
+                    <p class="text-center">No Roles</p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <hr>
+        <h4>Debug:</h4>
+        <pre>{{ ac.roles | json }}</pre>
+</div>
