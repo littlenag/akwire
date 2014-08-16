@@ -44,6 +44,24 @@
               templateUrl: "/assets/partials/admin/base.html",
             })
 
+            .state('admin.team', {
+              url: "/team",
+              abstract: true,
+              templateUrl: "/assets/partials/teams/base.html",
+            })
+            .state('admin.team.list', {
+              url: "",
+              templateUrl: "/assets/partials/teams/list.html",
+            })
+            .state('admin.team.create', {
+              url: "/create",
+              templateUrl: "/assets/partials/teams/create.html",
+            })
+            .state('admin.team.edit', {
+              url: "/edit/:teamId",
+              templateUrl: "/assets/partials/teams/edit.html",
+            })
+
             .state('admin.role', {
               url: "/role",
               abstract: true,

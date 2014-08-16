@@ -1,0 +1,34 @@
+<div class="row">
+    <div ng-controller="EditTeamCtrl as ctrl">
+        <h2>Edit Team</h2>
+
+        <form id="EditTeamForm" name="EditTeamForm" class="form-horizontal" role="form" ng-submit="updateTeam()">
+            <legend class="sm-col-12">Basic Information</legend>
+
+            <div class="form-group">
+                <label id="lbl_name" class="col-sm-2 control-label">New Name</label>
+
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" placeholder="Tier 1, Helpdesk, DBA, ..."
+                           ng-minlength="3" ng-maxlength="24"
+                           ng-model="team.name">
+                    <span class="error" ng-show="EditTeamForm.name.$error.minlength">
+                      Name too short!</span>
+                    <span class="error" ng-show="EditTeamForm.name.$error.maxlength">
+                      Name too long!</span>
+                </div>
+            </div>
+
+            <pre>{{ ctrl.team | json }}</pre>
+
+            <div class="form-group">
+                <div class="col-sm-offset-4 col-sm-8 text-right">
+                    <a ui-sref="admin.team.list" id="btn_cancel" class="btn btn-warning">Cancel</a>
+
+                    <button type="submit" class="btn btn-success" id="btn_role_update">Update Team</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+

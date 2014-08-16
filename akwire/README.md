@@ -54,3 +54,124 @@ This should fetch all the dependencies and start a Web Server listening on *loca
 ```
 
 Note: This will create a MongoDB Collection for you automatically, a free-be from the Driver! 
+
+----
+
+filter action [target ...] | filter {filter action target} other { action target }
+
+someway to perform rollups
+
+filters:
+ - during/when
+ - sev
+ - tag
+ - host/device
+ - observer
+ - key
+
+services filters:
+ - team/owner
+ - environment
+
+action keywords:
+ - assign (available for services? teams to?)
+ - phone
+ - sms
+ - email
+ - alert
+ > want 'text' and 'call' as reserved words probably, use backticks for escaping names e.g. user `key`
+
+targets:
+ - team
+ - user(name of user)
+ - name of policy
+ - alert/notify as generic keyword in case you pass a action type to a policy
+ - rollup : generic target? team!email, team!sms
+ - want an on-call schedule?
+
+date time ranges and patterns
+ - day of week
+ - hours in day
+ > want to check for gaps in schedule
+ > have to default to team timezone!
+ > short-hand for daily rotation, weekly rotation, layers
+
+probably want short=hand ways of daying something is a schedule, or a
+policy, that way can have viz present as a list of rule or as a
+calendar
+
+if a target can't be found always notify the default policy or target
+
+want everything to be "complete", that is no gaps in rules, rules
+followed one-by-one, use otherwise statement for intentional gaps,
+error if no gaps but use otherwise anyway
+
+probably want some way of defining escalation and reminders, as well
+
+'wait', 'repeat', 'after' as escalation keywords?
+
+may want some way to test if a notice has already been sent
+
+logical OR, AND filters together
+
+'elsewise' and 'otherwise' ? default match keywords
+
+drop/ignore, ticket, and log as builtin targets?
+
+send to the team email, vs send email to all members of a team, vs send email to an individual member
+
+integrations may need to hook into ack/resolve messages coming back
+from users, one way sync from akwire to external tool because
+basically saying that all state is managed in the external utility
+
+what about flapping? rate limiting?
+
+Automagic expansions:
+Weekdays -> Monday to Friday
+Weekends -> Saturday to Sunday
+
+
+
+examples:
+
+----
+
+policy default:
+
+email team then    # no filter means always match, then keyword allows chaining of policies, each policy runs to completion
+sev(1) {
+  during(Monday to Friday) phone user(Mark)
+  during(Weekends) phone user(Jason)
+}
+sev(2) sms team
+otherwise drop
+
+
+----
+
+policy default:
+
+email team then    # no filter means always match, then keyword allows chaining of policies, each policy runs to completion
+sev(1) {
+  notify policy(`on call`)
+}
+sev(2) {
+  sms team
+  email team
+}
+otherwise drop
+
+
+
+schedule 'on-call':
+
+during(Monday to Friday) phone user(Mark)
+during(Weekends) phone user(Jason)
+
+#alert policy(`on call`)
+
+#during(8am to 9pm) notify [team!phone, team!sms, user(`Mike`)!phone, rollup(2h)]
+
+should be able to have a 
+ - list of action + target pairs
+ - an action + list of targets

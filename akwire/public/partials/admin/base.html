@@ -1,30 +1,35 @@
 
 <div class="row" ng-controller="AdminCtrl as ac">
     <div class="col-md-2 well" style="width:200px;">
-      <ul class="nav nav-pills nav-stacked">
-        <li class="nav-header">Access</li>
-        <li><a ui-sref="admin.user.list">Users</a></li>
-        <li><a ui-sref="admin.group.list">Groups</a></li>
-        <li><a ui-sref="admin.role.list">Roles</a></li>
+        <ul class="nav nav-pills nav-stacked">
+            <li class="nav-header">Notification</li>
+            <li><a ui-sref="admin.team.list">Teams</a></li>
+            <li><a ui-sref="admin.team.detail.schedule">Schedules</a></li>
+            <li><a ui-sref="admin.channel.list">Channels</a></li>
 
-        <li class="nav-header">Notification</li>
-        <li><a ui-sref="/#/admin">Teams</a></li>
-        <li><a ui-sref="/#/admin">Schedules</a></li>
-        <li><a ui-sref="/#/admin">Channels</a></li>
+            <li class="nav-header">External</li>
+            <li><a ui-sref="admin.monitor.list">Monitoring Engines</a></li>
+            <li><a ui-sref="admin.service.list">Services</a></li>
+            <li><a ui-sref="admin.integration.list">Integrations</a></li>
 
-        <li class="nav-header">Analytics</li>
-        <li><a ui-sref="/#/admin">Esper</a></li>
-        <li><a ui-sref="/#/admin">Anomaly Detection</a></li>
+            <li class="nav-header">Access</li>
+            <li><a ui-sref="admin.user.list">Users</a></li>
+            <li><a ui-sref="admin.group.list">Groups</a></li>
+            <li><a ui-sref="admin.role.list">Roles</a></li>
 
-        <li class="nav-header">Instrumentation</li>
-        <li><a ui-sref="/#/admin/agents">Agents</a></li>
-        <li><a ui-sref="/#/admin/agents">Collectd</a></li>
+            <li class="nav-header">Analytics</li>
+            <li><a ui-sref="/#/admin">Esper</a></li>
+            <li><a ui-sref="/#/admin">Anomaly Detection</a></li>
 
-        <li class="nav-header">Persistenace</li>
-        <li><a ui-sref="/#/admin">Database</a></li>
-        <li><a ui-sref="/#/admin">Forwarders</a></li>
-        <li><a ui-sref="/#/admin">Peers</a></li>
-      </ul>
+            <li class="nav-header">Instrumentation</li>
+            <li><a ui-sref="/#/admin/agents">Agents</a></li>
+            <li><a ui-sref="/#/admin/agents">Collectd</a></li>
+
+            <li class="nav-header">Persistenace</li>
+            <li><a ui-sref="/#/admin">Database</a></li>
+            <li><a ui-sref="/#/admin">Forwarders</a></li>
+            <li><a ui-sref="/#/admin">Peers</a></li>
+        </ul>
     </div>
 
     <div ui-view class="col-md-10"></div>
