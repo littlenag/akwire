@@ -1,0 +1,37 @@
+<div class="row" ng-controller="ListDetectorCtrl as ac">
+        <div class="form-group">
+            <row>
+                <div class="col-md-11">
+                    <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Detectors...">
+                </div>
+                <div class="col-md-1">
+                    <a ui-sref="admin.detector.create" class="btn btn-primary pull-right" id="btn_role_create">Create Detector</a>
+                </div>
+            </row>
+            <hr>
+        </div>
+
+        <table id="detector_list" class="table table-striped">
+            <thead>
+            <tr>
+                <th>Name</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="detector in ac.detectors | filter:searchText">
+                <td>
+                    <a ui-sref="admin.detector.edit({detectorId: detector._id})">{{detector.name}}</a>
+                </td>
+            </tr>
+            <tr ng-hide="ac.detectors.length">
+                <td colspan="1">
+                    <p class="text-center">No Detectors</p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <hr>
+        <h4>Debug:</h4>
+        <pre>{{ ac.detectors | json }}</pre>
+</div>

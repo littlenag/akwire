@@ -1,0 +1,33 @@
+<div class="row">
+    <div ng-controller="EditDetectorCtrl as ctrl">
+        <h2>Edit Detector</h2>
+
+        <form id="EditDetectorForm" name="EditDetectorForm" class="form-horizontal" role="form" ng-submit="updateDetector()">
+            <legend class="sm-col-12">Basic Information</legend>
+
+            <div class="form-group">
+                <label id="lbl_name" class="col-sm-2 control-label">New Name</label>
+
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" ng-minlength="3" ng-maxlength="24"
+                           ng-model="detector.name">
+                    <span class="error" ng-show="EditDetectorForm.name.$error.minlength">
+                      Name too short!</span>
+                    <span class="error" ng-show="EditDetectorForm.name.$error.maxlength">
+                      Name too long!</span>
+                </div>
+            </div>
+
+            <pre>{{ ctrl.detector | json }}</pre>
+
+            <div class="form-group">
+                <div class="col-sm-offset-4 col-sm-8 text-right">
+                    <a ui-sref="admin.detector.list" id="btn_cancel" class="btn btn-warning">Cancel</a>
+
+                    <button type="submit" class="btn btn-success" id="btn_detector_update">Update</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+

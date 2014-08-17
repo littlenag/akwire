@@ -1,0 +1,29 @@
+<div class="row">
+    <div ng-controller="CreateDetectorCtrl as cuc">
+        <h2>Add Detector</h2>
+
+        <form id="CreateDetectorForm" name="CreateDetectorForm" class="form-horizontal" role="form" ng-submit="cuc.createDetector()">
+            <legend class="sm-col-12">Basic Information</legend>
+
+            <div class="form-group">
+                <label id="lbl_name" for="name" class="col-sm-2 control-label" is-required="CreateDetectorForm.name">Name</label>
+
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" name="name" id="name" placeholder="Nagios, PRTG, /opt/down.sh, ..."
+                           ng-model="cuc.detector.name">
+                </div>
+            </div>
+
+            <pre>{{ cuc.detector | json }}</pre>
+
+            <div class="form-group">
+                <div class="col-sm-offset-4 col-sm-8 text-right">
+                    <a ui-sref="admin.detector.list" id="btn_cancel" class="btn btn-warning">Cancel</a>
+
+                    <button type="submit" class="btn btn-success" id="btn_role_create">Submit</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+

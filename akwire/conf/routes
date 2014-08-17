@@ -11,6 +11,13 @@ PUT     /ingest                     @controllers.Ingest.submitObservations
 GET     /                           @controllers.Application.index
 GET     /randomUUID                 @controllers.Application.randomUUID
 
+# Detectors
+POST    /detectors                  @controllers.Detectors.createDetector
+GET     /detectors                  @controllers.Detectors.retrieveDetectors
+GET     /detectors/:detectorId      @controllers.Detectors.retrieveDetector(detectorId:String)
+POST    /detectors/:detectorId      @controllers.Detectors.updateDetector(detectorId:String)
+DELETE  /detectors/:detectorId      @controllers.Detectors.deleteTeam(detectorId:String)
+
 # Teams
 POST    /teams                     @controllers.Teams.createTeam
 GET     /teams                     @controllers.Teams.retrieveTeams
