@@ -83,21 +83,25 @@ class Detectors extends Controller {
     }
   }
 
-  def updateDetector(detectorId:String) = Action.async(parse.json) {
+  def updateDetector = Action.async(parse.json) {
     request =>
       request.body.asOpt[Detector] match {
         case Some(detector: Detector) =>
           DetectorsDAO.save(detector)
           Future.successful(Ok(Json.toJson(detector)))
         case None =>
-          Future.successful(BadRequest(s"Could not parse detector with id $detectorId"))
+          Future.successful(BadRequest(s"Could not parse request body"))
       }
   }
 
-  def deleteDetector(detectorId:String) = Action.async {
-    Future {
-      DetectorsDAO.removeById(new ObjectId(detectorId))
-      Ok(s"Removed detector with id $detectorId")
-    }
+  def deleteDetector = Action.async(parse.json) {
+    request =>
+      request.body.asOpt[Detector] match {
+        case Some(detector: Detector) =>
+          DetectorsDAO.removeById(detector._id)
+          Future.successful(Ok(s"Removed detector $detector"))
+        case None =>
+          Future.successful(BadRequest(s"Could not parse request body"))
+      }
   }
 }

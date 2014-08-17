@@ -1,86 +1,90 @@
 (function() {
+  "use strict";
 
-  servicesModule.service('DetectorService', [
-    '$log', '$http', '$q', function($log, $http, $q) {
-      var DetectorService;
-      return new (DetectorService = (function() {
+  servicesModule.service('DetectorService', ['$log', '$http', '$q',
+    function($log, $http, $q) {
 
-        DetectorService.headers = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        };
+      $log.debug("constructing DetectorService");
 
-        DetectorService.defaultConfig = {
-          headers: DetectorService.headers
-        };
+      var service = {};
 
-        function DetectorService() {
-          $log.debug("constructing DetectorService");
-        }
+      service.headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
 
-        DetectorService.prototype.getDetectors = function() {
-          var deferred,
-            _this = this;
-          $log.debug("getDetectors()");
-          deferred = $q.defer();
-          $http.get("/teams").success(function(data, status, headers) {
+      service.createDetector = function(detector) {
+        $log.debug("createDetector " + (angular.toJson(detector, true)));
+
+        var deferred = $q.defer();
+
+        $http.post('/detector/create', detector).
+          success(function(data, status, headers) {
+            $log.info("Successfully created Detector - status " + status);
+            return deferred.resolve(data);
+          }).
+          error(function(data, status, headers) {
+            $log.error("Failed to create detector - status " + status);
+            return deferred.reject(data);
+          });
+
+        return deferred.promise;
+      };
+
+      service.getDetectors = function() {
+        $log.debug("getDetectors()");
+
+        var deferred = $q.defer();
+
+        $http.get("/detector/list").
+          success(function(data, status, headers) {
             $log.info("Successfully listed Detectors - status " + status);
             return deferred.resolve(data);
-          }).error(function(data, status, headers) {
+          }).
+          error(function(data, status, headers) {
             $log.error("Failed to list Detectors - status " + status);
             return deferred.reject(data);
           });
-          return deferred.promise;
-        };
 
-        DetectorService.prototype.getDetector = function(teamId) {
-          var deferred,
-            _this = this;
-          $log.debug("getDetector('" + teamId + "')");
-          deferred = $q.defer();
-          $http.get("/teams/" + teamId).success(function(data, status, headers) {
+        return deferred.promise;
+      };
+
+      service.getDetector = function(detectorId) {
+        $log.debug("getDetector('" + detectorId + "')");
+
+        var deferred = $q.defer();
+
+        $http.get("/detector", {params : {detectorId: detectorId}}).
+          success(function(data, status, headers) {
             $log.info("Successfully retrieved Detector - status " + status);
             return deferred.resolve(data);
-          }).error(function(data, status, headers) {
+          }).
+          error(function(data, status, headers) {
             $log.error("Failed to retrieve Detector - status " + status);
             return deferred.reject(data);
           });
-          return deferred.promise;
-        };
 
-        DetectorService.prototype.createDetector = function(team) {
-          var deferred,
-            _this = this;
-          $log.debug("createDetector " + (angular.toJson(team, true)));
-          deferred = $q.defer();
-          $http.post('/teams', team).success(function(data, status, headers) {
-            $log.info("Successfully created Detector - status " + status);
-            return deferred.resolve(data);
-          }).error(function(data, status, headers) {
-            $log.error("Failed to create team - status " + status);
-            return deferred.reject(data);
-          });
-          return deferred.promise;
-        };
+        return deferred.promise;
+      };
 
-        DetectorService.prototype.updateDetector = function(team) {
-          var deferred,
-            _this = this;
-          $log.debug("updateDetector " + (angular.toJson(team, true)));
-          deferred = $q.defer();
-          $http.post("/teams/" + team._id, team).success(function(data, status, headers) {
+      service.updateDetector = function(detector) {
+        $log.debug("updateDetector " + (angular.toJson(detector, true)));
+
+        var deferred = $q.defer();
+
+        $http.post("/detector", detector).
+          success(function(data, status, headers) {
             $log.info("Successfully updated Detector - status " + status);
             return deferred.resolve(data);
           }).error(function(data, status, headers) {
             $log.error("Failed to update Detector - status " + status);
             return deferred.reject(data);
           });
-          return deferred.promise;
-        };
 
-        return DetectorService;
+        return deferred.promise;
+      };
 
-      })());
+      return service;
     }
   ]);
 

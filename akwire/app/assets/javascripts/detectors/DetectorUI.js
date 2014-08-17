@@ -1,6 +1,6 @@
 (function() {
 
-    angular.module('akwire.ui.detector', ['ui.router']).config(
+    angular.module('akwire.ui.detectors', ['ui.router']).config(
     [ '$stateProvider', '$urlRouterProvider',
       function($stateProvider, $urlRouterProvider) {
 

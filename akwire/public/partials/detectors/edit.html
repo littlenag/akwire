@@ -1,5 +1,5 @@
 <div class="row">
-    <div ng-controller="EditDetectorCtrl as ctrl">
+    <div ng-controller="EditDetectorCtrl">
         <h2>Edit Detector</h2>
 
         <form id="EditDetectorForm" name="EditDetectorForm" class="form-horizontal" role="form" ng-submit="updateDetector()">
@@ -18,7 +18,7 @@
                 </div>
             </div>
 
-            <pre>{{ ctrl.detector | json }}</pre>
+            <pre>{{ detector | json }}</pre>
 
             <div class="form-group">
                 <div class="col-sm-offset-4 col-sm-8 text-right">

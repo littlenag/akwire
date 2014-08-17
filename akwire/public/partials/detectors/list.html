@@ -1,4 +1,4 @@
-<div class="row" ng-controller="ListDetectorCtrl as ac">
+<div class="row" ng-controller="ListDetectorCtrl">
         <div class="form-group">
             <row>
                 <div class="col-md-11">
@@ -18,12 +18,12 @@
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="detector in ac.detectors | filter:searchText">
+            <tr ng-repeat="detector in detectors | filter:searchText">
                 <td>
                     <a ui-sref="admin.detector.edit({detectorId: detector._id})">{{detector.name}}</a>
                 </td>
             </tr>
-            <tr ng-hide="ac.detectors.length">
+            <tr ng-hide="detectors.length">
                 <td colspan="1">
                     <p class="text-center">No Detectors</p>
                 </td>
@@ -33,5 +33,5 @@
 
         <hr>
         <h4>Debug:</h4>
-        <pre>{{ ac.detectors | json }}</pre>
+        <pre>{{ detectors | json }}</pre>
 </div>
