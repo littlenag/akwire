@@ -1,9 +1,5 @@
 package models.core
 
-//import models.core.Stream;
-
-//import com.mongodb.casbah.Imports._
-//import org.bson.types.ObjectId;
 import org.joda.time.DateTime;
 
 import java.lang.String.format;

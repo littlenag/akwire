@@ -15,12 +15,16 @@
             <thead>
             <tr>
                 <th>Name</th>
+                <th>Token</th>
             </tr>
             </thead>
             <tbody>
             <tr ng-repeat="detector in detectors | filter:searchText">
                 <td>
                     <a ui-sref="admin.detector.edit({detectorId: detector._id})">{{detector.name}}</a>
+                </td>
+                <td>
+                    {{detector.integrationToken}}
                 </td>
             </tr>
             <tr ng-hide="detectors.length">

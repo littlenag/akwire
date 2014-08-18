@@ -1,5 +1,5 @@
 import akka.actor.ActorSystem
-import com.mongodb.casbah.commons.conversions.scala.{DeregisterJodaTimeConversionHelpers, RegisterJodaTimeConversionHelpers}
+import com.mongodb.casbah.commons.conversions.scala._
 import conf.AppConfiguration
 import org.springframework.scala.context.function.FunctionalConfigApplicationContext
 import play.api.GlobalSettings
@@ -37,11 +37,13 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     logger.info("Application has started")
+    RegisterConversionHelpers()
     RegisterJodaTimeConversionHelpers()
   }
 
   override def onStop(app: Application) {
     logger.info("Application is stopped")
+    DeregisterConversionHelpers()
     DeregisterJodaTimeConversionHelpers()
   }
 

@@ -84,6 +84,23 @@
         return deferred.promise;
       };
 
+      service.genIntegrationToken = function(detector) {
+        $log.debug("genIntegrationToken " + (angular.toJson(detector, true)));
+
+        var deferred = $q.defer();
+
+        $http.post("/detector/create_token", {}, {params : {detectorId : detector._id}}).
+          success(function(data, status, headers) {
+            $log.info("Successfully created Token; Detector - status " + status);
+            return deferred.resolve(data);
+          }).error(function(data, status, headers) {
+            $log.error("Failed to create Token; Detector - status " + status);
+            return deferred.reject(data);
+          });
+
+        return deferred.promise;
+      };
+
       return service;
     }
   ]);

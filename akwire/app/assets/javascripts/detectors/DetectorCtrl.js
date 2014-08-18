@@ -46,6 +46,18 @@
           return $log.error("Unable to update Detector: " + error);
         });
       };
+
+      $scope.genIntegrationToken = function() {
+        $log.debug("genIntegrationToken()");
+        return DetectorService.genIntegrationToken($scope.detector).then(function(data) {
+          $log.debug("Promise returned " + data + " Detector");
+          $scope.detector.integrationToken = data.integrationToken;
+          return $scope.detector;
+        }, function(error) {
+          $log.error("Unable to update Detector: " + error);
+          return null;
+        });
+      };
     }
   ]);
 

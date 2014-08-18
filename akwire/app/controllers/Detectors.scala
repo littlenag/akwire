@@ -27,6 +27,8 @@ import com.novus.salat.global._
 import com.novus.salat.annotations._
 import com.novus.salat.dao._
 import com.mongodb.casbah.MongoConnection
+import java.util.UUID
+
 /**
  * @see
  */
@@ -56,7 +58,7 @@ class Detectors extends Controller {
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { res =>
           val name: String = res
-          val detector = new Detector(ObjectId.get(), name, new DateTime(), true)
+          val detector = new Detector(ObjectId.get(), name, new DateTime(), None, true)
           DetectorsDAO.insert(detector)
           Future.successful(Created(s"Detector Created"))
         }
@@ -103,5 +105,18 @@ class Detectors extends Controller {
         case None =>
           Future.successful(BadRequest(s"Could not parse request body"))
       }
+  }
+
+  def genIntegrationToken(detectorId:String) = Action.async {
+    Future {
+      val filter = MongoDBObject("_id" -> new ObjectId(detectorId))
+      DetectorsDAO.findOne(filter) match {
+        case Some(detector : Detector) =>
+          val newEntity = detector.copy(integrationToken = Some(UUID.randomUUID()))
+          DetectorsDAO.save(newEntity)
+          Ok(Json.toJson(newEntity))
+        case None => BadRequest(s"Invalid id $detectorId")
+      }
+    }
   }
 }

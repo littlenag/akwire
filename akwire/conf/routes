@@ -17,6 +17,7 @@ GET     /detector/list             @controllers.Detectors.retrieveDetectors
 GET     /detector                  @controllers.Detectors.retrieveDetector(detectorId:String)
 POST    /detector                  @controllers.Detectors.updateDetector
 DELETE  /detector                  @controllers.Detectors.deleteDetector
+POST    /detector/create_token     @controllers.Detectors.genIntegrationToken(detectorId:String)
 
 # Teams
 POST    /teams                     @controllers.Teams.createTeam

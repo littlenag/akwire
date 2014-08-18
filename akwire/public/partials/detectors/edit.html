@@ -11,14 +11,12 @@
                 <div class="col-sm-10">
                     <input type="text" class="form-control" ng-minlength="3" ng-maxlength="24"
                            ng-model="detector.name">
-                    <span class="error" ng-show="EditDetectorForm.name.$error.minlength">
+                    <span class="error" ng-show="detector.name.$error.minlength">
                       Name too short!</span>
-                    <span class="error" ng-show="EditDetectorForm.name.$error.maxlength">
+                    <span class="error" ng-show="detector.name.$error.maxlength">
                       Name too long!</span>
                 </div>
             </div>
-
-            <pre>{{ detector | json }}</pre>
 
             <div class="form-group">
                 <div class="col-sm-offset-4 col-sm-8 text-right">
@@ -28,6 +26,11 @@
                 </div>
             </div>
         </form>
+
+        <button ng-click="genIntegrationToken()" class="btn" id="btn_detector_new_integration_token">Generate Integration Token</button>
+
+        <hr>
+        <pre>{{ detector | json }}</pre>
     </div>
 </div>
 
