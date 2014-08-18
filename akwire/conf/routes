@@ -4,8 +4,14 @@
 # Note: @controllers syntax signifies the actual controller instance, retrieved via GlobalSettings.getController().
 # ~~~~
 
-POST    /ingest                    @controllers.Ingest.submitObservations
-PUT     /ingest                    @controllers.Ingest.submitObservations
+# /ingest is the base resource for where other systems are supposed to send data
+# ./observations is for raw numeric or textual observations of deployed systems
+# ./alert is for integrating an alert from other external monitoring engines/scripts/etc
+POST    /ingest/observations       @controllers.Ingest.submitObservations
+PUT     /ingest/observations       @controllers.Ingest.submitObservations
+
+POST    /ingest/alert              @controllers.Ingest.submitAlert
+PUT     /ingest/alert              @controllers.Ingest.submitAlert
 
 # Single endpoint for serving AngularJS
 GET     /                          @controllers.Application.index

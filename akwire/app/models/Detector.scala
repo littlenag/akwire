@@ -4,7 +4,6 @@ import org.joda.time.DateTime
 
 import com.mongodb.casbah.Imports._
 import java.util.UUID
-import play.api.libs.json.{DefaultReads, DefaultWrites}
 
 /**
  * A detector could be a full-blown monitoring engine, like Nagios or PRTG, or could
@@ -19,12 +18,7 @@ case class Detector( _id: ObjectId,
 
 object Detector {
   import play.api.libs.json._
-//  import com.novus.salat._
-//  import com.novus.salat.global._
 
   import models.JsonUtil._
   implicit val detectorFormatter = Json.format[Detector]
-  //import play.api.libs.json.DefaultFormat
-  //import play.api.libs.json.DefaultReads
-  //import play.api.libs.json.DefaultWrites
 }

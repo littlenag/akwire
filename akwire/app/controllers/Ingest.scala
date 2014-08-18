@@ -5,7 +5,7 @@ import play.api.mvc._
 import javax.annotation.PostConstruct
 import org.slf4j.{Logger, LoggerFactory}
 import services.IngestService
-import models.RawSubmission
+import models.{RawAlert, RawSubmission}
 import javax.inject.Named
 import org.springframework.beans.factory.annotation.Autowired
 import scala.beans.BeanProperty
@@ -32,13 +32,25 @@ class Ingest extends Controller {
   //   zabbix agent push
   //   datadog (dd-agent)
 
-  def submitObservations = Action(parse.json) { request =>
-    request.body.asOpt[RawSubmission] match {
-      case Some(submission) =>
-        ingestService.process(submission)
-        Ok("Received: " + submission)
-      case None =>
-        Ok("Invalid")
-    }
+  def submitObservations = Action(parse.json) {
+    request =>
+      request.body.asOpt[RawSubmission] match {
+        case Some(submission) =>
+          ingestService.process(submission)
+          Ok("Received: " + submission)
+        case None =>
+          Ok("Invalid")
+      }
+  }
+
+  def submitAlert = Action(parse.json) {
+    request =>
+      request.body.asOpt[RawAlert] match {
+        case Some(alert) =>
+          ingestService.process(alert)
+          Ok("Received: " + alert)
+        case None =>
+          Ok("Invalid")
+      }
   }
 }
