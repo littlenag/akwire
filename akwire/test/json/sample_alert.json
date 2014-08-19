@@ -1,0 +1,10 @@
+{    
+  "service_key": "310877c9-5be4-435f-bade-f20c776e258a",
+  "incident_key": "srv01/HTTP",
+  "action": "trigger",
+  "description": "FAILURE for production/HTTP on machine srv01.acme.com",
+  "details": {
+    "ping time": "1500ms",
+    "load avg": 0.75
+  }
+}

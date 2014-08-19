@@ -1,10 +1,10 @@
 package models
 
-import org.joda.time.DateTime
 import java.util.UUID
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import models.RawAlert.IncidentKeyType
 
 object IncidentAction extends Enumeration {
   val Trigger = Value("trigger")
@@ -12,24 +12,40 @@ object IncidentAction extends Enumeration {
   val Resolve = Value("resolve")
 }
 
-case class IncidentKey(key : Either[String, Map[String, String]])
 
-case class RawAlert( serviceKey: UUID,
-                     action: IncidentAction.Value,
-                     description: String,
-                     incidentKey: IncidentKey,
+case class IncidentKey(key : IncidentKeyType)
+
+case class RawAlert( service_key: UUID,
+                     action: IncidentAction.Value = IncidentAction.Trigger,
+                     description: Option[String] = None,
+                     incident_key: IncidentKey,
                      details : JsObject)
 
-object rawAlert {
+object RawAlert {
+
+  type IncidentKeyType = Either[String, Map[String, String]]
 
   import JsonUtil._
 
-  implicit val readRawAlert: Reads[RawAlert] = (
-    (__ \ "service_key").read[UUID] and
-    (__ \ "action").read[IncidentAction.Value] and
-    (__ \ "description").read[String] and
-    (__ \ "incident_key").read[IncidentKey] and
-    (__ \ "details").read[JsObject]
-    )(RawAlert)
+  implicit object ActionReader extends Reads[IncidentAction.Value] {
+    override def reads(json: JsValue): JsResult[IncidentAction.Value] = {
+      val reader : Reads[IncidentAction.Value] = JsPath.read[String].map(IncidentAction.withName)
+      reader.reads(json)
+    }
+  }
+
+  implicit object keyReader extends Reads[IncidentKey] {
+    def one = (contentType:String) => IncidentKey(Left(contentType))
+    def two = (keys: Map[String, String]) => IncidentKey(Right(keys))
+
+    override def reads(json: JsValue): JsResult[IncidentKey] = {
+      val reader : Reads[IncidentKey] =
+        (JsPath.read[String]).map(one) or
+        (JsPath.read[Map[String, String]]).map(two)
+      reader.reads(json)
+    }
+  }
+
+  implicit val readRawAlert: Reads[RawAlert] = Json.reads[RawAlert]
 }
 

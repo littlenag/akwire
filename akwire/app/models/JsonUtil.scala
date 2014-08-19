@@ -2,8 +2,6 @@ package models
 
 import play.api.libs.json._
 
-//import com.novus.salat._
-//import com.novus.salat.global._
 import com.mongodb.casbah.Imports._
 import play.api.libs.json.{JsSuccess,JsError}
 import java.util.UUID

@@ -39,18 +39,18 @@ class Ingest extends Controller {
           ingestService.process(submission)
           Ok("Received: " + submission)
         case None =>
-          Ok("Invalid")
+          Ok("Invalid Observations Document")
       }
   }
 
   def submitAlert = Action(parse.json) {
     request =>
-      request.body.asOpt[RawAlert] match {
-        case Some(alert) =>
+      request.body.validate[RawAlert].fold(
+        valid = alert => {
           ingestService.process(alert)
           Ok("Received: " + alert)
-        case None =>
-          Ok("Invalid")
-      }
+        },
+        invalid = (e => BadRequest(e.toString))
+      )
   }
 }
