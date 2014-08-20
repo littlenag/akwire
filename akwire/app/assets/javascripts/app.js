@@ -8,6 +8,7 @@
         'ui.router',
         'akwire.ui.teams',
         'akwire.ui.detectors',
+        'akwire.ui.incidents',
         'akwire.filters',
         'akwire.services',
         'akwire.controllers',
@@ -31,10 +32,7 @@
         $urlRouterProvider.otherwise("/agents");
 
         $stateProvider
-            .state('incidents', {
-              url: "/incidents",
-              templateUrl: "/assets/partials/incidents/list.html"
-            })
+
             .state('agents', {
               url: "/agents",
               templateUrl: "/assets/partials/agents/list.html"

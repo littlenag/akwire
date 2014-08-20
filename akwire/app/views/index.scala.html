@@ -2,7 +2,7 @@
 <html lang="en" ng-app="akwire">
 <head>
     <meta charset="utf-8">
-    <title>Modern Web Template</title>
+    <title>Akwire</title>
     <!-- Latest compiled and minified Bootstrap CSS -->
 <!--
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
@@ -32,10 +32,10 @@
                 <ul class="nav navbar-nav">
 
                     <!-- the wiki! sops, special rendering plugins, etc -->
-                    <li ng-class="{ active: isActive('/wiki')}"><a ui-sref="wiki">Wiki</a></li>
+                    <li ng-class="{ active: $state.includes('wiki')}"><a ui-sref="wiki">Wiki</a></li>
 
                     <!-- agent management -->
-                    <li ng-class="{ active: isActive('/agents')}"><a ui-sref="agents">Agents</a></li>
+                    <li ng-class="{ active: $state.includes('agents')}"><a ui-sref="agents">Agents</a></li>
 
                     <!--
                       explore, sort, annotate, etc, both metrics, reports, and events
@@ -43,35 +43,9 @@
                       use a finder-like UI here
                       status display & svg maps
                     -->
-                    <li ng-class="{ active: isActive('/data')}"><a ui-sref="data">Data</a></li>
+                    <li ng-class="{ active: $state.includes('data')}"><a ui-sref="data">Data</a></li>
 
-                    <!--
-                      curated service definitions
-                      subscription driven by global rules and role/team rules
-
-                      services could
-                       - have their own rules
-                       - subscribe to the rules of other roles
-                       - be solely tag based for routing, that pushes tags to the edge though
-                       - could have one set of rules that feed all services, or define each service with its own set of rules
-
-                      goals
-                       - point of integration for external monitoring systems
-                       - push for tier 1, push notifications to owners
-                       - curated, defined by the business, with a real SLA and SOP
-
-                      how to share alerts
-                      avoid duplicate notifications
-                      curated rules
-                      curated tags
-
-                      global tagging
-                      global rules?
-
-                    -->
-                    <li ng-class="{ active: isActive('/services')}"><a ui-sref="services">Services</a></li>
-
-                    <li ng-class="{ active: isActive('/incidents')}"><a ui-sref="incidents">Incidents</a></li>
+                    <li ng-class="{ active: $state.includes('incidents')}"><a ui-sref="incidents.list">Incidents</a></li>
 
                     <li class="dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
@@ -172,6 +146,10 @@
 <script src='@routes.Assets.at("javascripts/detectors/DetectorService.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/detectors/DetectorCtrl.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/detectors/DetectorUI.js")' type="text/javascript"></script>
+
+<script src='@routes.Assets.at("javascripts/incidents/IncidentService.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/incidents/IncidentCtrl.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/incidents/IncidentUI.js")' type="text/javascript"></script>
 
 <script src='@routes.Assets.at("javascripts/agents/AgentService.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/agents/AgentCtrl.js")' type="text/javascript"></script>
