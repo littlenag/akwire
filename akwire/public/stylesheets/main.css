@@ -5,3 +5,21 @@ body {
     padding-bottom: 30px;
     min-width: 970px;
 }
+
+.navbar .divider-vertical {
+height: 50px;
+margin: 0 9px;
+border-right: 2px solid #ffffff;
+border-left: 2px solid #f2f2f2;
+}
+
+.navbar-inverse .divider-vertical {
+border-right-color: #222222;
+border-left-color: #000000;
+}
+
+@media (max-width: 767px) {
+.navbar-collapse .nav > .divider-vertical {
+    display: none;
+  }
+}
