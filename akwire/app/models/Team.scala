@@ -10,7 +10,7 @@ import com.mongodb.casbah.Imports._
 case class Team( _id: ObjectId,
                  name: String,
                  //members: Map[ObjectId, User],
-                 rules: Map[ObjectId, Rule],
+                 rules: List[Rule],
                  created: DateTime,
                  active: Boolean)
 

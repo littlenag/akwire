@@ -17,11 +17,18 @@ object ApplicationBuild extends Build {
     "org.mockito" % "mockito-core" % "1.9.5" % "test",
 
     /** SCALA DEPS **/
+
+    // MONGO going to stick with stock mongo and get rid of reactivemongo
     "org.reactivemongo" %% "reactivemongo" % "0.10.0",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
 
     "org.mongodb" %% "casbah" % "2.7.1",
     "com.novus" %% "salat" % "1.9.8",
+
+    // SCALDI for dependency injection (dropping spring)
+    "org.scaldi" %% "scaldi" % "0.3.2",
+    "org.scaldi" %% "scaldi-play" % "0.3.2",
+    "org.scaldi" %% "scaldi-akka" % "0.3.2",
 
     /** Likely will want this eventually **/
     "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
@@ -31,6 +38,8 @@ object ApplicationBuild extends Build {
 
     // Will be using a reimann like language instead of esper
 //    "com.espertech" % "esper" % "4.10.0",
+
+    // Using clojure and reimann for a rules engine (instead of esper)
     "org.clojure" % "clojure" % "1.6.0",
 
     // TODO These should be removed at some point
@@ -50,6 +59,7 @@ object ApplicationBuild extends Build {
   // Add your own project settings here'
   val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
     (Seq(resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/",
-      requireJs += "main.js", requireJsShim += "main.js") ++ closureCompilerSettings(defaultOptions)): _*
+         requireJs += "main.js",
+         requireJsShim += "main.js") ++ closureCompilerSettings(defaultOptions)): _*
   )
 }

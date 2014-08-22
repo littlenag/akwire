@@ -36,26 +36,7 @@ object JsonUtil {
     }
   }
 
-  implicit def mapReader[T] : Reads[Map[ObjectId, T]] = JsPath.read[Map[String, T]].map(m => m.keys.map{k => (new ObjectId(k), m.get(k))}.toMap)
+//  implicit def mapReader[T] : Reads[Map[ObjectId, T]] = JsPath.read[Map[String, T]].map(m => m.keys.map{k => (new ObjectId(k), m.get(k))}.toMap)
 //  implicit val mapWriter : Writes[Map[ObjectId, T]] = JsPath.write[Impact.Value]
-
-
-  implicit def objectMapFormat[T]() = new Format[Map[ObjectId, T]] {
-    override def writes(m: Map[ObjectId, T]) : JsValue = {
-      Json.to
-      Json.toJson(id.toString)
-    }
-
-    override def reads(json: JsValue) = json.validate[String] match {
-      case r:JsSuccess[String] =>
-        try {
-          JsSuccess(UUID.fromString(r.get))
-        } catch {
-          case ex: Exception => JsError(s"Malformed UUID: $r")
-        }
-      case r:JsError => JsError(s"UUID must be a string")
-    }
-  }
-
 
 }

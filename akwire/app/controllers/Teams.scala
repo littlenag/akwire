@@ -57,7 +57,7 @@ class Teams extends Controller {
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { res =>
           val name: String = res
-          val team = new Team(ObjectId.get(), name, new DateTime(), true)
+          val team = new Team(ObjectId.get(), name, Nil, new DateTime(), true)
           TeamsDAO.insert(team)
           Future.successful(Created(s"Team Created"))
         }
