@@ -32,7 +32,6 @@ import com.mongodb.casbah.MongoConnection
 /**
  * @see
  */
-@Named
 class Teams extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])

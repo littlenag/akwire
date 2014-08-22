@@ -33,7 +33,6 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.TimeoutException
 import scala.util.{Failure, Success}
 
-@Named
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
 class Messaging {
 

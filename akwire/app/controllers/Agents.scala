@@ -1,12 +1,9 @@
 package controllers
 
-import play.modules.reactivemongo.MongoController
-import play.modules.reactivemongo.json.collection.JSONCollection
+import scaldi.{Injectable, Injector}
 import scala.concurrent.Future
-import reactivemongo.api.Cursor
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.{Inject, Named}
 import play.api.mvc._
 import play.api.libs.json._
 import models._
@@ -20,10 +17,11 @@ import scala.util.{Success, Failure}
  * play plugin. This provides a non-blocking driver for mongoDB as well as some useful additions for handling JSon.
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
-@Named
-class Agents @Inject() (messaging: Messaging) extends Controller with MongoController with DefaultWriteables {
+class Agents(implicit inj: Injector) extends Controller with Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Agents])
+
+  val messaging =  inject[Messaging]
 
   /*
    * Get a JSONCollection (a Collection implementation that is designed to work

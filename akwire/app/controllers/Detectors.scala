@@ -32,7 +32,6 @@ import java.util.UUID
 /**
  * @see
  */
-@Named
 class Detectors extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Detectors])

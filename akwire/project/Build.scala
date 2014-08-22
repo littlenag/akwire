@@ -18,10 +18,6 @@ object ApplicationBuild extends Build {
 
     /** SCALA DEPS **/
 
-    // MONGO going to stick with stock mongo and get rid of reactivemongo
-    "org.reactivemongo" %% "reactivemongo" % "0.10.0",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
-
     "org.mongodb" %% "casbah" % "2.7.1",
     "com.novus" %% "salat" % "1.9.8",
 
@@ -33,18 +29,8 @@ object ApplicationBuild extends Build {
     /** Likely will want this eventually **/
     "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
 
-    // Update to RC1 when feasible
-    "org.springframework.scala" %% "spring-scala" % "1.0.0.RC1",
-
-    // Will be using a reimann like language instead of esper
-//    "com.espertech" % "esper" % "4.10.0",
-
     // Using clojure and reimann for a rules engine (instead of esper)
-    "org.clojure" % "clojure" % "1.6.0",
-
-    // TODO These should be removed at some point
-    "org.mongodb" % "mongo-java-driver" % "2.11.3"
-//    "org.springframework.data" % "spring-data-mongodb" % "1.3.2.RELEASE"
+    "org.clojure" % "clojure" % "1.6.0"
   )
 
   val root = new java.io.File(".")
