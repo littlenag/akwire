@@ -2,12 +2,9 @@ package models
 
 import org.joda.time.DateTime
 
-import com.novus.salat._
-import com.novus.salat.global._
-import com.mongodb.casbah.Imports._
+import com.mongodb.casbah.Imports.{ObjectId}
 
-
-case class Team( _id: ObjectId,
+case class Team( id: ObjectId,
                  name: String,
                  //members: Map[ObjectId, User],
                  rules: List[Rule],

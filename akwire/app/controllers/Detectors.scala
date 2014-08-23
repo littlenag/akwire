@@ -3,7 +3,6 @@ package controllers
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.Named
 import play.api.mvc._
 import play.api.data._
 import play.api.libs.json.Reads._
@@ -18,20 +17,11 @@ import play.api.PlayException
 import com.mongodb.casbah.commons.Imports._
 import com.mongodb.casbah.{MongoConnection}
 
-import com.novus.salat.Context
+import models.mongoContext._
 
-import controllers.mongoContext._
-
-import com.novus.salat._
-import com.novus.salat.global._
-import com.novus.salat.annotations._
-import com.novus.salat.dao._
 import com.mongodb.casbah.MongoConnection
 import java.util.UUID
 
-/**
- * @see
- */
 class Detectors extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Detectors])

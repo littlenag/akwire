@@ -2,27 +2,17 @@ package controllers
 
 import play.api.mvc._
 
-import javax.annotation.PostConstruct
 import org.slf4j.{Logger, LoggerFactory}
+import scaldi.{Injector, Injectable}
 import services.IngestService
 import models.{RawAlert, RawSubmission}
-import javax.inject.Named
-import org.springframework.beans.factory.annotation.Autowired
-import scala.beans.BeanProperty
 
-@Named
-class Ingest extends Controller {
+class Ingest(implicit inj: Injector) extends Controller with Injectable {
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Ingest])
 
   logger.info("Controller has started")
 
-  @Autowired
-  @BeanProperty
-  var ingestService : IngestService = null;
-
-  @PostConstruct
-  def init = {
-  }
+  var ingestService  = inject[IngestService]
 
   // accept data from:
   //   collectd (write http plugin)

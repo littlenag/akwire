@@ -2,10 +2,7 @@ package models
 
 import org.joda.time.DateTime
 
-import com.novus.salat._
-import com.novus.salat.global._
-import com.mongodb.casbah.Imports._
-
+import com.mongodb.casbah.Imports.{ObjectId}
 
 case class Role( _id: ObjectId,
                  name: String,

@@ -14,15 +14,19 @@ object Global extends GlobalSettings with ScaldiSupport {
 
   logger.info("Akwire starting")
 
-  def applicationModule = new WebModule
+  override def applicationModule = {
+    new WebModule
+  }
 
   override def onStart(app: Application) {
+    super.onStart(app)
     logger.info("Application has started")
     RegisterConversionHelpers()
     RegisterJodaTimeConversionHelpers()
   }
 
   override def onStop(app: Application) {
+    super.onStop(app)
     logger.info("Application is stopped")
     DeregisterConversionHelpers()
     DeregisterJodaTimeConversionHelpers()

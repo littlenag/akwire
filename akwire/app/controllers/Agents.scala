@@ -1,5 +1,9 @@
 package controllers
 
+import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.commons.MongoDBObject
+import com.novus.salat.dao.SalatDAO
+import org.bson.types.ObjectId
 import scaldi.{Injectable, Injector}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -9,8 +13,6 @@ import play.api.libs.json._
 import models._
 import services.{CommandResult, Messaging}
 import scala.concurrent.duration._
-import play.api.http.DefaultWriteables
-import scala.util.{Success, Failure}
 
 /**
  * The Agents controllers encapsulates the Rest endpoints and the interaction with the MongoDB, via ReactiveMongo
@@ -23,14 +25,9 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
 
   val messaging =  inject[Messaging]
 
-  /*
-   * Get a JSONCollection (a Collection implementation that is designed to work
-   * with JsObject, Reads and Writes.)
-   * Note that the `collection` is not a `val`, but a `def`. We do _not_ store
-   * the collection reference to avoid potential problems in development with
-   * Play hot-reloading.
-   */
-  def collection: JSONCollection = db.collection[JSONCollection]("agents")
+  import mongoContext._
+
+  object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoConnection()("akwire")("agents"))
 
   // ------------------------------------------ //
   // Using case classes + Json Writes and Reads //
@@ -51,41 +48,17 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
   }
 
   def findOneAgent(agentId:String) = Action.async {
-    val cursor: Future[Option[Agent]] = collection.
-      // find all
-      find(Json.obj("agentId" -> agentId)).
-      // sort them by creation date
-      sort(Json.obj("created" -> -1)).
-      // perform the query and get a cursor of JsObject
-      one[Agent]
-
-    cursor.map {
-      case Some(agent) => Ok(Json.toJson(agent))
-      case None => NotFound("No agent with id: " + agentId)
+    Future {
+      AgentsDAO.findOne(MongoDBObject("agentId" -> new ObjectId(agentId))) match {
+        case Some(agent: Agent) => Ok(Json.toJson(agent))
+        case None => NotFound("No agent with id: " + agentId)
+      }
     }
   }
 
   def findAllAgents = Action.async {
-    // let's do our query
-    val cursor: Cursor[Agent] = collection.
-      // find all
-      find(Json.obj()).
-      // sort them by creation date
-      sort(Json.obj("created" -> -1)).
-      // perform the query and get a cursor of JsObject
-      cursor[Agent]
-
-    // gather all the JsObjects in a list
-    val futureAgentsList: Future[List[Agent]] = cursor.collect[List]()
-
-    // transform the list into a JsArray
-    val futurePersonsJsonArray: Future[JsArray] = futureAgentsList.map { agents =>
-      Json.arr(agents)
-    }
-    // everything's ok! Let's reply with the array
-    futurePersonsJsonArray.map {
-      agents =>
-        Ok(agents(0))
+    Future {
+      Ok(Json.arr(AgentsDAO.find(MongoDBObject.empty).sort(orderBy = MongoDBObject("created" -> -1)).toList))
     }
   }
 

@@ -19,19 +19,10 @@ import play.api.PlayException
 import com.mongodb.casbah.commons.Imports._
 import com.mongodb.casbah.{MongoConnection}
 
-import com.novus.salat.Context
+import models.mongoContext._
 
-import controllers.mongoContext._
-
-import com.novus.salat._
-import com.novus.salat.global._
-import com.novus.salat.annotations._
-import com.novus.salat.dao._
 import com.mongodb.casbah.MongoConnection
 
-/**
- * @see
- */
 class Teams extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])
@@ -41,7 +32,6 @@ class Teams extends Controller {
   // ------------------------------------------ //
 
   import models.Team
-  import models.Team.teamFormatter
 
   object TeamsDAO extends SalatDAO[Team, ObjectId](MongoConnection()("akwire")("teams"))
 

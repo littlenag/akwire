@@ -3,10 +3,7 @@ package models
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-import com.novus.salat._
-import com.novus.salat.global._
-import com.mongodb.casbah.Imports._
-import com.novus.salat.annotations._
+import com.mongodb.casbah.Imports.{ObjectId}
 
 object Impact extends Enumeration {
   val CLEAR = Value("CLEAR")   // Everything is OK and if anything was wrong in the past its now fixed. Will resolve active situations when received.
@@ -57,13 +54,10 @@ object Rule {
   import play.api.libs.json.Json
   import JsonUtil._
 
-  implicit val impactReader : Reads[Impact.Value] = JsPath.read[String].map(Impact.withName)
+  implicit val impactReader : Reads[Impact.Value] = JsPath.read[Impact.Value]
   implicit val impactWriter : Writes[Impact.Value] = JsPath.write[Impact.Value]
-  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[String].map(Urgency.withName)
+  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
   implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
-
 
   implicit val ruleFormatter = Json.format[Rule]
 }
-
-

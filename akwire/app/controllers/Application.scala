@@ -1,6 +1,5 @@
 package controllers
 
-import javax.inject.{Named, Singleton, Inject}
 import scaldi.{Injector, Injectable}
 import services.{UUIDGenerator}
 import org.slf4j.{LoggerFactory, Logger}

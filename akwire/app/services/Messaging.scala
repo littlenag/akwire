@@ -1,16 +1,16 @@
 package services
 
+import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.commons.MongoDBObject
 import com.rabbitmq.client._
 import akka.actor._
+import org.bson.types.ObjectId
 import play.api.Configuration
 
 import akka.pattern.{ ask, pipe }
 
 import org.slf4j.{LoggerFactory, Logger}
-import org.springframework.beans.factory.annotation.Autowired
-import scala.beans.BeanProperty
-import javax.annotation.PostConstruct
-import javax.inject.Named
+import scaldi.{Injector, Injectable}
 import play.api.libs.json._
 
 import com.rabbitmq.client.AMQP.BasicProperties
@@ -22,39 +22,26 @@ import com.rabbitmq.client.QueueingConsumer.Delivery
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.ReactiveMongoPlugin
-
 import play.api.Play.current
 
 import models._
 import scala.concurrent.{Promise, Future, Await}
-import reactivemongo.bson.BSONObjectID
 import scala.concurrent.TimeoutException
 import scala.util.{Failure, Success}
 
 // Using Rabbitmq, this service handles all the messaging between the agents, this app, and external consumers/requestors
-class Messaging {
+class Messaging(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Messaging])
 
   logger.info("RabbitMQ Service Started")
 
-  @Autowired
-  @BeanProperty
-  var actorSystem : ActorSystem = null;
-
-  @Autowired
-  @BeanProperty
-  var dao : Dao = null;
-
-  @Autowired
-  @BeanProperty
-  var configuration : Configuration = null;
+  val actorSystem = inject[ActorSystem]
+  val dao = inject[Dao]
+  val configuration  = inject[Configuration]
 
   var sessionBroker : ActorRef = null;
 
-  @PostConstruct
   def init = {
     try {
       val factory = new ConnectionFactory()
@@ -309,27 +296,26 @@ class AgentHandler extends Actor {
   // length of time to wait for Futures
   implicit val timeout = akka.util.Timeout(30 seconds)
 
-  /** The agents collection */
-  private def col = ReactiveMongoPlugin.db.collection[JSONCollection]("agents")
+  import com.novus.salat.dao.SalatDAO
+  import models.mongoContext._
+
+  object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoConnection()("akwire")("agents"))
 
   def ensureAgent : Agent = {
     // let's do our query
-    val result = Await.result(col.find(Json.obj("agentId" -> agentId.value)).one[Agent], 5 seconds)
-
-    if (result.isDefined) {
-      return result.get
-    } else {
-      val agent = Agent(BSONObjectID.generate, agentId.value, "", false, false);
-      col.save(agent).map {
-        case ok if ok.ok =>
-        case error => throw new RuntimeException(error.message)
-      }
-      return agent
+    AgentsDAO.findOne(MongoDBObject("agentId" -> agentId.value)) match {
+      case Some(agent:Agent) => agent
+      case None =>
+        val agent = Agent(ObjectId.get(), agentId.value, "", false, false);
+        AgentsDAO.save(agent)
+        agent
     }
   }
 
-  def markAgentConnected(value : Boolean) = {
-    for (x <- col.save(ensureAgent.copy(connected = value))) yield x
+  def upsertConnected(value : Boolean): Agent = {
+    val agent = ensureAgent.copy(connected = value)
+    AgentsDAO.save(agent)
+    agent
   }
 
   // needs a become statement
@@ -340,8 +326,7 @@ class AgentHandler extends Actor {
       this.sessionBroker = sender
       this.agentId = agentId;
 
-      ensureAgent
-      markAgentConnected(false)
+      upsertConnected(false)
 
       val result: Future[Future[CommandResult]] = ask(sessionBroker, ExecuteCommand(agentId, "hello-agent")).mapTo[Future[CommandResult]]
 
@@ -356,7 +341,7 @@ class AgentHandler extends Actor {
               // Ensure that we ping the agent's in order to ensure they are alive
               this.lastHeard = new DateTime()
               heartbeat = Some(context.system.scheduler.schedule(5 seconds, 5 seconds, self, Ping))
-              markAgentConnected(true)
+              upsertConnected(true)
             case _ =>
               logger.error("Malformed response to command 'hello-agent':" + agentId)
               sessionBroker ! ReleaseAgent(agentId)
@@ -375,7 +360,7 @@ class AgentHandler extends Actor {
         case _ =>
       }
 
-      markAgentConnected(false)
+      upsertConnected(false)
 
     case Ping =>
       if (lastHeard.plusSeconds(10).isBeforeNow) {

@@ -1,29 +1,26 @@
 package services
 
-import javax.inject.Named
-
 import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import org.slf4j.{LoggerFactory, Logger}
 import scaldi.{Injectable, Injector}
-import models.{Agent, AgentId}
-import play.api.libs.json.{DefaultReads, DefaultWrites, Json}
+import models.{mongoContext, Agent, AgentId}
+//import play.api.libs.json.{DefaultReads, DefaultWrites, Json}
 
-import scala.concurrent.duration._
+//import play.api.Play.current
 
-import play.api.Play.current
-
-import scala.concurrent.{Await, ExecutionContext}
-import ExecutionContext.Implicits.global
+//import scala.concurrent.{Await, ExecutionContext}
+//import ExecutionContext.Implicits.global
 
 class Dao(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Dao])
 
   /** The agents collection */
-//  private def agents = ReactiveMongoPlugin.db.collection[JSONCollection]("agents")
 
   import com.novus.salat.dao.SalatDAO
+  import mongoContext._
 
   object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoConnection()("akwire")("agents"))
 
@@ -44,6 +41,6 @@ class Dao(implicit inj: Injector) extends Injectable {
 //  def agents: JSONCollection = db.collection[JSONCollection]("agents")
 
   def findAgent(agentId: AgentId) : Option[Agent] = {
-    return AgentsDAO.findOne("agentId" -> agentId.value)
+    return AgentsDAO.findOne(MongoDBObject("agentId" -> agentId.value))
   }
 }

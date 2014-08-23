@@ -3,24 +3,13 @@ package services
 import akka.actor.{ActorSystem, Props, Actor, ActorRef}
 import org.slf4j.{Logger, LoggerFactory}
 import models.{RawAlert, ObservedMeasurement, RawSubmission}
-import scala.beans.BeanProperty
-import org.springframework.beans.factory.annotation.Autowired
-import javax.inject.Named
-import javax.annotation.PostConstruct
+import scaldi.{Injectable, Injector}
 
-@Named
-class IngestService() {
+class IngestService(implicit inj: Injector) extends Injectable {
 
-  @Autowired
-  @BeanProperty
-  var actorSystem : ActorSystem = null;
+  val actorSystem  = inject[ActorSystem]
 
-  var o : ActorRef = null
-
-  @PostConstruct
-  def init = {
-    o = actorSystem.actorOf(Props[ObsHandler], name = "obsHandler");
-  }
+  lazy val o = actorSystem.actorOf(Props[ObsHandler], name = "obsHandler");
 
   def process(submission: RawSubmission) = {
     o ! submission
