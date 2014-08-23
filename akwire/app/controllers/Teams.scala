@@ -3,25 +3,14 @@ package controllers
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import javax.inject.Named
 import play.api.mvc._
-import play.api.data._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import com.novus.salat.dao.SalatDAO
 
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
-import play.api.Play.current
-import play.api.PlayException
-
 import com.mongodb.casbah.commons.Imports._
-import com.mongodb.casbah.{MongoConnection}
-
-import models.mongoContext._
-
-import com.mongodb.casbah.MongoConnection
 
 class Teams extends Controller {
 
@@ -32,8 +21,6 @@ class Teams extends Controller {
   // ------------------------------------------ //
 
   import models.Team
-
-  object TeamsDAO extends SalatDAO[Team, ObjectId](MongoConnection()("akwire")("teams"))
 
   def createTeam = Action.async(parse.json) {
     request =>
@@ -47,7 +34,7 @@ class Teams extends Controller {
         valid = { res =>
           val name: String = res
           val team = new Team(ObjectId.get(), name, Nil, new DateTime(), true)
-          TeamsDAO.insert(team)
+          Team.insert(team)
           Future.successful(Created(s"Team Created"))
         }
       )
@@ -55,10 +42,9 @@ class Teams extends Controller {
 
   def retrieveTeams = Action.async {
     Future {
-      //val filter = MongoDBObject.empty
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
-      val list = TeamsDAO.find(filter).sort(sort).toList
+      val list = Team.find(filter).sort(sort).toList
       Ok(Json.arr(list)(0))
     }
   }
@@ -66,7 +52,7 @@ class Teams extends Controller {
   def retrieveTeam(teamId:String) = Action.async {
     Future {
       val filter = MongoDBObject("_id" -> new ObjectId(teamId))
-      TeamsDAO.findOne(filter) match {
+      Team.findOne(filter) match {
         case Some(team : Team) => Ok(Json.toJson(team))
         case None => BadRequest(s"Invalid id $teamId")
       }
@@ -77,7 +63,7 @@ class Teams extends Controller {
     request =>
       request.body.asOpt[Team] match {
         case Some(team: Team) =>
-          TeamsDAO.save(team)
+          Team.save(team)
           Future.successful(Ok(Json.toJson(team)))
         case None =>
           Future.successful(BadRequest(s"Could not parse team with id $teamId"))
@@ -86,7 +72,7 @@ class Teams extends Controller {
 
   def deleteTeam(teamId:String) = Action.async {
     Future {
-      TeamsDAO.removeById(new ObjectId(teamId))
+      Team.removeById(new ObjectId(teamId))
       Ok(s"Removed team with id $teamId")
     }
   }
