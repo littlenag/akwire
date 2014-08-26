@@ -1,6 +1,6 @@
 package services
 
-import akka.actor.{ActorSystem, Props, Actor, ActorRef}
+import akka.actor.{ActorSystem, Props, Actor}
 import org.slf4j.{Logger, LoggerFactory}
 import models.{RawAlert, ObservedMeasurement, RawSubmission}
 import scaldi.{Injectable, Injector}

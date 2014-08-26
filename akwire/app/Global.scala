@@ -1,5 +1,5 @@
 import com.mongodb.casbah.commons.conversions.scala._
-import modules.WebModule
+import modules.CoreModule
 import play.api.GlobalSettings
 import play.api.Application
 import org.slf4j.{LoggerFactory, Logger}
@@ -15,7 +15,7 @@ object Global extends GlobalSettings with ScaldiSupport {
   logger.info("Akwire starting")
 
   override def applicationModule = {
-    new WebModule
+    new CoreModule
   }
 
   override def onStart(app: Application) {

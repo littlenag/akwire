@@ -2,11 +2,12 @@ package models
 
 import org.bson.types.ObjectId
 
-case class User( id : ObjectId,             // object id, unique for this object for this database
-                 age: Int,
-                 firstName: String,
-                 lastName: String,
-                 active: Boolean)
+case class User(id : ObjectId,             // object id, unique for this object for this database
+                name: String,
+                email: String)
+
+case class UserCreds(token: String,        // their session token
+                     hash: String)         // hash of their password
 
 case class AgentId(value: String)
 

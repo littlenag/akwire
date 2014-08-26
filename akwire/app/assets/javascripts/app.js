@@ -7,6 +7,7 @@
         'ui.bootstrap',
         'ui.router',
         'akwire.ui.teams',
+        'akwire.ui.rules',
         'akwire.ui.detectors',
         'akwire.ui.incidents',
         'akwire.filters',

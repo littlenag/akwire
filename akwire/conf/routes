@@ -4,6 +4,8 @@
 # Note: @controllers syntax signifies the actual controller instance, retrieved via GlobalSettings.getController().
 # ~~~~
 
+# By convention, POSTs are allowed to change state but are NOT idempotent, PUTs must be idempotent
+
 # /ingest is the base resource for where other systems are supposed to send data
 # ./observations is for raw numeric or textual observations of deployed systems
 # ./alert is for integrating an alert from other external monitoring engines/scripts/etc
@@ -29,8 +31,14 @@ POST    /detector/create_token     @controllers.Detectors.genIntegrationToken(de
 POST    /teams                     @controllers.Teams.createTeam
 GET     /teams                     @controllers.Teams.retrieveTeams
 GET     /teams/:teamId             @controllers.Teams.retrieveTeam(teamId:String)
-POST    /teams/:teamId             @controllers.Teams.updateTeam(teamId:String)
 DELETE  /teams/:teamId             @controllers.Teams.deleteTeam(teamId:String)
+POST    /teams/:teamId/rename      @controllers.Teams.renameTeam(teamId:String, oldName:String, newName:String)
+
+# Rules
+PUT     /teams/:teamId/rules          @controllers.Teams.saveRule(teamId:String)
+DELETE  /teams/:teamId/rules          @controllers.Teams.deleteRule(teamId:String, ruleId: String)
+PUT     /teams/:teamId/rules/start    @controllers.Teams.startRule(teamId:String, ruleId: String)
+PUT     /teams/:teamId/rules/pause    @controllers.Teams.pauseRule(teamId:String, ruleId: String)
 
 # Roles
 POST    /roles                     @controllers.Roles.createRole

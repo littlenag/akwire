@@ -1,8 +1,8 @@
 <div class="row">
-    <div ng-controller="CreateTeamCtrl as cuc">
+    <div ng-controller="CreateTeamCtrl">
         <h2>Create Team</h2>
 
-        <form id="CreateTeamForm" name="CreateTeamForm" class="form-horizontal" role="form" ng-submit="cuc.createTeam()">
+        <form id="CreateTeamForm" name="CreateTeamForm" class="form-horizontal" role="form" ng-submit="createTeam()">
             <legend class="sm-col-12">Basic Information</legend>
 
             <div class="form-group">
@@ -10,11 +10,11 @@
 
                 <div class="col-sm-10">
                     <input type="text" class="form-control" name="name" id="name" placeholder="Tier 1, Helpdesk, DBA, ..."
-                           ng-model="cuc.team.name">
+                           ng-model="team.name">
                 </div>
             </div>
 
-            <pre>{{ cuc.team | json }}</pre>
+            <pre>{{ team | json }}</pre>
 
             <div class="form-group">
                 <div class="col-sm-offset-4 col-sm-8 text-right">
