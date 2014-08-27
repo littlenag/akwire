@@ -30,23 +30,26 @@ object Urgency extends Enumeration {
   val IMMEDIATE = Value("IMMEDIATE")
 }
 
-case class Rule( id: Option[ObjectId],
-                 name: String,
-                 sop: String,                 // wiki link? could take context as an argument, more functional?
-                 impact: Impact.Value,
-                 urgency: Urgency.Value,
+case class Rule( name: String,
+                 test : String,           // to be removed once the proof-of-concept is over
 
-                 context:String,          // for multi-stream and non-nhok-contexted rules
+                 //expr : JsObject,         // clojure that's been JSON-encoded
 
-                 expr : JsObject,         // clojure that's been JSON-encoded
+                 id: Option[ObjectId] = Some(new ObjectId),
 
-                 createdOn: Option[DateTime],
-                 createdBy: Option[User],
-                 lastModifiedOn: Option[DateTime],
-                 lastModifiedBy: Option[User],
+                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
+                 impact: Impact.Value = Impact.SEV5,
+                 urgency: Urgency.Value = Urgency.NONE,
+
+                 context:String = "nhok",          // for multi-stream and non-nhok-contexted rules
+
+                 createdOn: Option[DateTime] = new DateTime(),
+                 createdBy: Option[User] = None,
+                 lastModifiedOn: Option[DateTime] = new DateTime(),
+                 lastModifiedBy: Option[User] = None,
 
                  //@Ignore team: Option[Team] = None
-                 active: Boolean
+                 active: Boolean = true
                ) {
 
   // in ITIL Priority is a function of both impact and urgency
