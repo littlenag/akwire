@@ -43,9 +43,9 @@ case class Rule( name: String,
 
                  context:String = "nhok",          // for multi-stream and non-nhok-contexted rules
 
-                 createdOn: Option[DateTime] = new DateTime(),
+                 createdOn: Option[DateTime] = Some(new DateTime()),
                  createdBy: Option[User] = None,
-                 lastModifiedOn: Option[DateTime] = new DateTime(),
+                 lastModifiedOn: Option[DateTime] = Some(new DateTime()),
                  lastModifiedBy: Option[User] = None,
 
                  //@Ignore team: Option[Team] = None

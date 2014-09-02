@@ -6,7 +6,7 @@ import org.slf4j.{LoggerFactory, Logger}
 import scaldi.play.ScaldiSupport
 
 /**
- * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
+ * Set up the Scaldi injector and provide the mechanism for return objects from the dependency graph.
  */
 object Global extends GlobalSettings with ScaldiSupport {
 

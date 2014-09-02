@@ -27,12 +27,21 @@ abstract class Observation(timestamp: DateTime, instance:String, host:String, ob
 
   //private String tags = "os:/linux";  // metadata about either the device or the stream itself
 
-  // TODO Sanitize these values for things like tabs, newlines -> make simple UTF-8!
-  def this(instance : String, host : String, observer: String, key: String) {
-    this(new DateTime(), instance, host, observer, key)
-  }
-
   override def toString() : String = {
     String.format("[%s]/%s/%s/%s/%s", timestamp, instance, host, observer, key);
   }
+}
+
+class ObservedMeasurement(timestamp: DateTime,
+                          override val instance:String,
+                          override val host:String,
+                          override val observer:String,
+                          override val key:String,
+                          value:Double)
+      extends Observation(timestamp, instance, host, observer, key) {
+
+  def this(instance : String, host : String, observer: String, key: String, value:Double) {
+    this(new DateTime(), instance, host, observer, key, value)
+  }
+
 }

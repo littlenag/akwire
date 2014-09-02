@@ -91,14 +91,14 @@ class CoreServices(implicit inj: Injector) extends Injectable {
       return Failure(new RuntimeException(s"Invalid rule id ${rule.id} for team $teamId"))
     }
 
-    val (team,rule) = upsertRule(teamOpt.get, rule)
+    val (team,newRule) = upsertRule(teamOpt.get, rule)
     Team.save(team)
 
     // Is the old rule running, if so unload it
     alertingEngine.unloadAlertingRule(rule.id.get)
 
-    if (rule.active) {
-      alertingEngine.loadAlertingRule(team, rule)
+    if (newRule.active) {
+      alertingEngine.loadAlertingRule(team, newRule)
     }
 
 
