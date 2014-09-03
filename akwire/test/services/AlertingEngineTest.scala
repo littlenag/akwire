@@ -14,7 +14,8 @@ class AlertingEngineTest extends Specification {
       val engine = new AlertingEngine
       engine.init
 
-      val rule = new Rule("r1", "println obs")
+      val rule = new Rule("r1", "(where (> ) trigger)")
+      // where not foo resolve
       val team = new Team(new ObjectId(), "t1", List(rule), new DateTime(), true)
 
       engine.loadAlertingRule(team, rule)
