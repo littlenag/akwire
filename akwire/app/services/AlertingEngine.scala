@@ -1,5 +1,9 @@
 package services
 
+import java.nio.charset.{StandardCharsets, Charset}
+import java.nio.file.{Files, Paths}
+import javax.script.{SimpleScriptContext, ScriptContext}
+
 import models.core.Observation
 import models.{Contextualized, Team, StreamContext, Rule}
 import org.bson.types.ObjectId
@@ -10,6 +14,20 @@ import scala.collection.concurrent.TrieMap
 
 trait ObsProcesser {
   def process(obs:Observation)
+}
+
+trait TriggerCallback {
+  /** Go through a java ArrayList since Java is our glue here */
+  def trigger(obs : java.util.ArrayList[Observation])
+}
+
+class TriggerAlert extends TriggerCallback {
+  private final val logger: Logger = LoggerFactory.getLogger(getClass)
+
+  def trigger(obs : java.util.ArrayList[Observation]) = {
+    println("Triggering alert with observations: " + obs)
+    logger.info("Triggering alert with observations: " + obs)
+  }
 }
 
 class AlertingEngine {
@@ -24,10 +42,17 @@ class AlertingEngine {
 
   val clojure = new ClojureScriptEngineFactory().getScriptEngine.asInstanceOf[ClojureScriptEngine]
 
+  val alertCollector = new TriggerAlert
+
   object Actions {
     def prn(o:Any) = {
       println(o)
     }
+  }
+
+  def readFile(path: String, encoding: Charset) : String = {
+    val encoded = Files.readAllBytes(Paths.get(path));
+    new String(encoded, encoding);
   }
 
   def init = {
@@ -44,6 +69,15 @@ class AlertingEngine {
 
     //require.invoke(stringReader.invoke("clojure"))
 
+    val bindings = clojure.createBindings()
+
+    bindings.put("akwire-binding-trigger", alertCollector)
+
+    clojure.getContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
+
+    clojure.eval(readFile("/home/mark/proj/akwire/akwire/app/util/Time.clj", StandardCharsets.UTF_8), clojure.getContext)
+    clojure.eval(readFile("/home/mark/proj/akwire/akwire/app/util/Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
+
     logger.info("Alerting Engine running")
   }
 
@@ -57,11 +91,17 @@ class AlertingEngine {
   def loadAlertingRule(team:Team, rule:Rule) = {
     val ruleName = s"rules.ID_${rule.id.get}"
 
-    val ruleText = s"""(ns $ruleName (:import services.ObsProcesser))
+    val ruleText = s"""(ns $ruleName (:import services.ObsProcesser) (:require akwire.streams) (:use akwire.streams))
       | (def ObsProcesserImpl
-      |    (proxy[ObsProcesser][]
-      |      (process [obs] (${rule.test}))))
+      |    ( proxy[ObsProcesser][]
+      |      (process [observation]
+      |        (apply (partial ${rule.test}) [(make-event observation)])
+      |      )
+      |    )
+      | )
     """.stripMargin
+
+    //|        (apply (partial ${rule.test}) [(make-event observation)])
 
     logger.info("Compiling rules: " + ruleText)
 

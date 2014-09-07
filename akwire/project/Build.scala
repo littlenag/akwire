@@ -30,7 +30,9 @@ object ApplicationBuild extends Build {
     "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
 
     // Using clojure and reimann for a rules engine (instead of esper)
-    "org.clojure" % "clojure" % "1.6.0"
+    "org.clojure" % "clojure" % "1.6.0",
+    "org.clojure" % "tools.logging" % "0.2.6",
+    "org.clojure" % "math.numeric-tower" % "0.0.4"
   )
 
   val root = new java.io.File(".")

@@ -32,12 +32,12 @@ abstract class Observation(timestamp: DateTime, instance:String, host:String, ob
   }
 }
 
-class ObservedMeasurement(timestamp: DateTime,
+class ObservedMeasurement(val timestamp: DateTime,
                           override val instance:String,
                           override val host:String,
                           override val observer:String,
                           override val key:String,
-                          value:Double)
+                          val value:Double)
       extends Observation(timestamp, instance, host, observer, key) {
 
   def this(instance : String, host : String, observer: String, key: String, value:Double) {

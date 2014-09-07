@@ -87,6 +87,7 @@ public class ClojureScriptEngine
      * or user/var if only the var is given.
      */
     private void applyBindings(Bindings bindings) {
+        System.out.println("Applying bindings -- Start[" + + bindings.size() + "]\n");
         for (Map.Entry<String, Object> entry : bindings.entrySet()) {
             String key = entry.getKey();
             if (key.indexOf('.') == -1) {
@@ -97,9 +98,13 @@ public class ClojureScriptEngine
                     key = names[1];
                 }
                 Object value = entry.getValue();
+                System.out.println("Binding: " + nsName + "/" + key + "\n");
                 Var.intern(Namespace.findOrCreate(Symbol.create(nsName.intern())), Symbol.create(key.intern()), value);
+            } else {
+                System.out.println("Invalid Binding: " + key);
             }
         }
+        System.out.println("Applying bindings -- Finish\n");
     }
 
     /*
