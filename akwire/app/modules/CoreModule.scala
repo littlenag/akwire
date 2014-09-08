@@ -5,7 +5,7 @@ import controllers.Application
 import org.slf4j.{LoggerFactory, Logger}
 import play.api.Configuration
 import scaldi.Module
-import services.{CoreServices, AlertingEngine, SimpleUUIDGenerator, UUIDGenerator}
+import services._
 
 class CoreModule extends Module {
   private final val logger: Logger = LoggerFactory.getLogger(classOf[CoreModule])
@@ -26,8 +26,8 @@ class CoreModule extends Module {
   binding to new controllers.Users
 
   binding to new AlertingEngine
+  binding to new PersistenceService
   binding to new CoreServices
-
 
   bind[ActorSystem] to ActorSystem("AkkaScalaSpring")
   bind[Configuration] to new play.api.Configuration(ConfigFactory.load("conf/application.conf"))

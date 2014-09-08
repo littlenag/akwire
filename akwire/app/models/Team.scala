@@ -41,7 +41,8 @@ case class Rule( name: String,
                  impact: Impact.Value = Impact.SEV5,
                  urgency: Urgency.Value = Urgency.NONE,
 
-                 context:String = "nhok",          // for multi-stream and non-nhok-contexted rules
+                 // the list of fields that matter
+                 context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-nhok-contexted rules
 
                  createdOn: Option[DateTime] = Some(new DateTime()),
                  createdBy: Option[User] = None,

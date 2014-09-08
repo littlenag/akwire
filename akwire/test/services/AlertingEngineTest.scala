@@ -4,17 +4,31 @@ import models.core.{ObservedMeasurement, Observation}
 import models.{Rule, Team}
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
+import org.specs2.mock.Mockito
 import org.specs2.mutable._
+import scaldi.DynamicModule
 
-class AlertingEngineTest extends Specification {
+class AlertingEngineTest extends Specification with Mockito {
 
   "AlertingEngine" should {
 
     "load a rule" in {
-      val engine = new AlertingEngine
+
+      val persistence = mock[PersistenceService]
+
+
+
+      val engine = new AlertingEngine()(DynamicModule(
+        _.binding to persistence
+      ))
+
       engine.init
 
-      val rule = new Rule("r1", """(where (host "h1") trigger)""")
+      // where is a macro, so it has to be in parens
+      // other functions that are not macro's do not need to be in parens
+
+      val rule = new Rule("r1", """(where (and (host "h1") (> value 2)) trigger)""")
+      //val rule = new Rule("r1", """(where (host "h1") trigger)""")
       //val rule = new Rule("r1", """(where true trigger)""")
       //val rule = new Rule("r1", "prn")
       //val rule = new Rule("r1", "akwire.streams/trigger")
@@ -25,7 +39,7 @@ class AlertingEngineTest extends Specification {
 
       // v = f(t), v_now = f(t_now)
 
-      val obs :ObservedMeasurement = new ObservedMeasurement("i1", "h1", "t1", "k1", 5)
+      val obs = new ObservedMeasurement("i1", "h1", "t1", "k1", 5)
 
       obs.host mustEqual "h1"
 

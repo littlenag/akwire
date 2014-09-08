@@ -4,35 +4,21 @@ import java.nio.charset.{StandardCharsets, Charset}
 import java.nio.file.{Files, Paths}
 import javax.script.{SimpleScriptContext, ScriptContext}
 
+import models.alert.DoTrigger
 import models.core.Observation
-import models.{Contextualized, Team, StreamContext, Rule}
+import models.{Contextualized, Team, Rule}
 import org.bson.types.ObjectId
 import org.slf4j.{Logger, LoggerFactory}
+import scaldi.{Injector, Injectable}
 import util.ClojureScriptEngineFactory
 import util.ClojureScriptEngine
 import scala.collection.concurrent.TrieMap
 
-trait ObsProcesser {
-  def process(obs:Observation)
-}
-
-trait TriggerCallback {
-  /** Go through a java ArrayList since Java is our glue here */
-  def trigger(obs : java.util.ArrayList[Observation])
-}
-
-class TriggerAlert extends TriggerCallback {
-  private final val logger: Logger = LoggerFactory.getLogger(getClass)
-
-  def trigger(obs : java.util.ArrayList[Observation]) = {
-    println("Triggering alert with observations: " + obs)
-    logger.info("Triggering alert with observations: " + obs)
-  }
-}
-
-class AlertingEngine {
+class AlertingEngine(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[AlertingEngine])
+
+  val persist = inject[PersistenceService]
 
   // rules and their compiled processors mapped via the rule id
   var alertingRules = TrieMap[ObjectId, (Rule, ObsProcesser)]()
@@ -41,14 +27,6 @@ class AlertingEngine {
   var resolvingRules = TrieMap[ObjectId, List[Rule]]()
 
   val clojure = new ClojureScriptEngineFactory().getScriptEngine.asInstanceOf[ClojureScriptEngine]
-
-  val alertCollector = new TriggerAlert
-
-  object Actions {
-    def prn(o:Any) = {
-      println(o)
-    }
-  }
 
   def readFile(path: String, encoding: Charset) : String = {
     val encoded = Files.readAllBytes(Paths.get(path));
@@ -71,7 +49,7 @@ class AlertingEngine {
 
     val bindings = clojure.createBindings()
 
-    bindings.put("akwire-binding-trigger", alertCollector)
+    bindings.put("akwire-bindings/alert-engine", this)
 
     clojure.getContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
 
@@ -81,6 +59,7 @@ class AlertingEngine {
     logger.info("Alerting Engine running")
   }
 
+  // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     logger.info(s"Inspecting: $obs")
     for (ar <- alertingRules) {
@@ -92,6 +71,14 @@ class AlertingEngine {
     val ruleName = s"rules.ID_${rule.id.get}"
 
     val ruleText = s"""(ns $ruleName (:import services.ObsProcesser) (:require akwire.streams) (:use akwire.streams))
+      | (def rule-id (org.bson.types.ObjectId. "${rule.id.get}"))
+      | (defn trigger [events]
+      |   (if (list? events)
+      |     (.triggerAlert akwire-bindings/alert-engine rule-id (java.util.ArrayList. (map make-obs events)))
+      |     (.triggerAlert akwire-bindings/alert-engine rule-id (java.util.ArrayList. (map make-obs [events])))
+      |   )
+      | )
+      |
       | (def ObsProcesserImpl
       |    ( proxy[ObsProcesser][]
       |      (process [observation]
@@ -101,9 +88,7 @@ class AlertingEngine {
       | )
     """.stripMargin
 
-    //|        (apply (partial ${rule.test}) [(make-event observation)])
-
-    logger.info("Compiling rules: " + ruleText)
+    logger.info("Compiling rule body: " + ruleText)
 
     clojure.eval(ruleText)
 
@@ -114,7 +99,7 @@ class AlertingEngine {
 
   // Assumes that the Alerting Rule has already been loaded
   def loadResolveRule(ruleId:ObjectId, entity:Contextualized) = {
-    val sc = entity.streamContext
+    val sc = entity.contextualizedStream
   }
 
   /**
@@ -139,4 +124,29 @@ class AlertingEngine {
     Some(rule)
   }
 
+  /** Go through a java ArrayList since Java is our glue here */
+  def triggerAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
+    println(s"$ruleId Triggering alert with observations: $obs")
+    logger.info("Triggering alert with observations: " + obs)
+
+    import scala.collection.JavaConverters._
+
+    alertingRules.get(ruleId) match {
+      case Some((rule,proc)) =>
+        persist.persistAlert(DoTrigger(rule, obs.asScala.toList))
+      case None =>
+        // Should never happen
+        throw new Exception("Should never happen!")
+    }
+  }
+
+  def resolveAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
+    println(s"$ruleId Resolving alert with observations: $obs")
+    logger.info("Resolving alert with observations: " + obs)
+  }
+
+}
+
+trait ObsProcesser {
+  def process(obs:Observation)
 }

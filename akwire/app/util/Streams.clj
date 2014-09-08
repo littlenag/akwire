@@ -88,7 +88,7 @@
 (ns akwire.streams
   (:use [akwire.common :exclude [match]])
   (:import (services.ObsProcesser)
-           (services.TriggerCallback)
+           (services.ObsCallback)
            (services.TriggerAlert$)
            ))
 
@@ -306,7 +306,7 @@
   )
 )
 
-(defn trigger
+(defn trigger-alert
   "Triggers a new alert from the passed in event(s). trigger is a terminal function
   and does not pass on events to any child streams.
 
@@ -320,10 +320,10 @@
   the alert condition so it makes the most sense to pass all of these forward,
   rather than just the last observation that trips the alert."
   [events]
-  (prn "alert triggered")
-  (prn events)
+  ;(prn "alert triggered")
+  ;(prn events)
   (if (list? events)
-    (.trigger user/akwire-binding-trigger (java.util.ArrayList. (map make-obs events)))
-    (.trigger user/akwire-binding-trigger (java.util.ArrayList. (map make-obs [events])))
+    (.triggerAlert akwire-bindings/alert-engine (java.util.ArrayList. (map make-obs events)))
+    (.triggerAlert akwire-bindings/alert-engine (java.util.ArrayList. (map make-obs [events])))
   )
 )

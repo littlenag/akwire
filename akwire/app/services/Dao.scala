@@ -6,12 +6,6 @@ import org.bson.types.ObjectId
 import org.slf4j.{LoggerFactory, Logger}
 import scaldi.{Injectable, Injector}
 import models.{mongoContext, Agent, AgentId}
-//import play.api.libs.json.{DefaultReads, DefaultWrites, Json}
-
-//import play.api.Play.current
-
-//import scala.concurrent.{Await, ExecutionContext}
-//import ExecutionContext.Implicits.global
 
 class Dao(implicit inj: Injector) extends Injectable {
 

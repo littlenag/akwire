@@ -1,5 +1,6 @@
 package models
 
+import models.alert.AlertMsg
 import org.joda.time.DateTime
 import com.novus.salat.annotations._
 import com.novus.salat.dao._
@@ -8,12 +9,27 @@ import play.api.libs.json._
 
 import models.mongoContext._
 
-// The context should understand both provence and about-ness of the data streams
-// Context's tell us when what look like multiple streams are really about the same object
-// TODO this needs fixing
-case class StreamContext(host: Option[String],
-                         observer: Option[String],
-                         key: Option[String])
+/*
+ * The context tells you which fields to compare to distinguish two streams from each other.
+ * This is important because two streams may have differing fields but still be about the same object
+ * from the perspective of the user.
+ *
+ * The context should understand both provence and about-ness of the data streams
+ *
+ * TODO this needs fixing
+ *
+ * only host, instance, and cluster should be privileged fields
+ *
+ * stream name + rule context -> contextualized stream
+ *
+ * incident key is actually a contextualized stream
+ */
+
+case class ContextualizedStream(fields : Map[String, String])
+
+trait Contextualized {
+  def contextualizedStream: ContextualizedStream;
+}
 
 case class Incident( id: ObjectId,
 
@@ -23,14 +39,15 @@ case class Incident( id: ObjectId,
                      interred: Boolean,
 
                      // Lifetime
-                     firstTrigger: DateTime,
-                     lastTrigger: DateTime,
+                     firstSeen: DateTime,
+                     lastSeen: DateTime,
                      count : Int,
 
                      // Ownership and Context
                      rule: Rule,
                      teamId : ObjectId,
-                     @Key("ctx") streamContext: StreamContext,
+
+                     @Key("incident_key") incidentKey: ContextualizedStream,
 
                      // User data
                      notes: Option[String],
@@ -52,13 +69,21 @@ case class Incident( id: ObjectId,
                      // tags
                      // all observations between the incident start and the eventual close
                      // alerting streams their observations (for multi-stream)
-                 ) extends Contextualized
+                 ) extends Contextualized {
+
+  override def contextualizedStream = incidentKey
+
+  def this(alert:AlertMsg) = {
+    this(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, null, )
+  }
+
+  def increment = {
+    this.copy(count = this.count + 1, lastSeen = new DateTime())
+  }
+
+}
 
 object Incident extends IncidentDAO with IncidentJson
-
-trait Contextualized {
-  val streamContext: StreamContext;
-}
 
 trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
   def collection = MongoConnection()("akwire")("incidents")
@@ -71,10 +96,8 @@ trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
     "resolved" -> 1,
     "interred" -> 1,
     "rule.id" -> 1,
-    "rule.context" -> 1,
-    "ctx.host" -> 1,
-    "ctx.observer" -> 1,
-    "ctx.key" -> 1
+//    "rule.context" -> 1,
+    "incident_key" -> 1
   )
 
   collection.ensureIndex(fields, "primary_idx")
@@ -82,14 +105,31 @@ trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
   // Queries
 }
 
-object StreamContext extends StreamContextJson
+object ContextualizedStream extends StreamContextJson
 
 trait StreamContextJson {
   import play.api.libs.json.Json
 
   import JsonUtil._
 
-  implicit val contextFormatter = Json.format[StreamContext]
+  //implicit val contextFormatter = Json.format[ContextualizedStream]
+
+  implicit object ctxStreamFormat extends Format[ContextualizedStream] {
+
+    val reader : Reads[ContextualizedStream] =
+      (JsPath.read[Map[String, String]]).map(x => ContextualizedStream(x))
+
+    override def reads(json: JsValue): JsResult[ContextualizedStream] = {
+      reader.reads(json)
+    }
+
+    override def writes(o: ContextualizedStream): JsValue = {
+      var ret = Json.obj()
+      o.fields.foreach(p => ret = ret + (p._1,JsString(p._2)))
+      ret
+    }
+  }
+
 }
 
 trait IncidentJson extends RuleEnumsJson with StreamContextJson {

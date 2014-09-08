@@ -15,6 +15,9 @@ object IncidentAction extends Enumeration {
 
 case class IncidentKey(key : IncidentKeyType)
 
+/**
+ * These are going to be sent by externally integrated systems, like Nagios and PRTG.
+ */
 case class RawAlert( service_key: UUID,
                      action: IncidentAction.Value = IncidentAction.Trigger,
                      description: Option[String] = None,
