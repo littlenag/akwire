@@ -25,7 +25,7 @@ import models.mongoContext._
  * incident key is actually a contextualized stream
  */
 
-case class ContextualizedStream(fields : Map[String, String])
+case class ContextualizedStream(fields : List[(String, String)])
 
 trait Contextualized {
   def contextualizedStream: ContextualizedStream;
@@ -112,21 +112,31 @@ trait StreamContextJson {
 
   import JsonUtil._
 
-  //implicit val contextFormatter = Json.format[ContextualizedStream]
-
   implicit object ctxStreamFormat extends Format[ContextualizedStream] {
 
-    val reader : Reads[ContextualizedStream] =
-      (JsPath.read[Map[String, String]]).map(x => ContextualizedStream(x))
-
+    // We want objects who are really just a simple set of key-value pairs:
+    // { k1:"v1", k2:"v2",...}
     override def reads(json: JsValue): JsResult[ContextualizedStream] = {
-      reader.reads(json)
+      json.validate[JsObject] match {
+        case JsSuccess(ob, path) =>
+          ob.fields.find(p => ! p._2.isInstanceOf[JsString]).map { o =>
+            return JsError(s"Field ${o._1} must have a string value; value ${o._2} is not a string")
+          }
+          val l = ob.fields.toList.map(p => (p._1, p._2.as[JsString].value))
+          return JsSuccess(ContextualizedStream(l))
+        case e : JsError =>
+          return e ++ JsError("Expected an object")
+      }
     }
 
     override def writes(o: ContextualizedStream): JsValue = {
-      var ret = Json.obj()
-      o.fields.foreach(p => ret = ret + (p._1,JsString(p._2)))
-      ret
+      //var ret = Json.obj()
+      //o.fields.foreach(p => ret = ret + (p._1,JsString(p._2)))
+      //ret
+      //
+      o.fields.foldLeft(Json.obj()) { (obj,p) =>
+        obj + (p._1,JsString(p._2))
+      }
     }
   }
 

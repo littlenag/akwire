@@ -16,17 +16,20 @@ sealed abstract class AlertMsg(val rule:Rule,
                                val created:DateTime) extends Contextualized {
 
   def contextualizedStream: ContextualizedStream = {
-    val fields = rule.context
+    // Only need to inspect the first Observation since the contextualized stream
+    // is defined as being the same across all in the provided list
     val obs = observations(0)
 
-    val context = new ContextualizedStream()
+    var l = List[(String, String)]()
 
-    if (fields.contains("instance")) { context.put("instance", obs.instance) }
-    if (fields.contains("host")) { context.put("host", obs.host) }
-    if (fields.contains("observer")) { context.put("observer", obs.observer) }
-    if (fields.contains("key")) { context.put("key", obs.key) }
+    rule.context.foreach {
+      case "instance" => l = l :+ ("instance", obs.instance)
+      case "host"     => l = l :+ ("host", obs.host)
+      case "observer" => l = l :+ ("observer", obs.observer)
+      case "key"      => l = l :+ ("key", obs.key)
+    }
 
-    context
+    ContextualizedStream(l)
   }
 }
 
