@@ -1,24 +1,26 @@
 (function() {
 
-    angular.module('akwire.ui.rules', ['ui.router']).config(
-    [ '$stateProvider', '$urlRouterProvider',
-      function($stateProvider, $urlRouterProvider) {
+    angular.module('akwire.ui.rules', ['ui.router']).config([
+
+      '$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
+
+        //$log.debug("setting ui routes: configure.rule.*");
 
         $stateProvider
-            .state('admin.rule', {
-              url: "/rule",
+            .state('configure.rules', {
+              url: "/rules",
               abstract: true,
               templateUrl: "/assets/partials/rules/base.html",
             })
-            .state('admin.rule.list', {
+            .state('configure.rules.list', {
               url: "",
               templateUrl: "/assets/partials/rules/list.html",
             })
-            .state('admin.rule.create', {
+            .state('configure.rules.create', {
               url: "/create",
               templateUrl: "/assets/partials/rules/create.html",
             })
-            .state('admin.rule.edit', {
+            .state('configure.rules.edit', {
               url: "/edit/:ruleId",
               templateUrl: "/assets/partials/rules/edit.html",
             });

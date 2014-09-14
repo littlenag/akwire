@@ -1,30 +1,22 @@
 (function() {
 
   controllersModule.controller('ListTeamCtrl', [
-    '$log', 'TeamService', function($log, TeamService) {
-      var ListTeamCtrl;
-      return new (ListTeamCtrl = (function() {
+    '$scope', '$log', 'TeamService', function($scope, $log, TeamService) {
+      $log.debug("constructing ListTeamController");
 
-        function ListTeamCtrl() {
-          $log.debug("constructing ListTeamController");
-          this.teams = [];
-          this.getAllTeams();
-        }
+      $scope.teams = [];
 
-        ListTeamCtrl.prototype.getAllTeams = function() {
-          var _this = this;
-          $log.debug("getAllTeams()");
-          return TeamService.getTeams().then(function(data) {
-            $log.debug("Promise returned " + data.length + " Teams");
-            return _this.teams = data;
-          }, function(error) {
-            return $log.error("Unable to get Teams: " + error);
-          });
-        };
+      $scope.getAllTeams = function() {
+        $log.debug("getAllTeams()");
+        return TeamService.getTeams().then(function(data) {
+          $log.debug("Promise returned " + data.length + " Teams");
+          return $scope.teams = data;
+        }, function(error) {
+          return $log.error("Unable to get Teams: " + error);
+        });
+      };
 
-        return ListTeamCtrl;
-
-      })());
+      $scope.getAllTeams();
     }
   ]);
 
@@ -57,31 +49,25 @@
   ]);
 
   controllersModule.controller('CreateTeamCtrl', [
-    '$log', '$location', 'TeamService', function($log, $location, TeamService) {
-      var CreateTeamCtrl;
-      return new (CreateTeamCtrl = (function() {
+    '$scope', '$log', '$state', 'TeamService', function($scope, $log, $state, TeamService) {
 
-        function CreateTeamCtrl() {
-          $log.debug("constructing CreateTeamController");
-          this.team = {};
-        }
+      $log.debug("constructing CreateTeamController");
 
-        CreateTeamCtrl.prototype.createTeam = function() {
-          var _this = this;
+      $scope.team = {}
+      $scope.createTeam = function() {
+
           $log.debug("createTeam()");
-          this.team.active = true;
-          return TeamService.createTeam(this.team).then(function(data) {
+          $scope.team.active = true;
+
+          return TeamService.createTeam($scope.team).then(function(data) {
             $log.debug("Promise returned " + data + " Team");
-            _this.team = data;
-            return $location.path("/admin/team");
+            $scope.team = data;
+            return $state.go("admin.team.list", {});
           }, function(error) {
             return $log.error("Unable to create Team: " + error);
           });
-        };
+      };
 
-        return CreateTeamCtrl;
-
-      })());
     }
   ]);
 

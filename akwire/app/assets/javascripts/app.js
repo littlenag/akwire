@@ -42,6 +42,10 @@
               url: "/admin",
               templateUrl: "/assets/partials/admin/base.html",
             })
+            .state('configure', {
+              url: "/configure",
+              templateUrl: "/assets/partials/configure/base.html",
+            })
 
             .state('admin.role', {
               url: "/role",
@@ -89,6 +93,10 @@
 
     controllersModule.controller('AdminCtrl', ['$scope', '$log', function($scope, $log) {
       $log.debug("constructing AdminCtrl");
+    }]);
+
+    controllersModule.controller('ConfigureCtrl', ['$scope', '$log', function($scope, $log) {
+      $log.debug("constructing ConfigureCtrl");
     }]);
 
 }).call(this);

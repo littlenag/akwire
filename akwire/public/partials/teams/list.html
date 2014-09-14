@@ -20,7 +20,7 @@
         <tbody>
         <tr ng-repeat="team in teams | filter:searchText">
             <td>
-                <a ui-sref="admin.team.edit({teamId: team._id})">{{team.name}}</a>
+                <a ui-sref="admin.team.edit({teamId: team.id})">{{team.name}}</a>
             </td>
         </tr>
         <tr ng-hide="teams.length">

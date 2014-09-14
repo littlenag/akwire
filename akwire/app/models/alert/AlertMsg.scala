@@ -50,9 +50,9 @@ case class DoTrigger(override val rule:Rule,
  * @param observations
  * @param created
  */
-case class DoMaintain(override val rule:Rule,
-                      override val observations:List[Observation],
-                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
+case class DoProlong(override val rule:Rule,
+                     override val observations:List[Observation],
+                     override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
 /**
  * Sent if new Observations are received that satisfy the clear condition set by

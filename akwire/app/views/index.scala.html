@@ -53,11 +53,12 @@
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
                         <ul class="dropdown-menu" role="menu">
                             <li role="presentation">
-                                <a ui-sref="configure.tag-rules">Tagging Rules</a>
+                                <a ui-sref="configure.rules.list">Alerting Rules</a>
                             </li>
                             <li role="presentation">
-                                <a ui-sref="configure.alert-rules">Alerting Rules</a>
+                                <a ui-sref="configure.tags.list">Tagging Rules</a>
                             </li>
+                            <!-- alert policy, escalation, schedule -->
                             <li role="presentation">
                                 <a ui-sref="configure.notifications">Notifications</a>
                             </li>
@@ -140,6 +141,10 @@
 
 <script src='@routes.Assets.at("javascripts/roles/RoleService.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/roles/RoleCtrl.js")' type="text/javascript"></script>
+
+<script src='@routes.Assets.at("javascripts/rules/RuleService.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/rules/RuleCtrl.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/rules/RuleUI.js")' type="text/javascript"></script>
 
 <script src='@routes.Assets.at("javascripts/teams/TeamService.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/teams/TeamCtrl.js")' type="text/javascript"></script>

@@ -14,11 +14,11 @@ object Impact extends Enumeration {
 //  val CLEAR = Value("CLEAR")   // Everything is OK and if anything was wrong in the past its now fixed. Will resolve active situations when received.
 //  val INFO = Value("INFO")     // Purely informational in nature, may or may not indicate that anything has gone wrong.
 
-  val SEV5 = Value("SEV5")     // Something small went wrong, and the entity will continue operating.
-  val SEV4 = Value("SEV4")     // Something larger went wrong, and the entity will continue operating.
-  val SEV3 = Value("SEV3")     // Something went wrong, and the entity may or may not continue.
-  val SEV2 = Value("SEV2")     // Something went wrong, and the entity cannot continue.
-  val SEV1 = Value("SEV1")     // Something went wrong, and the entity cannot continue.
+  val SEV_5 = Value("SEV-5")     // Something small went wrong, and the system will continue operating.
+  val SEV_4 = Value("SEV-4")     // Something larger went wrong, and the system will continue operating.
+  val SEV_3 = Value("SEV-3")     // Something went wrong, and the system may or may not continue.
+  val SEV_2 = Value("SEV-2")     // Something went wrong, and the system cannot continue.
+  val SEV_1 = Value("SEV-1")     // Something went wrong, and the system cannot continue.
 }
 
 // urgency is something that humans have to know about
@@ -30,19 +30,20 @@ object Urgency extends Enumeration {
   val IMMEDIATE = Value("IMMEDIATE")
 }
 
-case class Rule( name: String,
-                 test : String,           // to be removed once the proof-of-concept is over
+case class Rule( team: ObjectId,
+                 name: String,
 
-                 //expr : JsObject,         // clojure that's been JSON-encoded
+                 text : String,                              // text of the rule to be compiled and run by clojure
+                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
 
                  id: Option[ObjectId] = Some(new ObjectId),
 
                  sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
-                 impact: Impact.Value = Impact.SEV5,
+                 impact: Impact.Value = Impact.SEV_5,
                  urgency: Urgency.Value = Urgency.NONE,
 
                  // the list of fields that matter
-                 context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-nhok-contexted rules
+                 context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-ihok-contexted rules
 
                  createdOn: Option[DateTime] = Some(new DateTime()),
                  createdBy: Option[User] = None,
@@ -57,7 +58,7 @@ case class Rule( name: String,
   // maybe we want to have a priority matrix for each team?
   // then they could select things by priority
 
-  // will want to have a testing life-cycle
+  // will want to have a testing life-cycle for rules
 
   // streams have both provenance and context context
   // provenance tells you what and where the data came from
@@ -67,7 +68,7 @@ case class Rule( name: String,
   //def makeAlertingRule(): String
   //abstract def handleAlertTrigger(events: List[EventBean]) : List[TriggerAlert]
 
-  // Rules may need to know how to unload themselves
+  // Rules may need to know how to unload themselves from the alerting engine
   def destroy = {}
 }
 

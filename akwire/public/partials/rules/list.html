@@ -1,42 +1,46 @@
+<div class="col-md-1">
+    <a ui-sref="configure.rules.create" class="btn btn-primary" id="btn_rule_create">Create Rule</a>
+</div>
+
 <div class="row" ng-controller="ListRuleCtrl">
-    &NonBreakingSpace;
-
-    <div class="row">
-        <div class="form-group">
-            <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Rules...">
-            <hr>
-        </div>
-
-        <table id="rule_list" class="table table-striped">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Pattern</th>
-                <th>Expression</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr ng-repeat="rule in rules | filter:searchText">
-                <td>
-                    {{ rule.name }}
-                </td>
-                <td>
-                    {{ rule.pattern }}
-                </td>
-                <td>
-                    {{ rule.expression }}
-                </td>
-            </tr>
-            <tr ng-hide="rules.length">
-                <td colspan="4">
-                    <p class="text-center">No Rules</p>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-
+    <div class="form-group">
+        <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Rules...">
         <hr>
-        <h4>Debug:</h4>
-        <pre>{{ rules | json }}</pre>
     </div>
+
+    <table id="rule_list" class="table table-striped">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Expr</th>      <!-- plaintext rule expression, as interpreted by clojure -->
+            <th>Streams</th>   <!-- pattern, should be able to get a pop-over showing selected streams -->
+            <th>Rule</th>      <!-- expression -->
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="rule in rules | filter:searchText">
+            <td>
+                {{ rule.name }}
+            </td>
+            <td>
+                {{ rule.text }}
+            </td>
+            <td>
+                {{ rule.meta.pattern }}
+            </td>
+            <td>
+                {{ rule.meta.expression }}
+            </td>
+        </tr>
+        <tr ng-hide="rules.length">
+            <td colspan="4">
+                <p class="text-center">No Rules</p>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <hr>
+    <h4>Debug:</h4>
+    <pre>{{ rules | json }}</pre>
 </div>

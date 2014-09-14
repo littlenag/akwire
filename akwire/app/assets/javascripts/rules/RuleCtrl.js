@@ -1,30 +1,19 @@
 (function() {
 
   controllersModule.controller('ListRuleCtrl', [
-    '$log', 'RuleService', function($log, RuleService) {
-      var ListRuleCtrl;
-      return new (ListRuleCtrl = (function() {
+    '$scope', '$log', 'RuleService', function($scope, $log, RuleService) {
+      $log.debug("constructing ListRuleController");
+      $scope.rules = [];
 
-        function ListRuleCtrl() {
-          $log.debug("constructing ListRuleController");
-          this.rules = [];
-          this.getAllRules();
-        }
-
-        ListRuleCtrl.prototype.getAllRules = function() {
-          var _this = this;
-          $log.debug("getAllRules()");
-          return RuleService.getRules().then(function(data) {
-            $log.debug("Promise returned " + data.length + " Rules");
-            return _this.rules = data;
-          }, function(error) {
-            return $log.error("Unable to get Rules: " + error);
-          });
-        };
-
-        return ListRuleCtrl;
-
-      })());
+      $scope.getAllRules = function() {
+        $log.debug("getAllRules()");
+        return RuleService.getRules().then(function(data) {
+          $log.debug("Promise returned " + data.length + " Rules");
+          return $scope.rules = data;
+        }, function(error) {
+          return $log.error("Unable to get Rules: " + error);
+        });
+      };
     }
   ]);
 
@@ -48,7 +37,7 @@
         return RuleService.updateRule($scope.rule).then(function(data) {
           $log.debug("Promise returned " + data + " Rule");
           $scope.rule = data;
-          return $state.go("admin.rule.list", {});
+          return $state.go("admin.rules.list", {});
         }, function(error) {
           return $log.error("Unable to update Rule: " + error);
         });
@@ -57,31 +46,23 @@
   ]);
 
   controllersModule.controller('CreateRuleCtrl', [
-    '$log', '$location', 'RuleService', function($log, $location, RuleService) {
-      var CreateRuleCtrl;
-      return new (CreateRuleCtrl = (function() {
+    '$scope', '$log', '$state', 'RuleService', function($scope, $log, $state, RuleService) {
 
-        function CreateRuleCtrl() {
-          $log.debug("constructing CreateRuleController");
-          this.rule = {};
-        }
+      $log.debug("constructing CreateRuleController");
+      $scope.rule = {};
 
-        CreateRuleCtrl.prototype.createRule = function() {
-          var _this = this;
-          $log.debug("createRule()");
-          this.rule.active = true;
-          return RuleService.createRule(this.rule).then(function(data) {
-            $log.debug("Promise returned " + data + " Rule");
-            _this.rule = data;
-            return $location.path("/admin/rule");
-          }, function(error) {
-            return $log.error("Unable to create Rule: " + error);
-          });
-        };
+      $scope.createRule = function() {
+        $log.debug("createRule()");
+        $scope.rule.active = true;
 
-        return CreateRuleCtrl;
-
-      })());
+        return RuleService.createRule($scope.rule).then(function(data) {
+          $log.debug("Promise returned " + data + " Rule");
+          $scope.rule = data;
+          return $state.go("admin.rules.list", {});
+        }, function(error) {
+          return $log.error("Unable to create Rule: " + error);
+        });
+      };
     }
   ]);
 

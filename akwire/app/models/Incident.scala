@@ -7,6 +7,9 @@ import com.novus.salat.dao._
 import com.mongodb.casbah.Imports._
 import play.api.libs.json._
 
+import com.mongodb.DBObject
+import com.mongodb.casbah.commons.MongoDBObject
+
 import models.mongoContext._
 
 /*
@@ -25,7 +28,20 @@ import models.mongoContext._
  * incident key is actually a contextualized stream
  */
 
-case class ContextualizedStream(fields : List[(String, String)])
+// Pairs of field name and its content, order matters to mongo so its preserved
+// as part of the ordering inherent in a List
+case class ContextualizedStream(fields : List[(String, String)]) {
+
+  def asDBObject : DBObject = {
+    val o = MongoDBObject().empty
+
+    fields.foreach { p =>
+      o.put(p._1, p._2)
+    }
+
+    return o
+  }
+}
 
 trait Contextualized {
   def contextualizedStream: ContextualizedStream;
@@ -49,21 +65,21 @@ case class Incident( id: ObjectId,
 
                      @Key("incident_key") incidentKey: ContextualizedStream,
 
+                     impact: Impact.Value,              // set by the Rule
+                     urgency: Urgency.Value,            // initial value set by the Rule
+
                      // User data
-                     notes: Option[String],
-                     url: Option[String],        // Wiki-formatted
+                     notes: Option[String] = None,
+                     url: Option[String] = None,        // Wiki-formatted
 
                      // Blob for integration adapters to keep their data in
-                     integrationData: Option[JsObject],
+                     integrationData: Option[JsObject] = None,
 
-                     ackedBy: Option[User],
-                     ackedWhen: Option[DateTime],
+                     ackedBy: Option[User] = None,
+                     ackedWhen: Option[DateTime] = None,
 
-                     archivedBy: Option[User],
-                     archivedWhen: Option[DateTime],
-
-                     impact: Impact.Value,
-                     urgency: Urgency.Value
+                     archivedBy: Option[User] = None,
+                     archivedWhen: Option[DateTime] = None
 
                      // other possible data:
                      // tags
@@ -74,7 +90,7 @@ case class Incident( id: ObjectId,
   override def contextualizedStream = incidentKey
 
   def this(alert:AlertMsg) = {
-    this(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, null, )
+    this(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, null, alert.contextualizedStream, alert.rule.impact, alert.rule.urgency)
   }
 
   def increment = {
@@ -91,7 +107,7 @@ trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
   val dao = new SalatDAO[Incident, ObjectId](collection) {}
 
   // Indexes
-  val fields = DBObject(
+  val fields = MongoDBObject(
     "active" -> 1,
     "resolved" -> 1,
     "interred" -> 1,

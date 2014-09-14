@@ -82,7 +82,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
       | (def ObsProcesserImpl
       |    ( proxy[ObsProcesser][]
       |      (process [observation]
-      |        (apply (partial ${rule.test}) [(make-event observation)])
+      |        (apply (partial ${rule.text}) [(make-event observation)])
       |      )
       |    )
       | )
