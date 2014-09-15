@@ -26,6 +26,9 @@ object ApplicationBuild extends Build {
     "org.scaldi" %% "scaldi-play" % "0.3.2",
     "org.scaldi" %% "scaldi-akka" % "0.3.2",
 
+    // For User authentication and login
+    "ws.securesocial" %% "securesocial" % "2.1.4",
+
     /** Likely will want this eventually **/
     "com.github.sstone" %% "akka-amqp-proxies" % "1.3",
 
@@ -47,6 +50,7 @@ object ApplicationBuild extends Build {
   // Add your own project settings here'
   val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
     (Seq(resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/",
+         resolvers += Resolver.sonatypeRepo("releases"),
          requireJs += "main.js",
          requireJsShim += "main.js") ++ closureCompilerSettings(defaultOptions)): _*
   )

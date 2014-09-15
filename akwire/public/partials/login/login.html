@@ -1,10 +1,45 @@
-<!DOCTYPE html>
-<html>
-<head lang="en">
-    <meta charset="UTF-8">
-    <title></title>
-</head>
-<body>
 
-</body>
-</html>
+<div class="row">
+
+    <div class="col-md-3">
+
+    <h1>Sign In</h1>
+
+    <form ng-controller="LoginController" ng-submit="login()" class="form-horizontal" ng-class='{"has-error": form.errors.message != null}'>
+        <input
+                name="username"
+                model="form.username"
+                type="text"
+                class="form-control text-center"
+                errors="form.errors['username']"
+                placeholder="Email Address"
+                required="true"
+                width="250"/>
+
+        <br>
+        <input
+                name="password"
+                model="form.password"
+                type="password"
+                class="form-control text-center"
+                errors="form.errors['password']"
+                placeholder="Password"
+                required="true"/>
+
+        <div ng-show="form.errors.message" class="text-center alert alert-danger">
+            {{form.errors.message}}
+        </div>
+
+        <div class=" text-center">
+            <br>
+            <button type="submit" class="btn btn-success primary" id="btn_login">Sign In</button>
+
+            <br>
+            <p>
+                <a ui-sref="auth-reset">Did you forget your password?</a>
+            </p>
+        </div>
+    </form>
+
+    </div>
+</div>

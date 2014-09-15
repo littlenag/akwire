@@ -30,9 +30,19 @@
     app.config(
     [ '$stateProvider', '$urlRouterProvider',
       function($stateProvider, $urlRouterProvider) {
-        $urlRouterProvider.otherwise("/agents");
+        $urlRouterProvider.otherwise("/");
 
         $stateProvider
+
+            .state('login', {
+              url: "/",
+              templateUrl: "/assets/partials/login/login.html"
+            })
+
+            .state('home', {
+              url: "/home",
+              templateUrl: "/assets/partials/home.html"
+            })
 
             .state('agents', {
               url: "/agents",
@@ -99,4 +109,30 @@
       $log.debug("constructing ConfigureCtrl");
     }]);
 
+    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$log', function($scope, $http, $state, $log) {
+      $log.debug("constructing LoginController");
+      if (! $scope.form) {
+        $scope.form = {}
+      }
+
+      $scope.login = function() {
+        $http.post("users/authenticate/userpass", $scope.form).success(function(data, status, headers) {
+          $log.info("Successfully Authenticated: " + status);
+          $state.go("home", {});
+        }).error(function(data, status, headers) {
+          $log.error("Failed to authenticate: " + status);
+          $scope.form.errors = response
+        });
+      }
+
+      $scope.logout = function() {
+        $http.get("users/logout").success(function(data, status, headers) {
+          $log.info("Successfully Logged Out" + status);
+          $state.go("login", {});
+        }).error(function(data, status, headers) {
+          $log.error("Failed to log out " + status);
+          $state.go("login", {});
+        });
+      }
+    }]);
 }).call(this);

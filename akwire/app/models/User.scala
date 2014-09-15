@@ -1,33 +1,66 @@
 package models
 
+import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.commons.MongoDBObject
+import com.novus.salat.dao.{SalatDAO, ModelCompanion}
 import org.bson.types.ObjectId
+import securesocial.core._
 
-case class User(id : ObjectId,             // object id, unique for this object for this database
+import play.api.Play.current
+
+import models.mongoContext._
+
+case class User(id: ObjectId,                     // object id, unique for this object for this database
+                mail: String,                     // email is also unique, but may be changed (we keep the id around for this reason)
+                provider: String,                 // auth provider
                 name: String,
-                email: String)
+                token: String,                    // their session token, probably keep this in the Play Cache,
+                pwdInfo: Option[PasswordInfo])    // password hash, id of the hasher algo, and the salt used
+  extends Identity {
 
-case class UserCreds(token: String,        // their session token
-                     hash: String)         // hash of their password
+  override def identityId: IdentityId = IdentityId(mail, provider)
 
-case class AgentId(value: String)
+  override def email: Option[String] = Some(mail)
 
-case class Agent( id : ObjectId,             // object id, unique for this object for this database
-                  agentId: String,            // unique to this agent, and how we do actual lookups
-                  hostName: String,
-                  connected: Boolean,         // currently connected?
-                  managed: Boolean)           // expected to send data and respond normally?
+  override def firstName: String = name
 
-object User {
+  override def lastName: String = ""
+
+  override def fullName: String = name
+
+  override def oAuth1Info: Option[OAuth1Info] = None
+
+  override def oAuth2Info: Option[OAuth2Info] = None
+
+  override def avatarUrl: Option[String] = None
+
+  override def passwordInfo: Option[PasswordInfo] = pwdInfo
+
+  override def authMethod: AuthenticationMethod = AuthenticationMethod.UserPassword
+}
+
+object User extends UserDAO with UserJson
+
+trait UserDAO extends ModelCompanion[User, ObjectId] {
+  def collection = MongoConnection()("akwire")("users")
+
+  val dao = new SalatDAO[User, ObjectId](collection) {}
+
+  // Indexes
+  collection.ensureIndex(MongoDBObject("email" -> 1), "name", unique = true)
+
+  // Queries
+  def findOneByName(name: String): Option[User] = dao.findOne(MongoDBObject("name" -> name))
+
+  def findByEmailAndProvider(email: String, providerId: String): Option[User] = dao.findOne(MongoDBObject("email" -> email, "provider" -> providerId))
+}
+
+trait UserJson {
   import play.api.libs.json.Json
   import JsonUtil._
+
+  implicit val passwordInfoFormat = Json.format[PasswordInfo]
 
   // Generates Writes and Reads for Beans thanks to Json Macros
   implicit val userFormat = Json.format[User]
-}
-
-object Agent {
-  import play.api.libs.json.Json
-  import JsonUtil._
-
-  implicit val agentFormat = Json.format[Agent]
 }
