@@ -1,5 +1,8 @@
 import com.mongodb.casbah.commons.conversions.scala._
+import models.Team
 import modules.CoreModule
+import org.bson.types.ObjectId
+import org.joda.time.DateTime
 import play.api.GlobalSettings
 import play.api.Application
 import org.slf4j.{LoggerFactory, Logger}
@@ -23,6 +26,8 @@ object Global extends GlobalSettings with ScaldiSupport {
     logger.info("Application has started")
     RegisterConversionHelpers()
     RegisterJodaTimeConversionHelpers()
+
+    firstBoot
   }
 
   override def onStop(app: Application) {
@@ -30,6 +35,18 @@ object Global extends GlobalSettings with ScaldiSupport {
     logger.info("Application is stopped")
     DeregisterConversionHelpers()
     DeregisterJodaTimeConversionHelpers()
+  }
+
+  def firstBoot = {
+    // When akwire starts we need to make sure to have some initial configuration in place.
+    // This includes an admin user and an admin team
+    Team.findOneByName(Team.AKWIRE_ADMIN_TEAM_NAME) match {
+      case None =>
+        val admin = new Team(ObjectId.get(), Team.AKWIRE_ADMIN_TEAM_NAME, Nil, new DateTime(), true)
+        Team.save(admin)
+      case _ => logger.info("Teams init complete")
+
+    }
   }
 
   // Load the self-health engine

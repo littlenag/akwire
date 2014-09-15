@@ -79,7 +79,9 @@ case class Team( id: ObjectId,
                  created: DateTime,
                  active: Boolean)
 
-object Team extends TeamDAO with TeamJson
+object Team extends TeamDAO with TeamJson {
+  def AKWIRE_ADMIN_TEAM_NAME = "Akwire Administrators"
+}
 
 trait TeamDAO extends ModelCompanion[Team, ObjectId] {
   def collection = MongoConnection()("akwire")("teams")
