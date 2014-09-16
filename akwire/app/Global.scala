@@ -1,5 +1,5 @@
 import com.mongodb.casbah.commons.conversions.scala._
-import models.Team
+import models.{User, Team}
 import modules.CoreModule
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -7,6 +7,9 @@ import play.api.GlobalSettings
 import play.api.Application
 import org.slf4j.{LoggerFactory, Logger}
 import scaldi.play.ScaldiSupport
+import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.utils.{BCryptPasswordHasher, PasswordHasher}
+import securesocial.core.{PasswordInfo, AuthenticationMethod}
 
 /**
  * Set up the Scaldi injector and provide the mechanism for return objects from the dependency graph.
@@ -45,7 +48,18 @@ object Global extends GlobalSettings with ScaldiSupport {
         val admin = new Team(ObjectId.get(), Team.AKWIRE_ADMIN_TEAM_NAME, Nil, new DateTime(), true)
         Team.save(admin)
       case _ => logger.info("Teams init complete")
+    }
 
+    val ADMIN = "admin@akwire.com"
+    val PROVIDER = UsernamePasswordProvider.UsernamePassword
+
+    User.findByEmailAndProvider(ADMIN, PROVIDER) match {
+      case None =>
+        //import play.api.Play.current
+        val pw = (new BCryptPasswordHasher(play.api.Play.current)).hash("admin")
+        val admin = new User(ObjectId.get(), ADMIN, PROVIDER, "admin", Some(pw))
+        User.save(admin)
+      case _ => logger.info("User accounts init complete")
     }
   }
 

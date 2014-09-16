@@ -8,7 +8,7 @@
     <form ng-controller="LoginController" ng-submit="login()" class="form-horizontal" ng-class='{"has-error": form.errors.message != null}'>
         <input
                 name="username"
-                model="form.username"
+                ng-model="form.username"
                 type="text"
                 class="form-control text-center"
                 errors="form.errors['username']"
@@ -19,20 +19,22 @@
         <br>
         <input
                 name="password"
-                model="form.password"
+                ng-model="form.password"
                 type="password"
                 class="form-control text-center"
                 errors="form.errors['password']"
                 placeholder="Password"
                 required="true"/>
 
+        <pre>{{ form | json }}</pre>
+
         <div ng-show="form.errors.message" class="text-center alert alert-danger">
             {{form.errors.message}}
         </div>
 
-        <div class=" text-center">
+        <div class="form-group text-center">
             <br>
-            <button type="submit" class="btn btn-success primary" id="btn_login">Sign In</button>
+            <button type="submit" class="btn btn-success" id="btn_login">Sign In</button>
 
             <br>
             <p>

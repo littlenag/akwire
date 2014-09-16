@@ -14,7 +14,6 @@ case class User(id: ObjectId,                     // object id, unique for this 
                 mail: String,                     // email is also unique, but may be changed (we keep the id around for this reason)
                 provider: String,                 // auth provider
                 name: String,
-                token: String,                    // their session token, probably keep this in the Play Cache,
                 pwdInfo: Option[PasswordInfo])    // password hash, id of the hasher algo, and the salt used
   extends Identity {
 
@@ -52,7 +51,7 @@ trait UserDAO extends ModelCompanion[User, ObjectId] {
   // Queries
   def findOneByName(name: String): Option[User] = dao.findOne(MongoDBObject("name" -> name))
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[User] = dao.findOne(MongoDBObject("email" -> email, "provider" -> providerId))
+  def findByEmailAndProvider(email: String, providerId: String): Option[User] = dao.findOne(MongoDBObject("mail" -> email, "provider" -> providerId))
 }
 
 trait UserJson {

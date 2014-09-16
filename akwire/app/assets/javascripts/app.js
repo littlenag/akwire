@@ -116,7 +116,8 @@
       }
 
       $scope.login = function() {
-        $http.post("users/authenticate/userpass", $scope.form).success(function(data, status, headers) {
+        $log.info("Posting credentials: " + angular.toJson($scope.form));
+        $http.post("/authenticate/userpass", $scope.form).success(function(data, status, headers) {
           $log.info("Successfully Authenticated: " + status);
           $state.go("home", {});
         }).error(function(data, status, headers) {
@@ -126,7 +127,7 @@
       }
 
       $scope.logout = function() {
-        $http.get("users/logout").success(function(data, status, headers) {
+        $http.get("/logout").success(function(data, status, headers) {
           $log.info("Successfully Logged Out" + status);
           $state.go("login", {});
         }).error(function(data, status, headers) {
