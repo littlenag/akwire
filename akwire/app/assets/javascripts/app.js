@@ -40,8 +40,15 @@
             })
 
             .state('home', {
-              url: "/home",
-              templateUrl: "/assets/partials/home.html"
+              params:["team"],
+              views: {
+                '': {
+                  templateUrl: "/assets/partials/home.html"
+                },
+                'activeteam@': {
+                  template: "Hello from home"
+                }
+              }
             })
 
             .state('agents', {
@@ -109,7 +116,7 @@
       $log.debug("constructing ConfigureCtrl");
     }]);
 
-    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$log', function($scope, $http, $state, $log) {
+    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$stateParams', '$log', function($scope, $http, $state, $stateParams, $log) {
       $log.debug("constructing LoginController");
       if (! $scope.form) {
         $scope.form = {}
@@ -117,9 +124,20 @@
 
       $scope.login = function() {
         $log.info("Posting credentials: " + angular.toJson($scope.form));
-        $http.post("/authenticate/userpass", $scope.form).success(function(data, status, headers) {
-          $log.info("Successfully Authenticated: " + status);
-          $state.go("home", {});
+        $http.post("/auth//authenticate/userpass", $scope.form).success(function(data, status, headers) {
+          var o = {status: status, data: data};
+          $log.info("Successfully Authenticated: " + angular.toJson(o));
+
+          $http.get("/user").success(function(data, status, headers) {
+            $log.info("Successfully Logged Out" + status);
+            $state.go("login", {});
+          }).error(function(data, status, headers) {
+            $log.error("Failed to log out " + status);
+            $state.go("login", {});
+          });
+
+          $stateParams = { teamId: 12, teamName: "foo"};
+          $state.go("home", $stateParams);
         }).error(function(data, status, headers) {
           $log.error("Failed to authenticate: " + status);
           $scope.form.errors = response
@@ -127,7 +145,7 @@
       }
 
       $scope.logout = function() {
-        $http.get("/logout").success(function(data, status, headers) {
+        $http.get("/auth/logout").success(function(data, status, headers) {
           $log.info("Successfully Logged Out" + status);
           $state.go("login", {});
         }).error(function(data, status, headers) {

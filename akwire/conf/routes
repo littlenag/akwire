@@ -10,25 +10,25 @@
 
 
 # Login page
-GET     /login                      securesocial.controllers.LoginPage.login
-GET     /logout                     securesocial.controllers.LoginPage.logout
+GET     /auth/login                      securesocial.controllers.LoginPage.login
+GET     /auth/logout                     securesocial.controllers.LoginPage.logout
 
 # User Registration and password handling
-GET     /signup                     securesocial.controllers.Registration.startSignUp
-POST    /signup                     securesocial.controllers.Registration.handleStartSignUp
-GET     /signup/:token              securesocial.controllers.Registration.signUp(token)
-POST    /signup/:token              securesocial.controllers.Registration.handleSignUp(token)
-GET     /reset                      securesocial.controllers.Registration.startResetPassword
-POST    /reset                      securesocial.controllers.Registration.handleStartResetPassword
-GET     /reset/:token               securesocial.controllers.Registration.resetPassword(token)
-POST    /reset/:token               securesocial.controllers.Registration.handleResetPassword(token)
-GET     /password                   securesocial.controllers.PasswordChange.page
-POST    /password                   securesocial.controllers.PasswordChange.handlePasswordChange
+GET     /auth/signup                     securesocial.controllers.Registration.startSignUp
+POST    /auth/signup                     securesocial.controllers.Registration.handleStartSignUp
+GET     /auth/signup/:token              securesocial.controllers.Registration.signUp(token)
+POST    /auth/signup/:token              securesocial.controllers.Registration.handleSignUp(token)
+GET     /auth/reset                      securesocial.controllers.Registration.startResetPassword
+POST    /auth/reset                      securesocial.controllers.Registration.handleStartResetPassword
+GET     /auth/reset/:token               securesocial.controllers.Registration.resetPassword(token)
+POST    /auth/reset/:token               securesocial.controllers.Registration.handleResetPassword(token)
+GET     /auth/password                   securesocial.controllers.PasswordChange.page
+POST    /auth/password                   securesocial.controllers.PasswordChange.handlePasswordChange
 
 # Providers entry points
-GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
-GET     /not-authorized             securesocial.controllers.ProviderController.notAuthorized
+GET     /auth/authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /auth/authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+GET     /auth/not-authorized             securesocial.controllers.ProviderController.notAuthorized
 
 
 ########################################################################
@@ -54,6 +54,13 @@ GET     /detector                  @controllers.Detectors.retrieveDetector(detec
 POST    /detector                  @controllers.Detectors.updateDetector
 DELETE  /detector                  @controllers.Detectors.deleteDetector
 POST    /detector/create_token     @controllers.Detectors.genIntegrationToken(detectorId:String)
+
+# Users
+POST    /users                     @controllers.Users.createUser
+GET     /users                     @controllers.Users.retrieveUsers
+GET     /users/:userId             @controllers.Users.retrieveUser(userId:String)
+DELETE  /users/:userId             @controllers.Users.deleteUser(userId:String)
+POST    /users/:userId/rename      @controllers.Users.renameUser(userId:String, oldName:String, newName:String)
 
 # Teams
 POST    /teams                     @controllers.Teams.createTeam
