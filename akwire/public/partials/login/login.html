@@ -14,7 +14,9 @@
                 errors="form.errors['username']"
                 placeholder="Email Address"
                 required="true"
-                width="250"/>
+                value=""
+                autofill="autofill"
+                width="250">
 
         <br>
         <input
@@ -24,7 +26,9 @@
                 class="form-control text-center"
                 errors="form.errors['password']"
                 placeholder="Password"
-                required="true"/>
+                value=""
+                autofill="autofill"
+                required="true">
 
         <pre>{{ form | json }}</pre>
 
