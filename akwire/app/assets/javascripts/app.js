@@ -39,8 +39,8 @@
               templateUrl: "/assets/partials/login/login.html"
             })
 
-            .state('app', {
-              params:["teamId", "teamName"],
+            .state('home', {
+              url: "/home",
               views: {
                 '': {
                   templateUrl: "/assets/partials/home.html"
@@ -116,7 +116,7 @@
       $log.debug("constructing ConfigureCtrl");
     }]);
 
-    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$stateParams', '$log', function($scope, $http, $state, $stateParams, $log) {
+    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$log', 'UserSessionService', function($scope, $http, $state, $log, UserSessionService) {
       $log.debug("constructing LoginController");
       if (! $scope.form) {
         $scope.form = {}
@@ -125,21 +125,12 @@
       $scope.login = function() {
         $log.info("Posting credentials: " + angular.toJson($scope.form));
         $http.post("/auth/authenticate/userpass", $scope.form).success(function(data, status, headers) {
-          var o = {status: status, data: data};
-          $log.info("Successfully Authenticated: " + angular.toJson(o));
 
-          // Get the user profile
-          $http.get("/users/by-email/" + $scope.form.username).success(function(data, status, headers) {
-            $log.info("Successfully Logged Out" + status);
+          $log.info("Successfully Authenticated: " + angular.toJson({status: status, data: data}));
 
-            // Just use the first team returned as the default Team for the User
-            $stateParams = { teamId: data.memberOfTeams[0].id, teamName: data.memberOfTeams[0].name};
-            $state.go("app", $stateParams);
-          }).error(function(data, status, headers) {
-            $log.error("Failed to log out " + status);
-            $state.go("login", {});
-          });
+          UserSessionService.initForUser($scope.form.username)
 
+          $state.go("home", {});
 
         }).error(function(data, status, headers) {
           $log.error("Failed to authenticate: " + status);
@@ -157,4 +148,48 @@
         });
       }
     }]);
+
+    servicesModule.service('UserSessionService', [
+      '$log', '$http', '$q', function($log, $http, $q) {
+
+        $log.debug("constructing UserSessionService");
+
+        var service = {};
+
+        service.headers = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        };
+
+        service.userInfo = {
+          email: "",
+          id: "",
+          name: "",
+          teamId: "",      // these are just the current team, the user might change their "view"
+          teamName: ""
+        }
+
+        service.initForUser = function(email) {
+          $log.debug("initForUser("+email+")");
+
+          service.userInfo.email = email;
+
+          // Get the user profile
+          $http.get("/users/by-email/" + email).success(function(data, status, headers) {
+
+            // Just use the first team returned as the default Team for the User
+            service.userInfo.id = data.id;
+            service.userInfo.name = data.name;
+            service.userInfo.teamId = data.memberOfTeams[0].id;
+            service.userInfo.teamName = data.memberOfTeams[0].name;
+
+          }).error(function(data, status, headers) {
+            $log.error("Failed to get user info " + status);
+          });
+        };
+
+        return service;
+      }
+    ]);
+
 }).call(this);
