@@ -39,8 +39,8 @@
               templateUrl: "/assets/partials/login/login.html"
             })
 
-            .state('home', {
-              params:["team"],
+            .state('app', {
+              params:["teamId", "teamName"],
               views: {
                 '': {
                   templateUrl: "/assets/partials/home.html"
@@ -124,20 +124,23 @@
 
       $scope.login = function() {
         $log.info("Posting credentials: " + angular.toJson($scope.form));
-        $http.post("/auth//authenticate/userpass", $scope.form).success(function(data, status, headers) {
+        $http.post("/auth/authenticate/userpass", $scope.form).success(function(data, status, headers) {
           var o = {status: status, data: data};
           $log.info("Successfully Authenticated: " + angular.toJson(o));
 
-          $http.get("/user").success(function(data, status, headers) {
+          // Get the user profile
+          $http.get("/users/by-email/" + $scope.form.username).success(function(data, status, headers) {
             $log.info("Successfully Logged Out" + status);
-            $state.go("login", {});
+
+            // Just use the first team returned as the default Team for the User
+            $stateParams = { teamId: data.memberOfTeams[0].id, teamName: data.memberOfTeams[0].name};
+            $state.go("app", $stateParams);
           }).error(function(data, status, headers) {
             $log.error("Failed to log out " + status);
             $state.go("login", {});
           });
 
-          $stateParams = { teamId: 12, teamName: "foo"};
-          $state.go("home", $stateParams);
+
         }).error(function(data, status, headers) {
           $log.error("Failed to authenticate: " + status);
           $scope.form.errors = response

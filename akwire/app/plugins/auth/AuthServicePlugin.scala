@@ -24,7 +24,6 @@ class AuthServicePlugin(application: Application) extends securesocial.core.User
 
   Logger.info(s"Creating AuthServicePlugin")
 
-
   // For Akwire the userid is the email address
   def find(id: IdentityId): Option[Identity] = {
     findByEmailAndProvider(id.userId, id.providerId)
@@ -50,7 +49,8 @@ class AuthServicePlugin(application: Application) extends securesocial.core.User
     Logger.info(s"Saving new user: ${identity.email.get}")
 
     // Turn the SocialUser into an Akwire User
-    val user = new User(ObjectId.get(), identity.email.get, identity.identityId.providerId, identity.fullName, identity.passwordInfo)
+    // TODO this seems broken
+    val user = new User(ObjectId.get(), identity.email.get, identity.identityId.providerId, identity.fullName, identity.passwordInfo, Nil)
     User.save(user);
     user
   }

@@ -1,5 +1,5 @@
 import com.mongodb.casbah.commons.conversions.scala._
-import models.{User, Team}
+import models.{TeamRef, User, Team}
 import modules.CoreModule
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -43,12 +43,18 @@ object Global extends GlobalSettings with ScaldiSupport {
   def firstBoot = {
     // When akwire starts we need to make sure to have some initial configuration in place.
     // This includes an admin user and an admin team
+
+    var adminTeam:Team = null
+
     Team.findOneByName(Team.AKWIRE_ADMIN_TEAM_NAME) match {
       case None =>
-        val admin = new Team(ObjectId.get(), Team.AKWIRE_ADMIN_TEAM_NAME, Nil, new DateTime(), true)
-        Team.save(admin)
-      case _ => logger.info("Teams init complete")
+        adminTeam = new Team(ObjectId.get(), Team.AKWIRE_ADMIN_TEAM_NAME, Nil, new DateTime(), true)
+        Team.save(adminTeam)
+      case Some(t) =>
+        adminTeam = t
     }
+
+    logger.info("Teams init complete")
 
     val ADMIN = "admin@akwire.com"
     val PROVIDER = UsernamePasswordProvider.UsernamePassword
@@ -57,7 +63,8 @@ object Global extends GlobalSettings with ScaldiSupport {
       case None =>
         //import play.api.Play.current
         val pw = (new BCryptPasswordHasher(play.api.Play.current)).hash("admin")
-        val admin = new User(ObjectId.get(), ADMIN, PROVIDER, "admin", Some(pw))
+        val tr = new TeamRef(adminTeam.id, adminTeam.name)
+        val admin = new User(ObjectId.get(), ADMIN, PROVIDER, "admin", Some(pw), List(tr))
         User.save(admin)
       case _ => logger.info("User accounts init complete")
     }

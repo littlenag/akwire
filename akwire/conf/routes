@@ -58,9 +58,9 @@ POST    /detector/create_token     @controllers.Detectors.genIntegrationToken(de
 # Users
 POST    /users                     @controllers.Users.createUser
 GET     /users                     @controllers.Users.retrieveUsers
-GET     /users/:userId             @controllers.Users.retrieveUser(userId:String)
-DELETE  /users/:userId             @controllers.Users.deleteUser(userId:String)
-POST    /users/:userId/rename      @controllers.Users.renameUser(userId:String, oldName:String, newName:String)
+GET     /users/by-id/:userId       @controllers.Users.retrieveUserById(userId)
+GET     /users/by-email/:email     @controllers.Users.retrieveUserByEmail(email)
+DELETE  /users/:userId             @controllers.Users.deleteUser(userId)
 
 # Teams
 POST    /teams                     @controllers.Teams.createTeam

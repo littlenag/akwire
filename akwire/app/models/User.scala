@@ -10,11 +10,15 @@ import play.api.Play.current
 
 import models.mongoContext._
 
+//
+case class TeamRef(id: ObjectId,name: String)
+
 case class User(id: ObjectId,                     // object id, unique for this object for this database
                 mail: String,                     // email is also unique, but may be changed (we keep the id around for this reason)
                 provider: String,                 // auth provider
                 name: String,
-                pwdInfo: Option[PasswordInfo])    // password hash, id of the hasher algo, and the salt used
+                pwdInfo: Option[PasswordInfo],
+                memberOfTeams: List[TeamRef])    // password hash, id of the hasher algo, and the salt used
   extends Identity {
 
   override def identityId: IdentityId = IdentityId(mail, provider)
@@ -60,6 +64,9 @@ trait UserJson {
 
   implicit val passwordInfoFormat = Json.format[PasswordInfo]
 
+  implicit val teamRef = Json.format[TeamRef]
+
   // Generates Writes and Reads for Beans thanks to Json Macros
   implicit val userFormat = Json.format[User]
+
 }
