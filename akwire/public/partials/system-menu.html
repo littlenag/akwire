@@ -1,0 +1,17 @@
+<ul class="navbar-header pull-right" ng-controller="MenuCtrl">
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">{{userInfo.email}}<b class="caret"></b></a>
+        <ul class="dropdown-menu" role="menu">
+            <li>
+                <a ui-sref="admin">Admin</a>
+            </li>
+            <li role="presentation">
+                <a ui-sref="account">Account</a>
+            </li>
+            <li class="divider"></li>
+            <li role="presentation">
+                <a ui-sref="logout">Logout</a>
+            </li>
+        </ul>
+    </li>
+</ul>

@@ -22,7 +22,7 @@
     this.commonModule = angular.module('akwire.common', []);
     this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
     this.controllersModule = angular.module('akwire.controllers', []);
-    this.servicesModule = angular.module('akwire.services', []);
+    this.servicesModule = angular.module('akwire.services', ['ngResource', 'ngCookies']);
     this.modelsModule = angular.module('akwire.models', []);
     this.directivesModule = angular.module('akwire.directives', []);
     this.filtersModule = angular.module('akwire.filters', []);
@@ -46,7 +46,7 @@
                   templateUrl: "/assets/partials/home.html"
                 },
                 'activeteam@': {
-                  template: "Hello from home"
+                  templateUrl: "/assets/partials/system-menu.html"
                 }
               }
             })
@@ -126,7 +126,7 @@
         $log.info("Posting credentials: " + angular.toJson($scope.form));
         $http.post("/auth/authenticate/userpass", $scope.form).success(function(data, status, headers) {
 
-          $log.info("Successfully Authenticated: " + angular.toJson({status: status, data: data}));
+          $log.info("Successfully Authenticated: " + angular.toJson({status: status}));
 
           UserSessionService.initForUser($scope.form.username)
 
@@ -149,8 +149,14 @@
       }
     }]);
 
+    controllersModule.controller('MenuCtrl', ['$scope', '$log', 'UserSessionService', function($scope, $log, UserSessionService) {
+      $log.debug("constructing MenuCtrl");
+      $scope.userInfo = UserSessionService.getUserInfo();
+      $log.debug("MenuCtrl userInfo: "+angular.toJson($scope.userInfo));
+    }]);
+
     servicesModule.service('UserSessionService', [
-      '$log', '$http', '$q', function($log, $http, $q) {
+      '$log', '$http', '$q', '$resource', '$cookieStore', function($log, $http, $q, $resource, $cookieStore) {
 
         $log.debug("constructing UserSessionService");
 
@@ -169,23 +175,41 @@
           teamName: ""
         }
 
+        service.getUserInfo = function() {
+          if (service.userInfo.email === "") {
+            var lastEmailUsed = $cookieStore.get("akwire.email");
+
+            var Users = $resource("/users/by-email/:email");
+
+            var user = Users.get({email:lastEmailUsed},
+              function() {
+                $log.debug("User record returned")
+                service.userInfo.email = lastEmailUsed;
+                service.userInfo.id = user.id;
+                service.userInfo.name = user.name;
+                service.userInfo.teamId = user.memberOfTeams[0].id;
+                service.userInfo.teamName = user.memberOfTeams[0].name;
+              }, function() {
+                $log.error("Failed to get User record");
+              }
+            );
+          }
+
+          return service.userInfo;
+        }
+
         service.initForUser = function(email) {
           $log.debug("initForUser("+email+")");
 
           service.userInfo.email = email;
 
-          // Get the user profile
-          $http.get("/users/by-email/" + email).success(function(data, status, headers) {
+          var lastEmailUsed = $cookieStore.get("akwire.email");
 
-            // Just use the first team returned as the default Team for the User
-            service.userInfo.id = data.id;
-            service.userInfo.name = data.name;
-            service.userInfo.teamId = data.memberOfTeams[0].id;
-            service.userInfo.teamName = data.memberOfTeams[0].name;
+          if (lastEmailUsed == null || ! (lastEmailUsed === service.userInfo.email)) {
+            $cookieStore.put("akwire.email", service.userInfo.email);
+          }
 
-          }).error(function(data, status, headers) {
-            $log.error("Failed to get user info " + status);
-          });
+          service.getUserInfo();
         };
 
         return service;

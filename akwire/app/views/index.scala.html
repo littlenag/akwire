@@ -19,79 +19,81 @@
     <header>
         <div class="navbar navbar-default navbar-fixed-top" role="navigation">
             <div class="container-fluid">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" ui-sref="home">Akwire</a>
-            </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" ui-sref="home">Akwire</a>
+                </div>
+                    <div class="navbar-collapse collapse">
+                        <ul class="nav navbar-nav">
 
-                    <!-- the wiki! sops, special rendering plugins, etc -->
-                    <li ng-class="{ active: $state.includes('wiki')}"><a ui-sref="wiki">Wiki</a></li>
+                            <!-- the wiki! sops, special rendering plugins, etc -->
+                            <li ng-class="{ active: $state.includes('wiki')}"><a ui-sref="wiki">Wiki</a></li>
 
-                    <!-- agent management -->
-                    <li ng-class="{ active: $state.includes('agents')}"><a ui-sref="agents">Agents</a></li>
+                            <!-- agent management -->
+                            <li ng-class="{ active: $state.includes('agents')}"><a ui-sref="agents">Agents</a></li>
 
-                    <!--
-                      explore, sort, annotate, etc, both metrics, reports, and events
-                      charts, histograms, dashboards (GEQL)
-                      use a finder-like UI here
-                      status display & svg maps
-                    -->
-                    <li ng-class="{ active: $state.includes('data')}"><a ui-sref="data">Data</a></li>
+                            <!--
+                              explore, sort, annotate, etc, both metrics, reports, and events
+                              charts, histograms, dashboards (GEQL)
+                              use a finder-like UI here
+                              status display & svg maps
+                            -->
+                            <li ng-class="{ active: $state.includes('data')}"><a ui-sref="data">Data</a></li>
 
-                    <li ng-class="{ active: $state.includes('incidents')}"><a ui-sref="incidents.list">Incidents</a></li>
+                            <li ng-class="{ active: $state.includes('incidents')}"><a ui-sref="incidents.list">Incidents</a></li>
 
-                    <li class="divider-vertical"></li>
+                            <li class="divider-vertical"></li>
 
-                    <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
-                        <ul class="dropdown-menu" role="menu">
-                            <li role="presentation">
-                                <a ui-sref="configure.rules.list">Alerting Rules</a>
-                            </li>
-                            <li role="presentation">
-                                <a ui-sref="configure.tags.list">Tagging Rules</a>
-                            </li>
-                            <!-- alert policy, escalation, schedule -->
-                            <li role="presentation">
-                                <a ui-sref="configure.notifications">Notifications</a>
-                            </li>
-                            <li role="presentation">
-                                <a ui-sref="configure.profiles">Profiles</a>
-                            </li>
-                            <li role="presentation">
-                                <a ui-sref="configure.team">Team</a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-
-                <p ui-view="activeteam" class="navbar-text pull-right"></p>
-
-                <ul class="nav navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">System<b class="caret"></b></a>
-                        <ul class="dropdown-menu" role="menu">
-                            <li role="presentation">
-                                <a ui-sref="admin">Admin</a>
-                            </li>
-                            <li role="presentation">
-                                <a ui-sref="account">Account</a>
-                            </li>
-                            <li class="divider"></li>
-                            <li role="presentation">
-                                <a ui-sref="logout">Logout</a>
+                            <li class="dropdown">
+                                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li role="presentation">
+                                        <a ui-sref="configure.rules.list">Alerting Rules</a>
+                                    </li>
+                                    <li role="presentation">
+                                        <a ui-sref="configure.tags.list">Tagging Rules</a>
+                                    </li>
+                                    <!-- alert policy, escalation, schedule -->
+                                    <li role="presentation">
+                                        <a ui-sref="configure.notifications">Notifications</a>
+                                    </li>
+                                    <li role="presentation">
+                                        <a ui-sref="configure.profiles">Profiles</a>
+                                    </li>
+                                    <li role="presentation">
+                                        <a ui-sref="configure.team">Team</a>
+                                    </li>
+                                </ul>
                             </li>
                         </ul>
-                    </li>
-                </ul>
-            </div>
+
+                        <div ui-view="activeteam" class="navbar-text pull-right"></div>
+
+                        <!--
+                        <ul class="nav navbar-nav navbar-right">
+                            <li class="dropdown">
+                                <a class="dropdown-toggle" data-toggle="dropdown" href="#">System<b class="caret"></b></a>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li role="presentation">
+                                        <a ui-sref="admin">Admin</a>
+                                    </li>
+                                    <li role="presentation">
+                                        <a ui-sref="account">Account</a>
+                                    </li>
+                                    <li class="divider"></li>
+                                    <li role="presentation">
+                                        <a ui-sref="logout">Logout</a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                        -->
+                    </div>
             </div>
         </div>
     </header>
@@ -127,6 +129,8 @@
 -->
 <script src='@routes.Assets.at("javascripts/vendor/angular-1.2.21/angular.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/vendor/angular-1.2.21/angular-route.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/vendor/angular-1.2.21/angular-resource.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/vendor/angular-1.2.21/angular-cookies.js")' type="text/javascript"></script>
 
 <script src='@routes.Assets.at("javascripts/vendor/ui-bootstrap-tpls-0.10.0.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/vendor/angular-ui-router-0.2.10.min.js")' type="text/javascript"></script>
