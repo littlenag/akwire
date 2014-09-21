@@ -136,6 +136,11 @@
         password: ""
       }
 
+      // If already authenticated just move to the home state
+      if (AuthService.isAuthenticated()) {
+          $state.go("home", {});
+      }
+
       $scope.login = function (credentials) {
         AuthService.login(credentials).then(function (user) {
           $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
