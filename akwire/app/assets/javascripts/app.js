@@ -171,8 +171,9 @@
           email: "",
           id: "",
           name: "",
-          teamId: "",      // these are just the current team, the user might change their "view"
-          teamName: ""
+          teamId: "",      // these are just the current team, the user might change their selection
+          teamName: "",
+          teams: []
         }
 
         service.getUserInfo = function() {
@@ -189,6 +190,7 @@
                 service.userInfo.name = user.name;
                 service.userInfo.teamId = user.memberOfTeams[0].id;
                 service.userInfo.teamName = user.memberOfTeams[0].name;
+                service.userInfo.teams = user.memberOfTeams;
               }, function() {
                 $log.error("Failed to get User record");
               }

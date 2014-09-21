@@ -12,6 +12,11 @@
             <li role="presentation">
                 <a ui-sref="logout">Logout</a>
             </li>
+            <li class="divider"></li>
+            <li class="nav-header">Team Selector</li>
+            <li ng-repeat="team in userInfo.teams">
+                <a ui-sref="home.changeTeam(team.name)">{{team.name}}</a>
+            </li>
         </ul>
     </li>
 </ul>
