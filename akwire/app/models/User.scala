@@ -68,5 +68,4 @@ trait UserJson {
 
   // Generates Writes and Reads for Beans thanks to Json Macros
   implicit val userFormat = Json.format[User]
-
 }

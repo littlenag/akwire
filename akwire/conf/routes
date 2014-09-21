@@ -47,6 +47,8 @@ PUT     /ingest/alert              @controllers.Ingest.submitAlert
 GET     /                          @controllers.Application.index
 GET     /randomUUID                @controllers.Application.randomUUID
 
+POST    /handleAuth/:provider      @controllers.Application.handleAuth(provider)
+
 # Detectors
 POST    /detector/create           @controllers.Detectors.createDetector
 GET     /detector/list             @controllers.Detectors.retrieveDetectors

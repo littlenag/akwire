@@ -41,14 +41,7 @@
 
             .state('home', {
               url: "/home",
-              views: {
-                '': {
-                  templateUrl: "/assets/partials/home.html"
-                },
-                'activeteam@': {
-                  templateUrl: "/assets/partials/system-menu.html"
-                }
-              }
+              templateUrl: "/assets/partials/home.html"
             })
 
             .state('agents', {
@@ -108,6 +101,23 @@
         $rootScope.$stateParams = $stateParams;
       }]);
 
+
+    app.constant('AUTH_EVENTS', {
+      loginSuccess: 'auth-login-success',
+      loginFailed: 'auth-login-failed',
+      logoutSuccess: 'auth-logout-success',
+      sessionTimeout: 'auth-session-timeout',
+      notAuthenticated: 'auth-not-authenticated',
+      notAuthorized: 'auth-not-authorized'
+    })
+
+    app.constant('USER_ROLES', {
+      all: '*',
+      super_admin: 'super_admin',
+      team_admin: 'team_admin',
+      team_member: 'team_member'
+    })
+
     controllersModule.controller('AdminCtrl', ['$scope', '$log', function($scope, $log) {
       $log.debug("constructing AdminCtrl");
     }]);
@@ -116,27 +126,25 @@
       $log.debug("constructing ConfigureCtrl");
     }]);
 
-    controllersModule.controller('LoginController', ['$scope', '$http', '$state', '$log', 'UserSessionService', function($scope, $http, $state, $log, UserSessionService) {
+    controllersModule.controller('LoginController', ['$scope', '$rootScope', 'AUTH_EVENTS', 'AuthService', '$http', '$state', '$log',
+    function($scope, $rootScope, AUTH_EVENTS, AuthService, $http, $state, $log) {
+
       $log.debug("constructing LoginController");
-      if (! $scope.form) {
-        $scope.form = {}
+
+      $scope.credentials = {
+        username: "",
+        password: ""
       }
 
-      $scope.login = function() {
-        $log.info("Posting credentials: " + angular.toJson($scope.form));
-        $http.post("/auth/authenticate/userpass", $scope.form).success(function(data, status, headers) {
-
-          $log.info("Successfully Authenticated: " + angular.toJson({status: status}));
-
-          UserSessionService.initForUser($scope.form.username)
-
+      $scope.login = function (credentials) {
+        AuthService.login(credentials).then(function (user) {
+          $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
+          $scope.setCurrentUser(user);
           $state.go("home", {});
-
-        }).error(function(data, status, headers) {
-          $log.error("Failed to authenticate: " + status);
-          $scope.form.errors = response
+        }, function () {
+          $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
         });
-      }
+      };
 
       $scope.logout = function() {
         $http.get("/auth/logout").success(function(data, status, headers) {
@@ -149,73 +157,79 @@
       }
     }]);
 
-    controllersModule.controller('MenuCtrl', ['$scope', '$log', 'UserSessionService', function($scope, $log, UserSessionService) {
-      $log.debug("constructing MenuCtrl");
-      $scope.userInfo = UserSessionService.getUserInfo();
-      $log.debug("MenuCtrl userInfo: "+angular.toJson($scope.userInfo));
-    }]);
+    controllersModule.controller('ApplicationController', function ($scope, $log,
+                                                                    USER_ROLES,
+                                                                    AuthService) {
+      $scope.currentUser = null;
+      $scope.userRoles = USER_ROLES;
+      $scope.isAuthorized = AuthService.isAuthorized;
 
-    servicesModule.service('UserSessionService', [
-      '$log', '$http', '$q', '$resource', '$cookieStore', function($log, $http, $q, $resource, $cookieStore) {
+      $scope.setCurrentUser = function (user) {
+        $log.info("Current User: " + angular.toJson(user));
+        $scope.currentUser = user;
+      };
+    })
 
-        $log.debug("constructing UserSessionService");
+    ///////////////////////////////////////////////////////////////////////////
 
-        var service = {};
+    servicesModule.service('Session', function () {
+      this.create = function (userId, userEmail, userName, teamId, teamName, teams) {
+        //this.sessionId = sessionId;
+        //this.userRole = userRole;
+        this.userId = userId;
+        this.userEmail = userEmail;
+        this.userName = userName;
+        this.teamId = teamId;            // these are just the current team, the user might change their selection
+        this.teamName = teamName;
+        this.teams = teams;
+      };
+      this.destroy = function () {
+        this.userId = null;
+        this.userEmail = null;
+        this.userName = null;
+        this.teamId = null;
+        this.teamName = null;
+        this.teams = null;
+      };
+      return this;
+    })
 
-        service.headers = {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        };
+    servicesModule.service('AuthService', function ($http, $log, Session) {
+      var authService = {};
 
-        service.userInfo = {
-          email: "",
-          id: "",
-          name: "",
-          teamId: "",      // these are just the current team, the user might change their selection
-          teamName: "",
-          teams: []
+      authService.login = function (credentials) {
+        $log.info("Validating credentials: " + angular.toJson(credentials));
+
+        return $http
+          .post("/handleAuth/userpass", credentials)
+          .then(function(res) {
+
+            $log.info("Successfully Authenticated: " + angular.toJson({user: res.data}));
+
+            Session.create(res.data.id, res.data.mail, res.data.name, res.data.memberOfTeams[0].id, res.data.memberOfTeams[0].name, res.data.memberOfTeams)
+
+            return res.data;
+
+        }, function(err) {
+          $log.error("Failed to authenticate: " + err);
+          return err;
+        });
+      };
+
+      authService.isAuthenticated = function () {
+        return !!Session.userId;
+      };
+
+      authService.isAuthorized = function (authorizedRoles) {
+        if (!angular.isArray(authorizedRoles)) {
+          authorizedRoles = [authorizedRoles];
         }
+        return (authService.isAuthenticated() &&
+          authorizedRoles.indexOf(Session.userRole) !== -1);
+      };
 
-        service.getUserInfo = function() {
-          if (service.userInfo.email === "") {
-            var lastEmailUsed = $cookieStore.get("akwire.email");
+      return authService;
+    })
 
-            var Users = $resource("/users/by-email/:email");
-
-            var user = Users.get({email:lastEmailUsed},
-              function() {
-                $log.debug("User record returned")
-                service.userInfo.email = lastEmailUsed;
-                service.userInfo.id = user.id;
-                service.userInfo.name = user.name;
-                service.userInfo.teamId = user.memberOfTeams[0].id;
-                service.userInfo.teamName = user.memberOfTeams[0].name;
-                service.userInfo.teams = user.memberOfTeams;
-              }, function() {
-                $log.error("Failed to get User record");
-              }
-            );
-          }
-
-          return service.userInfo;
-        }
-
-        service.initForUser = function(email) {
-          $log.debug("initForUser("+email+")");
-
-          service.userInfo.email = email;
-
-          var lastEmailUsed = $cookieStore.get("akwire.email");
-
-          if (lastEmailUsed == null || ! (lastEmailUsed === service.userInfo.email)) {
-            $cookieStore.put("akwire.email", service.userInfo.email);
-          }
-
-          service.getUserInfo();
-        };
-
-        return service;
-      }
-    ]);
 
 }).call(this);
