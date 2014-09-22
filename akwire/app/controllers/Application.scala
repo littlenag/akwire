@@ -3,7 +3,7 @@ package controllers
 import play.api.libs.json.{Reads, ConstraintReads}
 import scaldi.{Injector, Injectable}
 import securesocial.controllers.ProviderController
-import securesocial.core.{AccessDeniedException, Registry}
+import securesocial.core._
 import services.{UUIDGenerator}
 import org.slf4j.{LoggerFactory, Logger}
 import play.api.mvc._
@@ -46,7 +46,7 @@ class Application(implicit inj: Injector) extends Controller with ConstraintRead
           p.authenticate().fold( result => result , {
             user => user match {
               case user:User =>
-                ProviderController.completeAuthentication(user, session)
+                val sr = ProviderController.completeAuthentication(user, session)
                 User.findByEmailAndProvider(user.mail, provider) match {
                   case Some(user) =>
                     logger.info("authenticated and found user!")

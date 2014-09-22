@@ -1,12 +1,8 @@
 package controllers
 
-import com.mongodb.casbah.MongoConnection
 import com.mongodb.casbah.commons.MongoDBObject
-import com.novus.salat.dao.SalatDAO
-import models.User
 import org.bson.types.ObjectId
-import org.joda.time.DateTime
-import securesocial.core.{SecureSocial, PasswordInfo}
+import securesocial.core.{SecureSocial}
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.providers.utils.BCryptPasswordHasher
 
@@ -21,7 +17,7 @@ import play.api.libs.json._
  * play plugin. This provides a non-blocking driver for mongoDB as well as some useful additions for handling JSon.
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
-class Users extends Controller with ConstraintReads with SecureSocial {
+class Users extends SecureSocial with ConstraintReads {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Users])
 
@@ -29,17 +25,6 @@ class Users extends Controller with ConstraintReads with SecureSocial {
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
-
-  def nukeUser = SecuredAction(ajaxCall = true) { implicit request =>
-    Ok("")
-  }
-
-  def nukeUser2 = SecuredAction(ajaxCall = true).async(parse.json) {
-    implicit request =>
-    Future {
-      Ok("")
-    }
-  }
 
   def createUser = SecuredAction(ajaxCall = true).async(parse.json) {
     implicit request =>

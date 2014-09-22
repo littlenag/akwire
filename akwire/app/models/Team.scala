@@ -46,9 +46,9 @@ case class Rule( team: ObjectId,
                  context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-ihok-contexted rules
 
                  createdOn: Option[DateTime] = Some(new DateTime()),
-                 createdBy: Option[User] = None,
+                 createdBy: Option[ObjectId] = None,                        // id of the user
                  lastModifiedOn: Option[DateTime] = Some(new DateTime()),
-                 lastModifiedBy: Option[User] = None,
+                 lastModifiedBy: Option[ObjectId] = None,                   // id of the user
 
                  //@Ignore team: Option[Team] = None
                  active: Boolean = true

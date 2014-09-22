@@ -39,6 +39,11 @@
               templateUrl: "/assets/partials/login/login.html"
             })
 
+            .state('loginpage', {
+              url: "/login",
+              templateUrl: "/assets/partials/login/login.html"
+            })
+
             .state('home', {
               url: "/home",
               templateUrl: "/assets/partials/home.html"
@@ -101,7 +106,6 @@
         $rootScope.$stateParams = $stateParams;
       }]);
 
-
     app.constant('AUTH_EVENTS', {
       loginSuccess: 'auth-login-success',
       loginFailed: 'auth-login-failed',
@@ -162,17 +166,30 @@
       }
     }]);
 
-    controllersModule.controller('ApplicationController', function ($scope, $log,
+    controllersModule.controller('ApplicationController', function ($scope, $log, $location,
                                                                     USER_ROLES,
                                                                     AuthService) {
+      $log.debug("constructing ApplicationController");
+
       $scope.currentUser = null;
+      $scope.currentTeamId = null;
+      $scope.currentTeamName = null;
       $scope.userRoles = USER_ROLES;
       $scope.isAuthorized = AuthService.isAuthorized;
 
       $scope.setCurrentUser = function (user) {
         $log.info("Current User: " + angular.toJson(user));
         $scope.currentUser = user;
+        $scope.currentTeamId = user.memberOfTeams[0].id;
+        $scope.currentTeamName = user.memberOfTeams[0].name;
       };
+
+      AuthService.retryAuth().then(function (user) {
+        if (user != null) {
+          $log.info("Re-authed with User: " + angular.toJson(user));
+          $scope.setCurrentUser(user);
+        }
+      });
     })
 
     ///////////////////////////////////////////////////////////////////////////
@@ -199,26 +216,44 @@
       return this;
     })
 
-    servicesModule.service('AuthService', function ($http, $log, Session) {
+    servicesModule.service('AuthService', function ($http, $log, $cookieStore, $location, $q, Session) {
       var authService = {};
 
       authService.login = function (credentials) {
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-          .post("/handleAuth/userpass", credentials)
+          .post("/auth/authenticate/userpass", credentials)
           .then(function(res) {
 
-            $log.info("Successfully Authenticated: " + angular.toJson({user: res.data}));
+            $log.info("Successfully Authenticated User: " + credentials.username);
 
-            Session.create(res.data.id, res.data.mail, res.data.name, res.data.memberOfTeams[0].id, res.data.memberOfTeams[0].name, res.data.memberOfTeams)
+            // securesocial returns nothing useful here other than our cookie
 
-            return res.data;
+            // return a promise that will contain our user's info
+            return authService.getUserInfo(credentials.username);
 
-        }, function(err) {
-          $log.error("Failed to authenticate: " + err);
-          return err;
-        });
+          }, function(err) {
+            $log.error("Failed to authenticate: " + err);
+            return err;
+          })
+          .then(function(res) {
+            // Now we have the user, create the session, stash the info, return the object
+            $log.info("Successfully Authenticated");
+            return authService.initSession(res.data);
+          });
+      };
+
+      authService.getUserInfo = function (username) {
+        $log.info("Fetching user entity: " + username);
+        return $http.get("/users/by-email/" + username);
+      };
+
+      authService.initSession = function (user) {
+        $log.info("User Info: " + angular.toJson(user));
+        Session.create(user.id, user.mail, user.name, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams)
+        $cookieStore.put("akwire.email", user.mail);
+        return user;
       };
 
       authService.isAuthenticated = function () {
@@ -232,6 +267,32 @@
         return (authService.isAuthenticated() &&
           authorizedRoles.indexOf(Session.userRole) !== -1);
       };
+
+      authService.retryAuth = function() {
+        // You might still have a good token in your browser, try if so
+        var lastEmailUsed = $cookieStore.get("akwire.email");
+
+        var deferred = $q.defer();
+
+        if (lastEmailUsed != null) {
+          // try to re-fetch the user object
+          $log.info("Retying auth for: " + lastEmailUsed);
+
+          authService.getUserInfo(lastEmailUsed).then(function(res) {
+            $log.info("Successfully Authenticated");
+            deferred.resolve(authService.initSession(res.data));
+          }, function(err) {
+            $log.error("Failed to authenticate: " + angular.toJson(err));
+            // Force the user back to the login page
+            $location.path("/");
+            deferred.reject(err);
+          });
+        } else {
+          deferred.reject(null);
+        }
+
+        return deferred.promise;
+      }
 
       return authService;
     })

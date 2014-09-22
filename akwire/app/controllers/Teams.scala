@@ -10,6 +10,8 @@ import play.api.mvc._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 
+import securesocial.core.{SecureSocial}
+
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
@@ -17,7 +19,7 @@ import com.mongodb.casbah.commons.Imports._
 
 import scala.util.{Failure, Success}
 
-class Teams(implicit inj: Injector) extends Controller with Injectable {
+class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])
 
@@ -26,8 +28,8 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
   import models.Team
   import models.Rule
 
-  def createTeam = Action.async(parse.json) {
-    request =>
+  def createTeam = SecuredAction(ajaxCall = true).async(parse.json) {
+    implicit request =>
 
       // minLength(3) tupled
       //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
@@ -44,7 +46,7 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
       )
   }
 
-  def retrieveTeams = Action.async {
+  def retrieveTeams = SecuredAction(ajaxCall = true).async {
     Future {
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
@@ -53,7 +55,7 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
     }
   }
 
-  def retrieveTeam(teamId:String) = Action.async {
+  def retrieveTeam(teamId:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
         case Some(team : Team) => Ok(Json.toJson(team))
@@ -62,7 +64,7 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
     }
   }
 
-  def renameTeam(teamId:String, oldName:String, newName:String) = Action.async {
+  def renameTeam(teamId:String, oldName:String, newName:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
         case Some(team : Team) =>
@@ -77,7 +79,7 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
     }
   }
 
-  def deleteTeam(teamId:String) = Action.async {
+  def deleteTeam(teamId:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Team.removeById(new ObjectId(teamId))
       Ok(s"Removed team with id $teamId")
@@ -89,7 +91,7 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
   // ------------------------------------------ //
 
   // ruleId in body means update existing rule
-  def saveRule(teamId:String) = Action.async(parse.json) { request =>
+  def saveRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
     Future {
       request.body.asOpt[Rule] match {
         case Some(rule: Rule) =>
@@ -99,23 +101,22 @@ class Teams(implicit inj: Injector) extends Controller with Injectable {
           }
         case None => BadRequest(s"Could not parse request body")
       }
-
     }
   }
 
-  def deleteRule(teamId:String, ruleId:String) = Action.async {
+  def deleteRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def startRule(teamId:String, ruleId:String) = Action.async {
+  def startRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def pauseRule(teamId:String, ruleId:String) = Action.async {
+  def pauseRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
     Future {
       Ok("placeholder")
     }

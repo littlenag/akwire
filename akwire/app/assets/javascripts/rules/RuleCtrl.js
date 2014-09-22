@@ -14,6 +14,8 @@
           return $log.error("Unable to get Rules: " + error);
         });
       };
+
+      $scope.getAllRules();
     }
   ]);
 
