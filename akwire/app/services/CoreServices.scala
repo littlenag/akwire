@@ -88,6 +88,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
     // Team exists, is the rule id valid (either already exists or is None)?
     if (rule.id.isDefined && teamOpt.get.rules.find( r => r.id == rule.id ).isEmpty) {
+      logger.info(s"Could not find rule to update")
       return Failure(new RuntimeException(s"Invalid rule id ${rule.id} for team $teamId"))
     }
 

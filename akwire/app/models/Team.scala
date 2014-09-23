@@ -34,9 +34,14 @@ case class Rule( team: ObjectId,
                  name: String,
 
                  text : String,                              // text of the rule to be compiled and run by clojure
+
+                 active: Boolean = true,
+
+                 id: Option[ObjectId] = Some(new ObjectId)
+
+/*
                  meta: Option[JsObject] = None,              // JSON meta object used by the browser
 
-                 id: Option[ObjectId] = Some(new ObjectId),
 
                  sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
                  impact: Impact.Value = Impact.SEV_5,
@@ -49,10 +54,13 @@ case class Rule( team: ObjectId,
                  createdBy: Option[ObjectId] = None,                        // id of the user
                  lastModifiedOn: Option[DateTime] = Some(new DateTime()),
                  lastModifiedBy: Option[ObjectId] = None,                   // id of the user
-
-                 //@Ignore team: Option[Team] = None
-                 active: Boolean = true
+*/
                ) {
+
+  def context = List("instance", "host", "observer", "key")
+
+  def impact = Impact.SEV_5
+  def urgency = Urgency.NONE
 
   // in ITIL Priority is a function of both impact and urgency
   // maybe we want to have a priority matrix for each team?

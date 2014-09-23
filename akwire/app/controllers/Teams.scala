@@ -92,15 +92,17 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
 
   // ruleId in body means update existing rule
   def saveRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
-    Future {
-      request.body.asOpt[Rule] match {
-        case Some(rule: Rule) =>
-          core.saveRule(new ObjectId(teamId), rule) match {
-            case Success(v) => Ok(Json.toJson(v))
-            case Failure(e) => BadRequest(s"${e.getMessage}")
-          }
-        case None => BadRequest(s"Could not parse request body")
-      }
+    logger.info(s"Saving rule for team: ${teamId}")
+    request.body.asOpt[Rule] match {
+      case Some(rule: Rule) =>
+        logger.info(s"Saving rule: ${rule}")
+        core.saveRule(new ObjectId(teamId), rule) match {
+          case Success(v) => Future.successful(Ok(Json.toJson(v)))
+          case Failure(e) => Future.successful(BadRequest(s"${e.getMessage}"))
+        }
+      case None =>
+        logger.info(s"Could not parse requset body")
+        Future.successful(BadRequest(s"Could not parse request body"))
     }
   }
 
