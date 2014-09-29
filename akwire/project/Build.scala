@@ -38,20 +38,26 @@ object ApplicationBuild extends Build {
     "org.clojure" % "math.numeric-tower" % "0.0.4"
   )
 
-  val root = new java.io.File(".")
-  val defaultOptions = new CompilerOptions()
-  defaultOptions.closurePass = true
-  defaultOptions.setProcessCommonJSModules(true)
-  defaultOptions.setCommonJSModulePathPrefix(root.getCanonicalPath + "/app/assets/javascripts/")
-  defaultOptions.setLanguageIn(CompilerOptions.LanguageMode.ECMASCRIPT5)
 
-  CompilationLevel.WHITESPACE_ONLY.setOptionsForCompilationLevel(defaultOptions)
+  val root = new java.io.File(".")
+  val jsOptions = new CompilerOptions()
+  jsOptions.closurePass = true
+  jsOptions.setProcessCommonJSModules(true)
+  jsOptions.setCommonJSModulePathPrefix(root.getCanonicalPath + "/app/assets/javascripts/")
+  jsOptions.setLanguageIn(CompilerOptions.LanguageMode.ECMASCRIPT5)
+
+  CompilationLevel.WHITESPACE_ONLY.setOptionsForCompilationLevel(jsOptions)
 
   // Add your own project settings here'
-  val main = play.Project(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
-    (Seq(resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/",
-         resolvers += Resolver.sonatypeRepo("releases"),
-         requireJs += "main.js",
-         requireJsShim += "main.js") ++ closureCompilerSettings(defaultOptions)): _*
+  val main = play.Project(appName, appVersion, appDependencies)
+    .settings(defaultScalaSettings:_*)
+    .settings(closureCompilerSettings(jsOptions):_*)
+    .settings(
+    resolvers += "SpringSource repository" at "https://repo.springsource.org/libs-milestone/",
+    resolvers += Resolver.sonatypeRepo("releases"),
+    requireJs += "main.js",
+    requireJsShim += "main.js"
+    //unmanagedResourceDirectories in Runtime += baseDirectory.value / "riemann",
+    //includeFilter in unmanagedResources := "*.clj"
   )
 }

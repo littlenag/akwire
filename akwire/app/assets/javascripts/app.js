@@ -39,9 +39,14 @@
               templateUrl: "/assets/partials/login/login.html"
             })
 
-            .state('loginpage', {
-              url: "/login",
-              templateUrl: "/assets/partials/login/login.html"
+            .state('logout', {
+              url: "/logout",
+              template: "",
+              controller: ['$scope', '$state', 'ApplicationController',
+                function ( $scope, $state, ApplicationController) {
+                  ApplicationController.logout();
+                }
+              ]
             })
 
             .state('home', {
@@ -154,20 +159,10 @@
           $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
         });
       };
-
-      $scope.logout = function() {
-        $http.get("/auth/logout").success(function(data, status, headers) {
-          $log.info("Successfully Logged Out" + status);
-          $state.go("login", {});
-        }).error(function(data, status, headers) {
-          $log.error("Failed to log out " + status);
-          $state.go("login", {});
-        });
-      }
     }]);
 
-    controllersModule.controller('ApplicationController', function ($scope, $log, $location,
-                                                                    USER_ROLES,
+    controllersModule.controller('ApplicationController', function ($scope, $rootScope, $log, $state,
+                                                                    USER_ROLES, AUTH_EVENTS,
                                                                     AuthService) {
       $log.debug("constructing ApplicationController");
 
@@ -183,6 +178,16 @@
         $scope.currentTeamId = user.memberOfTeams[0].id;
         $scope.currentTeamName = user.memberOfTeams[0].name;
       };
+
+      $scope.logout = function() {
+        $scope.currentUser = null;
+        $scope.currentTeamId = null;
+        $scope.currentTeamName = null;
+        AuthService.logout().then(function(x) {
+          $rootScope.$broadcast(AUTH_EVENTS.logoutSuccess);
+          $state.go("login", {});
+        });
+      }
 
       AuthService.retryAuth().then(function (user) {
         if (user != null) {
@@ -223,7 +228,7 @@
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-          .post("/auth/authenticate/userpass", credentials)
+          .post("/authenticate/userpass", credentials) // /auth
           .then(function(res) {
 
             $log.info("Successfully Authenticated User: " + credentials.username);
@@ -243,6 +248,14 @@
             return authService.initSession(res.data);
           });
       };
+
+      authService.logout = function() {
+        return $http.get("/auth/logout").then(function(res) {
+          $log.info("Successfully Logged Out");
+          Session.destroy();
+          return res;
+        });
+      }
 
       authService.getUserInfo = function (username) {
         $log.info("Fetching user entity: " + username);

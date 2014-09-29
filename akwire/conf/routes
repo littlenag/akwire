@@ -39,14 +39,15 @@ GET     /auth/not-authorized             securesocial.controllers.ProviderContro
 # ./observations is for raw numeric or textual observations of deployed systems
 # ./alert is for integrating an alert from other external monitoring engines/scripts/etc
 POST    /ingest/observations       @controllers.Ingest.submitObservations
-PUT     /ingest/observations       @controllers.Ingest.submitObservations
+#PUT     /ingest/observations       @controllers.Ingest.submitObservations
 
 POST    /ingest/alert              @controllers.Ingest.submitAlert
-PUT     /ingest/alert              @controllers.Ingest.submitAlert
+#PUT     /ingest/alert              @controllers.Ingest.submitAlert
 
 # Single endpoint for serving AngularJS
 GET     /                          @controllers.Application.index
 GET     /randomUUID                @controllers.Application.randomUUID
+POST    /authenticate/:provider    @controllers.Application.authenticate(provider)
 
 # Detectors
 POST    /detector/create           @controllers.Detectors.createDetector
@@ -71,7 +72,8 @@ DELETE  /teams/:teamId             @controllers.Teams.deleteTeam(teamId:String)
 POST    /teams/:teamId/rename      @controllers.Teams.renameTeam(teamId:String, oldName:String, newName:String)
 
 # Rules
-POST    /teams/:teamId/rules          @controllers.Teams.saveRule(teamId)
+POST    /teams/:teamId/rules          @controllers.Teams.createRule(teamId)
+PUT     /teams/:teamId/rules          @controllers.Teams.updateRule(teamId)
 DELETE  /teams/:teamId/rules          @controllers.Teams.deleteRule(teamId,ruleId)
 PUT     /teams/:teamId/rules/start    @controllers.Teams.startRule(teamId,ruleId)
 PUT     /teams/:teamId/rules/pause    @controllers.Teams.pauseRule(teamId,ruleId)

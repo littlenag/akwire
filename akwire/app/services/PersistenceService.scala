@@ -16,7 +16,7 @@ class PersistenceService {
       "visible" -> true,
       "resolved" -> false,
       "interred" -> false,
-      "rule.id" -> alert.rule.id.get,
+      "rule.id" -> alert.rule.id,
       "incident_key" -> alert.contextualizedStream.asDBObject
     )
 

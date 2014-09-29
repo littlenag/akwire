@@ -30,13 +30,14 @@ class JsonParsers extends Specification {
           | "urgency":"NONE",
           | "context": ["instance", "host", "observer", "key"]}""".stripMargin
 
-      val rule : Rule = Json.parse(ruleText).as[Rule]
+      Json.parse(ruleText).validate[Rule].fold(
+        invalid = (e => e mustNotEqual null),
+        valid = ( rule => {
+          rule.name must_== "test 1"
+          rule.active must_== true;
+          rule.team must_==(new ObjectId("5415d1fbec2e527a31f97fe1"))
+        }) )
 
-      rule mustNotEqual null
-
-      rule.name must_== "test 1"
-      rule.active must_== true
-      rule.team must_==(new ObjectId("5415d1fbec2e527a31f97fe1"))
     }
   }
 }

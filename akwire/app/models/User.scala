@@ -9,6 +9,7 @@ import securesocial.core._
 import play.api.Play.current
 
 import models.mongoContext._
+import securesocial.core.providers.UsernamePasswordProvider
 
 //
 case class TeamRef(id: ObjectId,name: String)
@@ -42,7 +43,10 @@ case class User(id: ObjectId,                     // object id, unique for this 
   override def authMethod: AuthenticationMethod = AuthenticationMethod.UserPassword
 }
 
-object User extends UserDAO with UserJson
+object User extends UserDAO with UserJson {
+  def AKWIRE_ADMIN_ACCT_NAME = "admin@akwire.com"
+  def AKWIRE_ADMIN_PROVIDER = UsernamePasswordProvider.UsernamePassword
+}
 
 trait UserDAO extends ModelCompanion[User, ObjectId] {
   def collection = MongoConnection()("akwire")("users")

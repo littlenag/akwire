@@ -1,5 +1,6 @@
 package models
 
+import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import com.novus.salat.annotations._
 import com.novus.salat.dao._
@@ -10,6 +11,7 @@ import models.mongoContext._
 
 // impact is something that the alert knows about itself
 object Impact extends Enumeration {
+  type Impact = Value
   // CLEAR and INFO are not allowed to have an Urgency attached to them
 //  val CLEAR = Value("CLEAR")   // Everything is OK and if anything was wrong in the past its now fixed. Will resolve active situations when received.
 //  val INFO = Value("INFO")     // Purely informational in nature, may or may not indicate that anything has gone wrong.
@@ -23,6 +25,7 @@ object Impact extends Enumeration {
 
 // urgency is something that humans have to know about
 object Urgency extends Enumeration {
+  type Urgency = Value
   val NONE = Value("NONE")
   val LOW = Value("LOW")
   val MEDIUM = Value("MEDIUM")
@@ -30,21 +33,56 @@ object Urgency extends Enumeration {
   val IMMEDIATE = Value("IMMEDIATE")
 }
 
-case class Rule( team: ObjectId,
+trait RuleJson {
+  import JsonUtil._
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  import EnumUtils._
+
+  implicit val impactFormat = EnumUtils.enumFormat(Impact)
+  implicit val urgencyFormat = EnumUtils.enumFormat(Urgency)
+
+  /*
+  implicit val impactReader : Reads[Impact.Value] = JsPath.read[Impact.Value]
+//  implicit val impactWriter : Writes[Impact.Value] = JsPath.write[Impact.Value]
+
+//  implicit val impactReads: Reads[Impact.Value] = StringReads.map(new ObjectId(_))
+
+  implicit val impactWrites = new Writes[Impact.Value] {
+    override def writes(en: Impact.Value) = Json.toJson(en.toString)
+  }
+
+  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
+  implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
+  */
+
+  implicit val ruleWriter = Json.writes[Rule]
+
+  implicit val ruleReader : Reads[Rule] = (
+      ((__ \ "id").read[ObjectId] orElse Reads.pure(ObjectId.get())) ~
+      (__ \ "name").read[String] ~
+      (__ \ "text").read[String] ~
+      ((__ \ "active").read[Boolean] orElse Reads.pure(true)) ~
+//      (__ \ "meta").readNullable[JsObject] ~
+//      (__ \ "sop").readNullable[String] ~
+      ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.SEV_5))
+  )(Rule.apply _)
+}
+
+case class Rule( id: ObjectId,
                  name: String,
 
                  text : String,                              // text of the rule to be compiled and run by clojure
 
                  active: Boolean = true,
 
-                 id: Option[ObjectId] = Some(new ObjectId)
+//                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
+//                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
+
+                 impact: Impact.Value = Impact.SEV_5
 
 /*
-                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
-
-
-                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
-                 impact: Impact.Value = Impact.SEV_5,
                  urgency: Urgency.Value = Urgency.NONE,
 
                  // the list of fields that matter
@@ -59,8 +97,13 @@ case class Rule( team: ObjectId,
 
   def context = List("instance", "host", "observer", "key")
 
-  def impact = Impact.SEV_5
+  //def impact = Impact.SEV_5
   def urgency = Urgency.NONE
+
+  @Ignore var _team: ObjectId = null
+
+  def setTeam(t:ObjectId) = _team = t
+  def team = _team
 
   // in ITIL Priority is a function of both impact and urgency
   // maybe we want to have a priority matrix for each team?
@@ -105,23 +148,22 @@ trait TeamDAO extends ModelCompanion[Team, ObjectId] {
 
 object Rule extends RuleJson
 
-trait RuleEnumsJson {
-  import JsonUtil._
-  implicit val impactReader : Reads[Impact.Value] = JsPath.read[Impact.Value]
-  implicit val impactWriter : Writes[Impact.Value] = JsPath.write[Impact.Value]
-  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
-  implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
-}
-
-trait RuleJson extends RuleEnumsJson {
-  import JsonUtil._
-  implicit val ruleFormatter = Json.format[Rule]
-}
-
 trait TeamJson extends RuleJson {
   import play.api.libs.json.Json
 
   import JsonUtil._
 
-  implicit val teamFormatter = Json.format[Team]
+  implicit val teamReads = Json.reads[Team]
+
+  implicit val teamWrites : Writes[Team] = new Writes[Team] {
+    def writes(t: Team): JsValue = {
+      Json.obj(
+        "id" -> t.id,
+        "name" -> t.name,
+        "rules" -> t.rules,
+        "created" -> t.created,
+        "active" -> t.active
+      )
+    }
+  }
 }

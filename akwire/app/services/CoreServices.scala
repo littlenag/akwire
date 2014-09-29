@@ -51,34 +51,27 @@ class CoreServices(implicit inj: Injector) extends Injectable {
       // Only for "active" situations would we load a resolve rule
       if (incident.active) {
         logger.trace(s"Loading Resolution Rule for 'active' Incident: ${incident}")
-        alertingEngine.loadResolveRule(incident.rule.id.get, incident)
+        alertingEngine.loadResolveRule(incident.rule.id, incident)
       }
     }
   }
 
-
   def upsertRule(team:Team, rule:Rule): (Team,Rule) = {
-    rule.id match {
-      case Some(id) =>
-        team.rules.find( v => v.id == rule.id ) match {
-          case Some(rule) =>
-            // Update to an existing rule
-            val updated = team.rules.map( r => if (r.id == rule.id) rule else r)
-            val newTeam = team.copy(rules = updated)
-            (newTeam, rule)
-          case None =>
-            // this should be an error
-            throw new RuntimeException("thought this was checked ?!?")
-        }
+    team.rules.find( v => v.id == rule.id ) match {
+      case Some(rule) =>
+        // Update to an existing rule
+        val updated = team.rules.map( r => if (r.id == rule.id) rule else r)
+        val newTeam = team.copy(rules = updated)
+        (newTeam, rule)
       case None =>
-        // New Rule, have to assign id for rule
-        val newRule = rule.copy(id = Some(new ObjectId()))
-        val newTeam = team.copy(rules = team.rules.:+(newRule))
-        (newTeam, newRule)
+        // New Rule, insert the rule
+        val newTeam = team.copy(rules = team.rules.:+(rule))
+        (newTeam, rule)
     }
   }
 
-  def saveRule(teamId: ObjectId, rule: Rule): Try[Team] = {
+  def createRule(rule: Rule): Try[Team] = {
+    val teamId = rule.team
     val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
 
     // Does the team exist?
@@ -87,7 +80,32 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     }
 
     // Team exists, is the rule id valid (either already exists or is None)?
-    if (rule.id.isDefined && teamOpt.get.rules.find( r => r.id == rule.id ).isEmpty) {
+    if (teamOpt.get.rules.find( r => r.id == rule.id ).isDefined) {
+      logger.info(s"Found existing rule with same id")
+      return Failure(new RuntimeException(s"Duplicate rule id ${rule.id} for team $teamId"))
+    }
+
+    val (team,newRule) = upsertRule(teamOpt.get, rule)
+    Team.save(team)
+
+    if (newRule.active) {
+      alertingEngine.loadAlertingRule(team, newRule)
+    }
+
+    return Success(team)
+  }
+
+  def updateRule(rule: Rule): Try[Team] = {
+    val teamId = rule.team
+    val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
+
+    // Does the team exist?
+    if (teamOpt.isEmpty) {
+      return Failure(new RuntimeException(s"Invalid team id $teamId"))
+    }
+
+    // Team exists, is the rule id valid (either already exists or is None)?
+    if (teamOpt.get.rules.find( r => r.id == rule.id ).isEmpty) {
       logger.info(s"Could not find rule to update")
       return Failure(new RuntimeException(s"Invalid rule id ${rule.id} for team $teamId"))
     }
@@ -96,7 +114,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     Team.save(team)
 
     // Is the old rule running, if so unload it
-    alertingEngine.unloadAlertingRule(rule.id.get)
+    alertingEngine.unloadAlertingRule(rule.id)
 
     if (newRule.active) {
       alertingEngine.loadAlertingRule(team, newRule)
@@ -105,6 +123,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
     return Success(team)
   }
+
 }
 
 

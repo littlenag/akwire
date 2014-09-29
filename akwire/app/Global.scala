@@ -56,15 +56,12 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     logger.info("Teams init complete")
 
-    val ADMIN = "admin@akwire.com"
-    val PROVIDER = UsernamePasswordProvider.UsernamePassword
-
-    User.findByEmailAndProvider(ADMIN, PROVIDER) match {
+    User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
         //import play.api.Play.current
         val pw = (new BCryptPasswordHasher(play.api.Play.current)).hash("admin")
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
-        val admin = new User(ObjectId.get(), ADMIN, PROVIDER, "admin", Some(pw), List(tr))
+        val admin = new User(ObjectId.get(), User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER, "admin", Some(pw), List(tr))
         User.save(admin)
       case _ => logger.info("User accounts init complete")
     }

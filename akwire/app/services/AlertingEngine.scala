@@ -53,8 +53,12 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
     clojure.getContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
 
-    clojure.eval(readFile("/home/mark/proj/akwire/akwire/app/util/Time.clj", StandardCharsets.UTF_8), clojure.getContext)
-    clojure.eval(readFile("/home/mark/proj/akwire/akwire/app/util/Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
+    //val text = io.Source.fromInputStream(getClass.getResourceAsStream("Time.clj")).mkString
+
+    clojure.eval(readFile("/home/mark/proj/akwire/akwire/conf/Time.clj", StandardCharsets.UTF_8), clojure.getContext)
+    clojure.eval(readFile("/home/mark/proj/akwire/akwire/conf/Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
+//    clojure.eval(io.Source.fromInputStream(getClass.getResourceAsStream("Time.clj")).mkString, clojure.getContext)
+//    clojure.eval(readFile("classpath://Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
 
     logger.info("Alerting Engine running")
   }
@@ -68,10 +72,10 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
   }
 
   def loadAlertingRule(team:Team, rule:Rule) = {
-    val ruleName = s"rules.ID_${rule.id.get}"
+    val ruleName = s"rules.ID_${rule.id}"
 
     val ruleText = s"""(ns $ruleName (:import services.ObsProcesser) (:require akwire.streams) (:use akwire.streams))
-      | (def rule-id (org.bson.types.ObjectId. "${rule.id.get}"))
+      | (def rule-id (org.bson.types.ObjectId. "${rule.id}"))
       | (defn trigger [events]
       |   (if (list? events)
       |     (.triggerAlert akwire-bindings/alert-engine rule-id (java.util.ArrayList. (map make-obs events)))
@@ -94,7 +98,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
     val proc : ObsProcesser = clojure.getInterface(ruleName, classOf[ObsProcesser])
 
-    alertingRules.put(rule.id.get, (rule, proc))
+    alertingRules.put(rule.id, (rule, proc))
   }
 
   // Assumes that the Alerting Rule has already been loaded

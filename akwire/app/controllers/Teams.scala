@@ -1,12 +1,12 @@
 package controllers
 
+import models.{RuleJson, TeamJson}
 import scaldi.{Injector, Injectable}
 import services.CoreServices
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
-import play.api.mvc._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 
@@ -19,7 +19,7 @@ import com.mongodb.casbah.commons.Imports._
 
 import scala.util.{Failure, Success}
 
-class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
+class Teams(implicit inj: Injector) extends SecureSocial with Injectable with TeamJson with RuleJson {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])
 
@@ -51,7 +51,11 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
       val list = Team.find(filter).sort(sort).toList
-      Ok(Json.arr(list)(0))
+      logger.info(s"teams: $list")
+      //Ok(Json.toJson(list))
+      val t = Json.toJson(list)
+      logger.info(s"t: $t")
+      Ok(t)
     }
   }
 
@@ -90,13 +94,35 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
   // API Methods for dealing with Rules         //
   // ------------------------------------------ //
 
-  // ruleId in body means update existing rule
-  def saveRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
+  def createRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
     logger.info(s"Saving rule for team: ${teamId}")
+
+    // TODO check user access to team
+
     request.body.asOpt[Rule] match {
       case Some(rule: Rule) =>
         logger.info(s"Saving rule: ${rule}")
-        core.saveRule(new ObjectId(teamId), rule) match {
+        rule.setTeam(new ObjectId(teamId))
+        core.createRule(rule) match {
+          case Success(v) => Future.successful(Ok(Json.toJson(v)))
+          case Failure(e) => Future.successful(BadRequest(s"${e.getMessage}"))
+        }
+      case None =>
+        logger.info(s"Could not parse requset body")
+        Future.successful(BadRequest(s"Could not parse request body"))
+    }
+  }
+
+  def updateRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
+    logger.info(s"Updating rule for team: ${teamId}")
+
+    // TODO check user access to team
+
+    request.body.asOpt[Rule] match {
+      case Some(rule: Rule) =>
+        logger.info(s"Saving rule: ${rule}")
+        rule.setTeam(new ObjectId(teamId))
+        core.updateRule(rule) match {
           case Success(v) => Future.successful(Ok(Json.toJson(v)))
           case Failure(e) => Future.successful(BadRequest(s"${e.getMessage}"))
         }

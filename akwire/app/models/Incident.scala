@@ -158,10 +158,15 @@ trait StreamContextJson {
 
 }
 
-trait IncidentJson extends RuleEnumsJson with StreamContextJson {
+trait IncidentJson extends StreamContextJson {
   import play.api.libs.json.Json
 
   import JsonUtil._
+
+  implicit val impactReader : Reads[Impact.Value] = JsPath.read[Impact.Value]
+  implicit val impactWriter : Writes[Impact.Value] = JsPath.write[Impact.Value]
+  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
+  implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
 
   implicit val incidentFormatter = Json.format[Incident]
 }
