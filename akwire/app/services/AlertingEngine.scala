@@ -14,6 +14,11 @@ import util.ClojureScriptEngineFactory
 import util.ClojureScriptEngine
 import scala.collection.concurrent.TrieMap
 
+import play.api.Play.current
+
+import clojure.lang.RT
+import clojure.lang.Compiler
+
 class AlertingEngine(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[AlertingEngine])
@@ -47,6 +52,11 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
     //require.invoke(stringReader.invoke("clojure"))
 
+    logger.info("clojure classpath: " + System.getProperty("java.class.path"))
+
+    // FIXME this is a major security hole and will allow arbitrary code execution!
+    Compiler.LOADER.bindRoot(current.classloader)
+
     val bindings = clojure.createBindings()
 
     bindings.put("akwire-bindings/alert-engine", this)
@@ -59,6 +69,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
     clojure.eval(readFile("/home/mark/proj/akwire/akwire/conf/Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
 //    clojure.eval(io.Source.fromInputStream(getClass.getResourceAsStream("Time.clj")).mkString, clojure.getContext)
 //    clojure.eval(readFile("classpath://Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
+    //Play.application.resourceAsStream("/foo/case0.json")
 
     logger.info("Alerting Engine running")
   }

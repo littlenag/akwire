@@ -25,7 +25,7 @@ class CoreModule extends Module {
   binding to new controllers.Teams
   binding to new controllers.Users
 
-  binding to new AlertingEngine
+  binding to new AlertingEngine initWith(_.init)
   binding to new PersistenceService
   binding to new CoreServices
 

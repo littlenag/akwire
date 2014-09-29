@@ -90,6 +90,7 @@
   (:import (services.ObsProcesser)
            (services.ObsCallback)
            (services.TriggerAlert$)
+           (models.core.ObservedMeasurement)
            ))
 
 (defn warn [ex & children]

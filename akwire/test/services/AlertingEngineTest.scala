@@ -1,6 +1,6 @@
 package services
 
-import models.core.{ObservedMeasurement, Observation}
+import models.core.{ObservedMeasurement}
 import models.{Rule, Team}
 import org.bson.types.ObjectId
 import org.joda.time.DateTime

@@ -19,7 +19,7 @@ import com.mongodb.casbah.commons.Imports._
 
 import scala.util.{Failure, Success}
 
-class Teams(implicit inj: Injector) extends SecureSocial with Injectable with TeamJson with RuleJson {
+class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])
 
@@ -52,10 +52,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable with Te
       val sort = MongoDBObject("name" -> 1)
       val list = Team.find(filter).sort(sort).toList
       logger.info(s"teams: $list")
-      //Ok(Json.toJson(list))
-      val t = Json.toJson(list)
-      logger.info(s"t: $t")
-      Ok(t)
+      Ok(Json.toJson(list))
     }
   }
 
