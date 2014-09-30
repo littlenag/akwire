@@ -1,0 +1,18 @@
+{ 
+ "measurements": [
+    {
+    "observer":"m1",
+    "key":"test",
+    "value":5
+    }
+  ],
+ "events": [
+    {
+    "host":"srv02",
+    "observer":"os",
+    "key":"printer/toner",
+    "message":"bad text",
+    "impact":"CLEAR"
+    }
+  ]
+}

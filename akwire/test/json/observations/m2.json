@@ -1,0 +1,28 @@
+{ "measurements": [
+    {
+      "observer":"os",
+      "key":"proc/running1",
+      "value":122
+    },
+    {
+      "observer":"os",
+      "key":"proc/running2",
+      "value":122
+    },
+    {
+      "observer":"os",
+      "key":"proc/running3",
+      "value":122
+    },
+    {
+      "observer":"os",
+      "key":"proc/running4",
+      "value":122
+    },
+    {
+      "observer":"os",
+      "key":"proc/zombie5",
+      "value":0
+    }
+  ]
+}

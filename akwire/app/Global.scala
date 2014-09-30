@@ -5,39 +5,39 @@ import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import play.api.GlobalSettings
 import play.api.Application
-import org.slf4j.{LoggerFactory, Logger}
+import play.api.Logger
 import scaldi.play.ScaldiSupport
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.providers.utils.{BCryptPasswordHasher, PasswordHasher}
 import securesocial.core.{PasswordInfo, AuthenticationMethod}
+
 
 /**
  * Set up the Scaldi injector and provide the mechanism for return objects from the dependency graph.
  */
 object Global extends GlobalSettings with ScaldiSupport {
 
-  private final val logger: Logger = LoggerFactory.getLogger("global")
-
-  logger.info("Akwire starting")
+  Logger.info("Akwire starting")
 
   override def applicationModule = {
+    Logger.info("Defining modules")
     new CoreModule
   }
 
   override def onStart(app: Application) {
     super.onStart(app)
-    logger.info("Application has started")
     RegisterConversionHelpers()
     RegisterJodaTimeConversionHelpers()
 
     firstBoot
+    Logger.debug("onStart() complete")
   }
 
   override def onStop(app: Application) {
     super.onStop(app)
-    logger.info("Application is stopped")
     DeregisterConversionHelpers()
     DeregisterJodaTimeConversionHelpers()
+    Logger.debug("onStop() complete")
   }
 
   def firstBoot = {
@@ -54,7 +54,7 @@ object Global extends GlobalSettings with ScaldiSupport {
         adminTeam = t
     }
 
-    logger.info("Teams init complete")
+    Logger.info("Teams init complete")
 
     User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
@@ -63,7 +63,7 @@ object Global extends GlobalSettings with ScaldiSupport {
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
         val admin = new User(ObjectId.get(), User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER, "admin", Some(pw), List(tr))
         User.save(admin)
-      case _ => logger.info("User accounts init complete")
+      case _ => Logger.info("User accounts init complete")
     }
   }
 

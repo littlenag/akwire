@@ -1,0 +1,8 @@
+{ "measurements": [
+    {
+      "observer":"os",
+      "key":"proc/running",
+      "value":12
+    }
+  ]
+}

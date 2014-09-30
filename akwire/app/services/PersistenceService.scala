@@ -23,6 +23,15 @@ class PersistenceService {
     return query;
   }
 
+  def init = {
+    logger.info("Persistence Services Stopping")
+  }
+
+  def shutdown = {
+    logger.info("Persistence Services Stopping")
+  }
+
+
   def persistAlert(alert : DoTrigger) = {
     logger.info("Normal Alert: {}", alert);
 

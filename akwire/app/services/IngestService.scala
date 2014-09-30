@@ -11,6 +11,10 @@ class IngestService(implicit inj: Injector) extends Injectable {
 
   lazy val o = actorSystem.actorOf(Props[ObsHandler], name = "obsHandler");
 
+  def init = {
+
+  }
+
   def process(submission: RawSubmission) = {
     o ! submission
   }

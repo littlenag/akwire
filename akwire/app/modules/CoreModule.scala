@@ -2,15 +2,13 @@ package modules
 
 import akka.actor.ActorSystem
 import controllers.Application
-import org.slf4j.{LoggerFactory, Logger}
+import play.api.Logger
 import play.api.Configuration
 import scaldi.Module
 import services._
 
 class CoreModule extends Module {
-  private final val logger: Logger = LoggerFactory.getLogger(classOf[CoreModule])
-
-  logger.debug("Binding dependencies")
+  Logger.debug("Binding dependencies")
 
   // binding to "foo" <= IS EQUIVALENT TO => bind[String] to "foo"
 
@@ -25,11 +23,14 @@ class CoreModule extends Module {
   binding to new controllers.Teams
   binding to new controllers.Users
 
-  binding to new AlertingEngine initWith(_.init)
-  binding to new PersistenceService
-  binding to new CoreServices
+  binding toNonLazy new IngestService initWith(_.init)
+  binding toNonLazy new AlertingEngine initWith(_.init) destroyWith(_.shutdown)
+  binding toNonLazy new PersistenceService initWith(_.init)
+  binding toNonLazy new CoreServices initWith(_.init)
 
-  bind[ActorSystem] to ActorSystem("AkkaScalaSpring")
-  bind[Configuration] to new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
-  bind[UUIDGenerator] to new SimpleUUIDGenerator
+  bind[ActorSystem] toNonLazy ActorSystem("AkkaScalaSpring")
+  bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
+  bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator
+
+  Logger.debug("Binding complete")
 }

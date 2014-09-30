@@ -2,26 +2,23 @@ package services
 
 import java.nio.charset.{StandardCharsets, Charset}
 import java.nio.file.{Files, Paths}
-import javax.script.{SimpleScriptContext, ScriptContext}
+import javax.script.ScriptContext
 
 import models.alert.DoTrigger
 import models.core.Observation
 import models.{Contextualized, Team, Rule}
 import org.bson.types.ObjectId
-import org.slf4j.{Logger, LoggerFactory}
 import scaldi.{Injector, Injectable}
 import util.ClojureScriptEngineFactory
 import util.ClojureScriptEngine
 import scala.collection.concurrent.TrieMap
 
 import play.api.Play.current
+import play.api.Logger
 
-import clojure.lang.RT
 import clojure.lang.Compiler
 
 class AlertingEngine(implicit inj: Injector) extends Injectable {
-
-  private final val logger: Logger = LoggerFactory.getLogger(classOf[AlertingEngine])
 
   val persist = inject[PersistenceService]
 
@@ -39,7 +36,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
   }
 
   def init = {
-    logger.info("Alerting Engine starting")
+    Logger.info("Alerting Engine starting")
 
     // probably load a whole bunch of clojure related stuff here
     // set the class path directory
@@ -52,7 +49,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
     //require.invoke(stringReader.invoke("clojure"))
 
-    logger.info("clojure classpath: " + System.getProperty("java.class.path"))
+    Logger.info("clojure classpath: " + System.getProperty("java.class.path"))
 
     // FIXME this is a major security hole and will allow arbitrary code execution!
     Compiler.LOADER.bindRoot(current.classloader)
@@ -71,12 +68,17 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 //    clojure.eval(readFile("classpath://Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
     //Play.application.resourceAsStream("/foo/case0.json")
 
-    logger.info("Alerting Engine running")
+    Logger.info("Alerting Services running")
+  }
+
+  def shutdown = {
+    Logger.info("Alerting Services stopping")
+    alertingRules.keys.map(unloadAlertingRule(_))
   }
 
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
-    logger.info(s"Inspecting: $obs")
+    Logger.info(s"Inspecting: $obs")
     for (ar <- alertingRules) {
       ar._2._2.asInstanceOf[ObsProcesser].process(obs)
     }
@@ -103,16 +105,31 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
       | )
     """.stripMargin
 
-    logger.info("Compiling rule body: " + ruleText)
+    Logger.info("Compiling rule body: " + ruleText)
 
     clojure.eval(ruleText)
 
     val proc : ObsProcesser = clojure.getInterface(ruleName, classOf[ObsProcesser])
 
+    Logger.debug(s"Hook loaded as: ${proc.getClass.getCanonicalName}")
+
     alertingRules.put(rule.id, (rule, proc))
   }
 
-  // Assumes that the Alerting Rule has already been loaded
+  def destroyRule(ruleId:ObjectId, procName:String) = {
+    val ruleName = s"rules.ID_${ruleId}"
+
+    val ruleText = s"(remove-ns '${ruleName})"
+    val procText = s"(remove-ns '${procName})"
+
+    Logger.info("Unloading rule namespace: " + ruleText)
+    Logger.info("Unloading proc namespace: " + procText)
+
+    clojure.eval(ruleText)
+    clojure.eval(procText)
+  }
+
+  // Assumes that the Alerting Rule has already been loaded 
   def loadResolveRule(ruleId:ObjectId, entity:Contextualized) = {
     val sc = entity.contextualizedStream
   }
@@ -122,11 +139,11 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
    * @return The rule that was running
    */
   def unloadAlertingRule(ruleId:ObjectId) : Option[Rule] = {
-    val (rule, _) = alertingRules(ruleId)
+    val (rule, proc) = alertingRules(ruleId)
 
     if (rule == null) { return None }
 
-    logger.info("Unloading rule: {}", rule);
+    Logger.info(s"Unloading rule: ${rule}")
 
     for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
       resolvingRule.destroy
@@ -134,7 +151,8 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
       //alerts.send(MessageBuilder.withPayload(new Inter(rule, entry.getKey())).build());
     }
 
-    //rule.destroy
+    destroyRule(rule.id, proc.getClass.getCanonicalName)
+
     alertingRules = alertingRules - ruleId
     Some(rule)
   }
@@ -142,7 +160,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
   /** Go through a java ArrayList since Java is our glue here */
   def triggerAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
     println(s"$ruleId Triggering alert with observations: $obs")
-    logger.info("Triggering alert with observations: " + obs)
+    Logger.info("Triggering alert with observations: " + obs)
 
     import scala.collection.JavaConverters._
 
@@ -157,7 +175,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
   def resolveAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
     println(s"$ruleId Resolving alert with observations: $obs")
-    logger.info("Resolving alert with observations: " + obs)
+    Logger.info("Resolving alert with observations: " + obs)
   }
 
 }

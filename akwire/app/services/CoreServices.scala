@@ -30,6 +30,10 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     logger.info("Core Services Running")
   }
 
+  def shutdown = {
+    logger.info("Core Services Stopping")
+  }
+
   def loadAlertingRules = {
     logger.info("Loading Alerting Rules");
     for (team <- Team.findAll()) {
