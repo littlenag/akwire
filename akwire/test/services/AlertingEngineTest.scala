@@ -16,9 +16,10 @@ class AlertingEngineTest extends Specification with Mockito {
 
       val persistence = mock[PersistenceService]
 
-      val engine = new AlertingEngine()(DynamicModule(
-        _.binding to persistence
-      ))
+      val engine = new AlertingEngine()(DynamicModule { dm =>
+        dm.binding to persistence
+        dm.binding to getClass.getClassLoader
+      })
 
       engine.init
 
@@ -28,16 +29,18 @@ class AlertingEngineTest extends Specification with Mockito {
       // team id
       val tid = new ObjectId()
 
-      val rule = new Rule(tid, "r1", """(where (and (host "h1") (> value 2)) trigger)""")
+      val rule1 = new Rule(tid, "r1", """(where (and (host "h1") (< value 10)) trigger)""")
+      val rule2 = new Rule(tid, "r1", """(where (and (host "h1") (> value 11)) trigger)""")
+
       //val rule = new Rule("r1", """(where (host "h1") trigger)""")
       //val rule = new Rule("r1", """(where true trigger)""")
       //val rule = new Rule("r1", "prn")
       //val rule = new Rule("r1", "akwire.streams/trigger")
       // where not foo resolve
 
-      val team = new Team(tid, "t1", List(rule), new DateTime(), true)
+      val team = new Team(tid, "t1", List(rule1), new DateTime(), true)
 
-      engine.loadAlertingRule(team, rule)
+      engine.loadAlertingRule(team, rule1)
 
       // v = f(t), v_now = f(t_now)
 
@@ -47,9 +50,19 @@ class AlertingEngineTest extends Specification with Mockito {
 
       engine.inspect(obs)
 
-      there was one(persistence).persistAlert _
+      //there was one(persistence).persistAlert _
 
-      rule mustNotEqual null
+      // next rule
+
+      engine.loadAlertingRule(team, rule2)
+
+      // v = f(t), v_now = f(t_now)
+
+      val obs2 = new ObservedMeasurement("i1", "h1", "t1", "k1", 15)
+
+      engine.inspect(obs2)
+
+      there was two(persistence).persistAlert _
     }
 
     "test alert persistence" in {

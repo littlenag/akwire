@@ -39,7 +39,7 @@ abstract class Observation(timestamp: DateTime, instance:String, host:String, ob
   //private String tags = "os:/linux";  // metadata about either the device or the stream itself
 
   override def toString() : String = {
-    String.format("[%s]/%s/%s/%s/%s", timestamp, instance, host, observer, key);
+    String.format("[%s]/%s/%s/%s/%s", timestamp, instance, host, observer, key)
   }
 }
 
@@ -53,6 +53,10 @@ class ObservedMeasurement(val timestamp: DateTime,
 
   def this(instance : String, host : String, observer: String, key: String, value:Double) {
     this(new DateTime(), instance, host, observer, key, value)
+  }
+
+  override def toString() : String = {
+    s"${super.toString()}:$value"
   }
 
 }

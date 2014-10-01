@@ -7,6 +7,8 @@ import play.api.Configuration
 import scaldi.Module
 import services._
 
+import play.api.Play.current
+
 class CoreModule extends Module {
   Logger.debug("Binding dependencies")
 
@@ -22,6 +24,9 @@ class CoreModule extends Module {
   binding to new controllers.Roles
   binding to new controllers.Teams
   binding to new controllers.Users
+
+  // The app classloader is our default classloader
+  binding to current
 
   binding toNonLazy new IngestService initWith(_.init)
   binding toNonLazy new AlertingEngine initWith(_.init) destroyWith(_.shutdown)
