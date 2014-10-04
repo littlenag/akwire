@@ -1,5 +1,6 @@
 { "measurements": [
     {
+      "host":"h1",
       "observer":"os",
       "key":"proc/running",
       "value":12

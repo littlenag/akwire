@@ -1,8 +1,9 @@
 package services
 
 import akka.actor.{ActorSystem, Props, Actor}
+import models.core.ObservedMeasurement
 import org.slf4j.{Logger, LoggerFactory}
-import models.{RawAlert, ObservedMeasurement, RawSubmission}
+import models.{RawAlert, RawSubmission}
 import scaldi.{Injectable, Injector}
 
 class IngestService(implicit inj: Injector) extends Injectable {

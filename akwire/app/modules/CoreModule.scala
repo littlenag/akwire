@@ -1,7 +1,6 @@
 package modules
 
 import akka.actor.ActorSystem
-import controllers.Application
 import play.api.Logger
 import play.api.Configuration
 import scaldi.Module
@@ -26,7 +25,7 @@ class CoreModule extends Module {
   binding to new controllers.Users
 
   // The app classloader is our default classloader
-  binding to current
+  binding to current.classloader
 
   binding toNonLazy new IngestService initWith(_.init)
   binding toNonLazy new AlertingEngine initWith(_.init) destroyWith(_.shutdown)

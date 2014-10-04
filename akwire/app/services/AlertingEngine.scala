@@ -15,7 +15,7 @@ import scala.collection.concurrent.TrieMap
 
 import play.api.Logger
 
-import clojure.lang.Compiler
+import clojure.lang.{Var, RT, IFn, Compiler}
 
 class AlertingEngine(implicit inj: Injector) extends Injectable {
 
@@ -23,7 +23,7 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
   val classloader = inject[ClassLoader]
 
   // rules and their compiled processors mapped via the rule id
-  var alertingRules = TrieMap[ObjectId, (Rule, ObsProcesser)]()
+  var alertingRules = TrieMap[ObjectId, (Rule, Var)]()
 
   // TODO rules and their rules, the rules need to know their StreamContext!!!
   var resolvingRules = TrieMap[ObjectId, List[Rule]]()
@@ -74,23 +74,24 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
   def shutdown = {
     Logger.info("Alerting Services stopping")
     alertingRules.keys.map(unloadAlertingRule(_))
+    clojure.eval("(remove-ns akwire)")
   }
 
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
     for (ar <- alertingRules) {
-      ar._2._2.asInstanceOf[ObsProcesser].process(obs)
+      ar._2._2.invoke(obs)
     }
   }
 
   def loadAlertingRule(team:Team, rule:Rule) = {
 
-    val ruleName = s"rules.ID_${rule.id}"
+    val ruleNS = s"akwire.rules.ID_${rule.id}"
 
     alertingRules.get(rule.id) match {
       case Some((loadedRule,proc)) =>
-        val ruleText = s"""(ns $ruleName)
+        val ruleText = s"""(ns $ruleNS)
           | (def rule-text (partial ${rule.text}))
            """.stripMargin
 
@@ -99,7 +100,10 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
 
       case None =>
 
-        val ruleText = s"""(ns $ruleName (:import services.ObsProcesser) (:require akwire.streams) (:use akwire.streams))
+        val ruleText = s"""
+        | (ns $ruleNS
+        |   (:require akwire.streams)
+        |   (:use akwire.streams))
         | (def rule-id (org.bson.types.ObjectId. "${rule.id}"))
         | (defn trigger [events]
         |   (if (list? events)
@@ -116,23 +120,22 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
         | (defn process-event [event]
         |   (apply (partial ${rule.text}) [event]))
         |
-        | (def ObsProcesserImpl
-        |    ( proxy[ObsProcesser][]
-        |      (process [observation]
-        |        (apply rule-text [(make-event observation)])
-        |      )
-        |    )
+        | (defn process [observation]
+        |   (apply rule-text [(make-event observation)])
         | )
+        |
         """.stripMargin
 
         Logger.info("New rule, compiling complete rule body: " + ruleText)
 
         clojure.eval(ruleText)
 
-        val proc : ObsProcesser = clojure.getInterface(ruleName, classOf[ObsProcesser])
+        //val proc : ObsProcesser = clojure.getInterface(ruleNS, classOf[ObsProcesser])
 
-        Logger.debug(s"Hook loaded as: ${proc.getClass.getCanonicalName}")
+        val proc = RT.`var`(ruleNS, "process")
 
+        Logger.debug(s"Hook loaded as: ${ruleNS}")
+ 
         alertingRules.put(rule.id, (rule, proc))
     }
   }
@@ -199,8 +202,4 @@ class AlertingEngine(implicit inj: Injector) extends Injectable {
     Logger.info("Resolving alert with observations: " + obs)
   }
 
-}
-
-trait ObsProcesser {
-  def process(obs:Observation)
 }

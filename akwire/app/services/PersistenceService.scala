@@ -2,9 +2,9 @@ package services
 
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
-import models.{Incident, mongoContext, ObservedMeasurement}
+import models.core.ObservedMeasurement
+import models.Incident
 import models.alert.{DoTrigger, AlertMsg}
-import org.bson.types.ObjectId
 import org.slf4j.{Logger, LoggerFactory}
 
 class PersistenceService {
@@ -30,7 +30,6 @@ class PersistenceService {
   def shutdown = {
     logger.info("Persistence Services Stopping")
   }
-
 
   def persistAlert(alert : DoTrigger) = {
     logger.info("Normal Alert: {}", alert);

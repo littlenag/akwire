@@ -11,6 +11,10 @@ description "Collect core cpu metrics for a given server."
 # simple (100 - idle)
 # complex (full break out of buckets: idle, iowait, nice, system, user, steal)
 
+# df -TP -x tmpfs -x devtmpfs -x debugfs
+# cat /proc/meminfo
+# cat /proc/loadavg
+
 # dependencies: /proc/loadavg
 
 measurement "uptime" do
@@ -22,9 +26,10 @@ measurement "uptime" do
 end
 
 measurement "loadavg", :interval => ["01m", "05m", "15m"] do
-  collect { 
-    observe(File.read("/proc/loadavg").split[0], "01m")
-    observe(File.read("/proc/loadavg").split[1], "05m")
-    observe(File.read("/proc/loadavg").split[2], "15m")
+  collect {
+    avg=File.read("/proc/loadavg")
+    observe(avg.split[0], "01m")
+    observe(avg.split[1], "05m")
+    observe(avg.split[2], "15m")
   }
 end

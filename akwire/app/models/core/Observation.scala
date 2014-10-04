@@ -43,7 +43,7 @@ abstract class Observation(timestamp: DateTime, instance:String, host:String, ob
   }
 }
 
-class ObservedMeasurement(val timestamp: DateTime,
+case class ObservedMeasurement(val timestamp: DateTime,
                           override val instance:String,
                           override val host:String,
                           override val observer:String,
@@ -58,5 +58,9 @@ class ObservedMeasurement(val timestamp: DateTime,
   override def toString() : String = {
     s"${super.toString()}:$value"
   }
+}
 
+object ObservedMeasurement {
+  import play.api.libs.json.Json
+  implicit val omFormat = Json.format[ObservedMeasurement]
 }

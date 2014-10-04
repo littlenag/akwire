@@ -1,6 +1,6 @@
 package models
 
-import org.joda.time.DateTime
+import models.core.ObservedMeasurement
 
 case class RawSubmission(measurements: List[ObservedMeasurement])
 
@@ -10,16 +10,4 @@ object RawSubmission {
   implicit val om = ObservedMeasurement.omFormat
 
   implicit val submitFormat = Json.format[RawSubmission]
-}
-
-case class ObservedMeasurement(timestamp: Option[DateTime],
-                               host: Option[String],
-                               observer : String,
-                               key : String,
-                               value : Double)
-
-object ObservedMeasurement {
-  import play.api.libs.json.Json
-
-  implicit val omFormat = Json.format[ObservedMeasurement]
 }
