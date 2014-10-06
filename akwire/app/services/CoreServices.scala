@@ -12,7 +12,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[CoreServices])
 
-  var alertingEngine = inject[AlertingEngine]
+  var alertingEngine = inject[AlertingService]
 
   def init = {
     //loadAdapters()    // to sync alert state with other systems

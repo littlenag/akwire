@@ -1,8 +1,12 @@
 package models.core
 
+import models.JsonUtil
 import org.joda.time.DateTime;
 
-import java.lang.String.format;
+import java.lang.String.format
+
+import play.api.libs.json.Reads
+;
 
 /**
  * base concepts: observers, sensors, and observations
@@ -58,9 +62,4 @@ case class ObservedMeasurement(val timestamp: DateTime,
   override def toString() : String = {
     s"${super.toString()}:$value"
   }
-}
-
-object ObservedMeasurement {
-  import play.api.libs.json.Json
-  implicit val omFormat = Json.format[ObservedMeasurement]
 }

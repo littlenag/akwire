@@ -1,5 +1,8 @@
 package controllers
 
+import models.core.ObservedMeasurement
+import org.joda.time.DateTime
+import play.api.Configuration
 import play.api.mvc._
 
 import org.slf4j.{Logger, LoggerFactory}
@@ -14,7 +17,23 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable {
 
   var ingestService  = inject[IngestService]
 
-  // accept data from:
+  var configuration = inject[Configuration]
+
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  implicit val measReader : Reads[ObservedMeasurement] =
+    ( ((__ \ "timestamp").read[DateTime] orElse Reads.pure(DateTime.now())) ~
+      ((__ \ "instance").read[String] orElse Reads.pure(configuration.getString("akwire.instance").get)) ~
+      (__ \ "host").read[String] ~
+      (__ \ "observer").read[String] ~
+      (__ \ "key").read[String] ~
+      (__ \ "value").read[Double]
+      )(ObservedMeasurement.apply _)
+
+  implicit val submissionReads = Json.reads[RawSubmission]
+
+  // try to accept data from:
   //   collectd (write http plugin)
   //   statsd
   //   diamond

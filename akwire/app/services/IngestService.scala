@@ -2,15 +2,18 @@ package services
 
 import akka.actor.{ActorSystem, Props, Actor}
 import models.core.ObservedMeasurement
-import org.slf4j.{Logger, LoggerFactory}
 import models.{RawAlert, RawSubmission}
+import play.api.Logger
+import scaldi.akka.AkkaInjectable
 import scaldi.{Injectable, Injector}
 
-class IngestService(implicit inj: Injector) extends Injectable {
+class IngestService(implicit inj: Injector) extends AkkaInjectable {
 
   val actorSystem  = inject[ActorSystem]
 
-  lazy val o = actorSystem.actorOf(Props[ObsHandler], name = "obsHandler");
+  val alerting = inject[AlertingService]
+
+  lazy val o = actorSystem.actorOf(Props(classOf[ObsHandler], alerting), name = "obsHandler");
 
   def init = {
 
@@ -26,8 +29,7 @@ class IngestService(implicit inj: Injector) extends Injectable {
 
 }
 
-class ObsHandler extends Actor {
-  private final val logger: Logger = LoggerFactory.getLogger(classOf[ObsHandler])
+class ObsHandler(val alerting: AlertingService) extends Actor {
 
   def tag(measurements: List[ObservedMeasurement]) = {
     measurements
@@ -35,9 +37,11 @@ class ObsHandler extends Actor {
 
   def receive = {
     case r: RawSubmission =>
-      logger.info("Raw submission: " + r.measurements)
+      Logger.info("Raw submission: " + r.measurements)
 
       val taggedMeasurements = tag(r.measurements)
+
+      taggedMeasurements.foreach(alerting.inspect(_))
 
       // new observations stream
       //  -> tagger
@@ -49,9 +53,9 @@ class ObsHandler extends Actor {
       //  \-> delivery service
 
     case r: RawAlert =>
-      logger.info("Alert: " + r)
+      Logger.info("Alert: " + r)
 
     case x =>
-      logger.info("Received: " + x)
+      Logger.info("Received: " + x)
   }
 }

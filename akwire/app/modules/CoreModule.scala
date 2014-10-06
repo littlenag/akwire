@@ -28,11 +28,11 @@ class CoreModule extends Module {
   binding to current.classloader
 
   binding toNonLazy new IngestService initWith(_.init)
-  binding toNonLazy new AlertingEngine initWith(_.init) destroyWith(_.shutdown)
+  binding toNonLazy new AlertingService initWith(_.init) destroyWith(_.shutdown)
   binding toNonLazy new PersistenceService initWith(_.init)
   binding toNonLazy new CoreServices initWith(_.init)
 
-  bind[ActorSystem] toNonLazy ActorSystem("AkkaScalaSpring")
+  bind[ActorSystem] toNonLazy ActorSystem("AkkaScalaSpring") destroyWith (_.shutdown())
   bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
   bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator
 

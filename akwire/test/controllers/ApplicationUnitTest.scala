@@ -8,7 +8,7 @@ import org.specs2.mutable._
 import play.api.test._
 import play.api.test.Helpers._
 import scaldi.play.ScaldiSupport
-import services.{AlertingEngine, CoreServices, SimpleUUIDGenerator, UUIDGenerator}
+import services.{AlertingService, CoreServices, SimpleUUIDGenerator, UUIDGenerator}
 import java.util.UUID
 
 import scaldi._
@@ -35,7 +35,7 @@ class ApplicationUnitTest extends Specification with Mockito {
         binding to new controllers.Teams
         binding to new controllers.Users
 
-        binding to new AlertingEngine
+        binding to new AlertingService
         binding to new CoreServices
 
         bind[ActorSystem] to ActorSystem("AkkaScalaSpring")
