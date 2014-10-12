@@ -99,7 +99,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     request.body.asOpt[Rule] match {
       case Some(rule: Rule) =>
         logger.info(s"Saving rule: ${rule}")
-        rule.setTeam(new ObjectId(teamId))
+        rule.teamId = new ObjectId(teamId)
         core.createRule(rule) match {
           case Success(v) => Future.successful(Ok(Json.toJson(v)))
           case Failure(e) => Future.successful(BadRequest(s"${e.getMessage}"))
@@ -118,7 +118,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     request.body.asOpt[Rule] match {
       case Some(rule: Rule) =>
         logger.info(s"Saving rule: ${rule}")
-        rule.setTeam(new ObjectId(teamId))
+        rule.teamId = new ObjectId(teamId)
         core.updateRule(rule) match {
           case Success(v) => Future.successful(Ok(Json.toJson(v)))
           case Failure(e) => Future.successful(BadRequest(s"${e.getMessage}"))

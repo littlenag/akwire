@@ -35,7 +35,7 @@ class JsonParsers extends Specification {
         valid = ( rule => {
           rule.name must_== "test 1"
           rule.active must_== true;
-          rule.team must_==(new ObjectId("5415d1fbec2e527a31f97fe1"))
+          rule.teamId must_==(new ObjectId("5415d1fbec2e527a31f97fe1"))
         }) )
 
     }

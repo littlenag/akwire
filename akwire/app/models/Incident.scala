@@ -1,5 +1,6 @@
 package models
 
+import com.novus.salat.transformers.CustomTransformer
 import models.alert.AlertMsg
 import org.joda.time.DateTime
 import com.novus.salat.annotations._
@@ -41,6 +42,14 @@ case class ContextualizedStream(fields : List[(String, String)]) {
 
     return o
   }
+}
+
+object ContextualizedStreamTransformer extends CustomTransformer[ContextualizedStream, DBObject] {
+  def deserialize(b: DBObject) = {
+    val l = for (k <- b.keys) yield (k, b.get(k).asInstanceOf[String])
+    new ContextualizedStream(l.toList)
+  }
+  def serialize(a: ContextualizedStream) = a.asDBObject
 }
 
 trait Contextualized {
@@ -89,17 +98,23 @@ case class Incident( id: ObjectId,
 
   override def contextualizedStream = incidentKey
 
-  def this(alert:AlertMsg) = {
-    this(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, null, alert.contextualizedStream, alert.rule.impact, alert.rule.urgency)
-  }
-
   def increment = {
     this.copy(count = this.count + 1, lastSeen = new DateTime())
   }
 
 }
 
-object Incident extends IncidentDAO with IncidentJson
+object Incident extends IncidentDAO with IncidentJson {
+
+  /**
+   * Salat doesn't like multiple constructors with arguments
+   * @param alert
+   * @return
+   */
+  def fromAlert(alert:AlertMsg) = {
+    new Incident(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, alert.rule.teamId, alert.contextualizedStream, alert.rule.impact, alert.rule.urgency)
+  }
+}
 
 trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
   def collection = MongoConnection()("akwire")("incidents")
@@ -146,13 +161,13 @@ trait StreamContextJson {
     }
 
     override def writes(o: ContextualizedStream): JsValue = {
-      //var ret = Json.obj()
-      //o.fields.foreach(p => ret = ret + (p._1,JsString(p._2)))
-      //ret
-      //
-      o.fields.foldLeft(Json.obj()) { (obj,p) =>
-        obj + (p._1,JsString(p._2))
-      }
+      var ret = Json.obj()
+      o.fields.foreach(p => ret = ret + (p._1,JsString(p._2)))
+      ret
+
+      //o.fields.foldLeft(Json.obj()) { (obj,p) =>
+      //  obj + (p._1,JsString(p._2))
+      //}
     }
   }
 

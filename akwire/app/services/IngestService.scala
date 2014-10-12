@@ -5,7 +5,7 @@ import models.core.ObservedMeasurement
 import models.{RawAlert, RawSubmission}
 import play.api.Logger
 import scaldi.akka.AkkaInjectable
-import scaldi.{Injectable, Injector}
+import scaldi.{Injector}
 
 class IngestService(implicit inj: Injector) extends AkkaInjectable {
 

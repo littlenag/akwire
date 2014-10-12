@@ -5,6 +5,14 @@
       "observer":"os",
       "key":"proc/running",
       "value":12
+    },
+    {
+      "instance":"i1",
+      "host":"h1",
+      "observer":"os",
+      "key":"proc/stopped",
+      "value":12
     }
+
   ]
 }

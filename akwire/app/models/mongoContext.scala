@@ -19,6 +19,8 @@ package object mongoContext {
     context.registerGlobalKeyOverride(remapThis = "id", toThisInstead = "_id")
     context.registerClassLoader(Play.classloader)
 
+    context.registerCustomTransformer(ContextualizedStreamTransformer)
+
     context
   }
 }

@@ -100,10 +100,10 @@ case class Rule( id: ObjectId,
   //def impact = Impact.SEV_5
   def urgency = Urgency.NONE
 
-  @Ignore var _team: ObjectId = null
+  @Ignore var teamId: ObjectId = null
 
-  def setTeam(t:ObjectId) = _team = t
-  def team = _team
+//  def setTeamId(t:ObjectId) = _team = t
+//  def teamId = _team
 
   // in ITIL Priority is a function of both impact and urgency
   // maybe we want to have a priority matrix for each team?
@@ -132,6 +132,7 @@ case class Team( id: ObjectId,
 
 object Team extends TeamDAO with TeamJson {
   def AKWIRE_ADMIN_TEAM_NAME = "Akwire Administrators"
+
 }
 
 trait TeamDAO extends ModelCompanion[Team, ObjectId] {
@@ -143,7 +144,14 @@ trait TeamDAO extends ModelCompanion[Team, ObjectId] {
   collection.ensureIndex(DBObject("name" -> 1), "team_name", unique = true)
 
   // Queries
-  def findOneByName(name: String): Option[Team] = dao.findOne(MongoDBObject("name" -> name))
+  def findOneByName(name: String): Option[Team] = {
+    dao.findOne(MongoDBObject("name" -> name)).map(hydrate(_))
+  }
+
+  def hydrate(team:Team) = {
+    team.rules.foreach(_.teamId = team.id)
+    team
+  }
 }
 
 object Rule extends RuleJson

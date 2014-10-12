@@ -36,7 +36,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
   def loadAlertingRules = {
     logger.info("Loading Alerting Rules");
-    for (team <- Team.findAll()) {
+    for (team <- Team.findAll().map(Team.hydrate _)) {
       logger.info(s"Loading Alerting Rules for Team: ${team.name}")
       for (rule:Rule <- team.rules) {
         if (rule.active) {
@@ -75,7 +75,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
   }
 
   def createRule(rule: Rule): Try[Team] = {
-    val teamId = rule.team
+    val teamId = rule.teamId
     val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
 
     // Does the team exist?
@@ -100,7 +100,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
   }
 
   def updateRule(rule: Rule): Try[Team] = {
-    val teamId = rule.team
+    val teamId = rule.teamId
     val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
 
     // Does the team exist?

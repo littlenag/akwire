@@ -9,14 +9,14 @@ import org.slf4j.{Logger, LoggerFactory}
 
 class PersistenceService {
 
-  private final val logger: Logger = LoggerFactory.getLogger(getClass)
+  private final val Logger: Logger = LoggerFactory.getLogger(getClass)
 
   private def genIncidentQuery(alert: AlertMsg) : DBObject = {
     val query = MongoDBObject(
-      "visible" -> true,
+      "active" -> true,
       "resolved" -> false,
       "interred" -> false,
-      "rule.id" -> alert.rule.id,
+      "rule._id" -> alert.rule.id,
       "incident_key" -> alert.contextualizedStream.asDBObject
     )
 
@@ -24,26 +24,30 @@ class PersistenceService {
   }
 
   def init = {
-    logger.info("Persistence Services Stopping")
+    Logger.info("Persistence Services Stopping")
   }
 
   def shutdown = {
-    logger.info("Persistence Services Stopping")
+    Logger.info("Persistence Services Stopping")
   }
 
   def persistAlert(alert : DoTrigger) = {
-    logger.info("Normal Alert: {}", alert);
+    Logger.info("Normal Alert: {}", alert);
 
-    Incident.findOne(genIncidentQuery(alert)) match {
+    val q = genIncidentQuery(alert)
+
+    Logger.info("Looking for incidents matching query: {}", q);
+
+    Incident.findOne(q) match {
       case Some(i) =>
         // TODO Error once we have DoProlong in place
         val next_i = i.increment
-        logger.info("Updating incident to: {}", next_i)
+        Logger.info("Updating incident to: {}", next_i)
         Incident.save(next_i)
         //integrationService.incidentProlong(next_i);
       case None =>
-        val i = new Incident(alert);
-        logger.info("Saving new incident: {}", i);
+        val i = Incident.fromAlert(alert);
+        Logger.info("Saving new incident: {}", i);
         Incident.insert(i);
         //integrationService.incidentTriggered(i);
     }
