@@ -4,7 +4,7 @@ import java.nio.charset.{StandardCharsets, Charset}
 import java.nio.file.{Files, Paths}
 import javax.script.ScriptContext
 
-import models.alert.DoTrigger
+import models.alert.{AlertMsg, DoTrigger}
 import models.core.Observation
 import models.{Contextualized, Team, Rule}
 import org.bson.types.ObjectId
@@ -17,10 +17,19 @@ import play.api.Logger
 
 import clojure.lang.{Var, RT, Compiler}
 
+import scala.collection.parallel.mutable
+
 class AlertingService(implicit inj: Injector) extends Injectable {
 
-  val persist = inject[PersistenceService]
+  //val persist = inject[PersistenceService]
   val classloader = inject[ClassLoader]
+
+  //val alertsQueue = new scala.collection.mutable.Queue[AlertMsg]
+
+  import scala.collection.mutable.Queue
+
+  val alertsQueue = inject[Queue[AlertMsg]] (identified by "alertsQueue")
+
 
   // rules and their compiled processors mapped via the rule id
   var alertingRules = TrieMap[ObjectId, (Rule, Var)]()
@@ -188,7 +197,7 @@ class AlertingService(implicit inj: Injector) extends Injectable {
 
     alertingRules.get(ruleId) match {
       case Some((rule,proc)) =>
-        persist.persistAlert(DoTrigger(rule, obs.asScala.toList))
+        alertsQueue.enqueue(DoTrigger(rule, obs.asScala.toList))
       case None =>
         // Should never happen
         throw new Exception("Should never happen!")

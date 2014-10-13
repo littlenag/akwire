@@ -6,8 +6,6 @@ import com.novus.salat.dao.{SalatDAO, ModelCompanion}
 import org.bson.types.ObjectId
 import securesocial.core._
 
-import play.api.Play.current
-
 import models.mongoContext._
 import securesocial.core.providers.UsernamePasswordProvider
 
@@ -19,28 +17,21 @@ case class User(id: ObjectId,                     // object id, unique for this 
                 provider: String,                 // auth provider
                 name: String,
                 pwdInfo: Option[PasswordInfo],
-                memberOfTeams: List[TeamRef])    // password hash, id of the hasher algo, and the salt used
-  extends Identity {
+                profile : BasicProfile,
+                memberOfTeams: List[TeamRef]) {   // password hash, id of the hasher algo, and the salt used
 
+/*
   override def identityId: IdentityId = IdentityId(mail, provider)
-
   override def email: Option[String] = Some(mail)
-
   override def firstName: String = name
-
   override def lastName: String = ""
-
   override def fullName: String = name
-
   override def oAuth1Info: Option[OAuth1Info] = None
-
   override def oAuth2Info: Option[OAuth2Info] = None
-
   override def avatarUrl: Option[String] = None
-
   override def passwordInfo: Option[PasswordInfo] = pwdInfo
-
   override def authMethod: AuthenticationMethod = AuthenticationMethod.UserPassword
+*/
 }
 
 object User extends UserDAO with UserJson {

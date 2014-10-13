@@ -7,10 +7,7 @@ import play.api.GlobalSettings
 import play.api.Application
 import play.api.Logger
 import scaldi.play.ScaldiSupport
-import securesocial.core.providers.UsernamePasswordProvider
-import securesocial.core.providers.utils.{BCryptPasswordHasher, PasswordHasher}
-import securesocial.core.{PasswordInfo, AuthenticationMethod}
-
+import securesocial.core.providers.utils.{PasswordHasher}
 
 /**
  * Set up the Scaldi injector and provide the mechanism for return objects from the dependency graph.
@@ -56,10 +53,11 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     Logger.info("Teams init complete")
 
+    val hasher = new PasswordHasher.Default(PasswordHasher.Default.Rounds)
+
     User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
-        //import play.api.Play.current
-        val pw = (new BCryptPasswordHasher(play.api.Play.current)).hash("admin")
+        val pw = hasher.hash("admin")
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
         val admin = new User(ObjectId.get(), User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER, "admin", Some(pw), List(tr))
         User.save(admin)

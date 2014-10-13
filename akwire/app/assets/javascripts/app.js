@@ -1,7 +1,7 @@
 (function() {
     "use strict";
 
-    console.log("Akwire Client starting. Starting AngularJS.")
+    console.log("Akwire Client starting. Starting AngularJS.");
 
     var dependencies = [
         'ui.bootstrap',

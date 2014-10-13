@@ -16,15 +16,16 @@ import play.api.Play.current
 
 import scala.concurrent.duration.Duration
 
-class AuthServicePlugin(application: Application) extends securesocial.core.UserServicePlugin(application) {
-
-  //private final val logger: Logger = LoggerFactory.getLogger(classOf[AuthServicePlugin])
-
-  //logger.info(s"Creating AuthServicePlugin")
+class AuthServicePlugin extends securesocial.core.services.UserService[User] {
 
   Logger.info(s"Creating AuthServicePlugin")
 
   // For Akwire the userid is the email address
+
+  def find(providerId : scala.Predef.String, userId : scala.Predef.String) : scala.concurrent.Future[scala.Option[securesocial.core.BasicProfile]] = {
+
+  }
+
   def find(id: IdentityId): Option[Identity] = {
     findByEmailAndProvider(id.userId, id.providerId)
   }

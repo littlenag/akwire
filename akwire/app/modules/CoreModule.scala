@@ -1,6 +1,7 @@
 package modules
 
 import akka.actor.ActorSystem
+import models.alert.AlertMsg
 import play.api.Logger
 import play.api.Configuration
 import scaldi.Module
@@ -26,6 +27,12 @@ class CoreModule extends Module {
 
   // The app classloader is our default classloader
   binding to current.classloader
+
+  //val alertsQueue = new scala.collection.mutable.Queue[AlertMsg]
+
+  import scala.collection.mutable.Queue
+
+  binding identifiedBy "alertsQueue" toNonLazy new scala.collection.mutable.Queue[AlertMsg]
 
   binding toNonLazy new IngestService initWith(_.init)
   binding toNonLazy new AlertingService initWith(_.init) destroyWith(_.shutdown)
