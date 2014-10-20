@@ -10,13 +10,14 @@
         $log.debug("getAllIncidents()");
         return IncidentService.getIncidents().then(function(data) {
           $log.debug("Promise returned " + data.length + " Incidents");
-          return $scope.incidents = data;
+          $scope.incidents = data;
+          return data;
         }, function(error) {
           return $log.error("Unable to get Incidents: " + error);
         });
       };
 
-      $scope.getAllIncidents()
+      $scope.getAllIncidents();
     }
   ]);
 

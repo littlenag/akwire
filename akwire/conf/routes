@@ -9,28 +9,8 @@
 
 ########################################################################
 
-
-# Login page
-GET     /auth/login                      securesocial.controllers.LoginPage.login
-GET     /auth/logout                     securesocial.controllers.LoginPage.logout
-
-# User Registration and password handling
-GET     /auth/signup                     securesocial.controllers.Registration.startSignUp
-POST    /auth/signup                     securesocial.controllers.Registration.handleStartSignUp
-GET     /auth/signup/:token              securesocial.controllers.Registration.signUp(token)
-POST    /auth/signup/:token              securesocial.controllers.Registration.handleSignUp(token)
-GET     /auth/reset                      securesocial.controllers.Registration.startResetPassword
-POST    /auth/reset                      securesocial.controllers.Registration.handleStartResetPassword
-GET     /auth/reset/:token               securesocial.controllers.Registration.resetPassword(token)
-POST    /auth/reset/:token               securesocial.controllers.Registration.handleResetPassword(token)
-GET     /auth/password                   securesocial.controllers.PasswordChange.page
-POST    /auth/password                   securesocial.controllers.PasswordChange.handlePasswordChange
-
-# Providers entry points
-GET     /auth/authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
-POST    /auth/authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
-GET     /auth/not-authorized             securesocial.controllers.ProviderController.notAuthorized
-
+# SecureSocial entry point
+-> /auth securesocial.Routes
 
 ########################################################################
 
@@ -47,7 +27,7 @@ POST    /ingest/alert              @controllers.Ingest.submitAlert
 # Single endpoint for serving AngularJS
 GET     /                          @controllers.Application.index
 GET     /randomUUID                @controllers.Application.randomUUID
-POST    /authenticate/:provider    @controllers.Application.authenticate(provider)
+#POST    /authenticate/:provider    @controllers.Application.authenticate(provider)
 
 # Detectors
 POST    /detector/create           @controllers.Detectors.createDetector

@@ -30,14 +30,14 @@ class Application(implicit inj: Injector) extends Controller with ConstraintRead
     logger.info("calling UUIDGenerator...")
     Ok(uuidGenerator.generate.toString)
   }
-
+/*
   def authenticate(provider:String) = Action.async { implicit request =>
     if (request.remoteAddress == "127.0.0.1") {
       logger.warn("Accepting login from localhost")
-      User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER) match {
+      User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_EMAIL, User.AKWIRE_ADMIN_PROVIDER) match {
         case Some(user) =>
           val sr = ProviderController.completeAuthentication(user, session)
-          Future.successful(sr.withHeaders(("ADMIN_ACCOUNT_NAME", User.AKWIRE_ADMIN_ACCT_NAME)))
+          Future.successful(sr.withHeaders(("ADMIN_ACCOUNT_NAME", User.AKWIRE_ADMIN_ACCT_EMAIL)))
         case None =>
           Future.successful(InternalServerError("No admin account found"))
       }
@@ -46,5 +46,5 @@ class Application(implicit inj: Injector) extends Controller with ConstraintRead
       ProviderController.authenticate(provider)(request)
     }
   }
-
+*/
 }

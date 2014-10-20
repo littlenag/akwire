@@ -10,7 +10,8 @@
         $log.debug("getAllTeams()");
         return TeamService.getTeams().then(function(data) {
           $log.debug("Promise returned " + data.length + " Teams");
-          return $scope.teams = data;
+          $scope.teams = data;
+          return data;
         }, function(error) {
           return $log.error("Unable to get Teams: " + error);
         });
@@ -29,7 +30,8 @@
 
       TeamService.getTeam($scope.teamId).then(function(data) {
         $log.debug("Promise returned Team(" + $scope.teamId + ")");
-        return $scope.team = data;
+        $scope.team = data;
+        return data;
       }, function(error) {
         return $log.error("Unable to get Team(" + $scope.teamId + ": " + error);
       });
@@ -53,7 +55,7 @@
 
       $log.debug("constructing CreateTeamController");
 
-      $scope.team = {}
+      $scope.team = {};
       $scope.createTeam = function() {
 
           $log.debug("createTeam()");

@@ -118,14 +118,14 @@
       sessionTimeout: 'auth-session-timeout',
       notAuthenticated: 'auth-not-authenticated',
       notAuthorized: 'auth-not-authorized'
-    })
+    });
 
     app.constant('USER_ROLES', {
       all: '*',
       super_admin: 'super_admin',
       team_admin: 'team_admin',
       team_member: 'team_member'
-    })
+    });
 
     controllersModule.controller('AdminCtrl', ['$scope', '$log', function($scope, $log) {
       $log.debug("constructing AdminCtrl");
@@ -143,7 +143,7 @@
       $scope.credentials = {
         username: "",
         password: ""
-      }
+      };
 
       // If already authenticated just move to the home state
       if (AuthService.isAuthenticated()) {
@@ -187,15 +187,15 @@
           $rootScope.$broadcast(AUTH_EVENTS.logoutSuccess);
           $state.go("login", {});
         });
-      }
+      };
 
       AuthService.retryAuth().then(function (user) {
-        if (user != null) {
+        if (user !== null) {
           $log.info("Re-authed with User: " + angular.toJson(user));
           $scope.setCurrentUser(user);
         }
       });
-    })
+    });
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -219,7 +219,7 @@
         this.teams = null;
       };
       return this;
-    })
+    });
 
     servicesModule.service('AuthService', function ($http, $log, $cookieStore, $location, $q, Session) {
       var authService = {};
@@ -228,7 +228,7 @@
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-          .post("/authenticate/userpass", credentials) // /auth
+          .post("/auth/authenticate/userpass", credentials) // /auth
           .then(function(res) {
 
             $log.info("Successfully Authenticated User: " + credentials.username);
@@ -255,7 +255,7 @@
           Session.destroy();
           return res;
         });
-      }
+      };
 
       authService.getUserInfo = function (username) {
         $log.info("Fetching user entity: " + username);
@@ -264,7 +264,7 @@
 
       authService.initSession = function (user) {
         $log.info("User Info: " + angular.toJson(user));
-        Session.create(user.id, user.mail, user.name, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams)
+        Session.create(user.id, user.mail, user.name, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams);
         $cookieStore.put("akwire.email", user.mail);
         return user;
       };
@@ -287,7 +287,7 @@
 
         var deferred = $q.defer();
 
-        if (lastEmailUsed != null) {
+        if (lastEmailUsed !== null) {
           // try to re-fetch the user object
           $log.info("Retying auth for: " + lastEmailUsed);
 
@@ -305,10 +305,10 @@
         }
 
         return deferred.promise;
-      }
+      };
 
       return authService;
-    })
+    });
 
 
 }).call(this);

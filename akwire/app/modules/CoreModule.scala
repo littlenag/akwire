@@ -1,10 +1,13 @@
 package modules
 
 import akka.actor.ActorSystem
+import models.User
 import models.alert.AlertMsg
 import play.api.Logger
 import play.api.Configuration
+import plugins.auth.AuthServicePlugin
 import scaldi.Module
+import securesocial.core.RuntimeEnvironment
 import services._
 
 import play.api.Play.current
@@ -16,6 +19,12 @@ class CoreModule extends Module {
 
   import conf.AkkaContext._
   import com.typesafe.config._
+
+  implicit val env = new RuntimeEnvironment.Default[User] {
+    //override lazy val routes = new CustomRoutesService()
+    override lazy val userService: AuthServicePlugin = new AuthServicePlugin()
+    //override lazy val eventListeners = List(new MyEventListener())
+  }
 
   binding to new controllers.Application
   binding to new controllers.Agents

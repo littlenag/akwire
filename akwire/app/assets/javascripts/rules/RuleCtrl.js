@@ -9,7 +9,8 @@
         $log.debug("getAllRules()");
         return RuleService.getRules().then(function(data) {
           $log.debug("Promise returned " + data.length + " Rules");
-          return $scope.rules = data;
+          $scope.rules = data;
+          return data;
         }, function(error) {
           return $log.error("Unable to get Rules: " + error);
         });
@@ -28,7 +29,8 @@
 
       RuleService.getRule($scope.ruleId).then(function(data) {
         $log.debug("Promise returned Rule(" + $scope.ruleId + ")");
-        return $scope.rule = data;
+        $scope.rule = data;
+        return data;
       }, function(error) {
         return $log.error("Unable to get Rule(" + $scope.ruleId + ": " + error);
       });

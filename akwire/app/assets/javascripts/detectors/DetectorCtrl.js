@@ -10,13 +10,14 @@
         $log.debug("getAllDetectors()");
         return DetectorService.getDetectors().then(function(data) {
           $log.debug("Promise returned " + data.length + " Detectors");
-          return $scope.detectors = data;
+          $scope.detectors = data;
+          return data;
         }, function(error) {
           return $log.error("Unable to get Detectors: " + error);
         });
       };
 
-      $scope.getAllDetectors()
+      $scope.getAllDetectors();
     }
   ]);
 
@@ -30,7 +31,8 @@
 
       DetectorService.getDetector($scope.detectorId).then(function(data) {
         $log.debug("Promise returned Detector(" + $scope.detectorId + ")");
-        return $scope.detector = data;
+        $scope.detector = data;
+        return data;
       }, function(error) {
         return $log.error("Unable to get Detector(" + $scope.detectorId + ": " + error);
       });

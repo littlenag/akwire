@@ -22,7 +22,7 @@
         }).error(function (data, status, headers) {
                 $log.error("Failed to list Agents - status #{status}");
                 deferred.reject(data);
-        })
+        });
 
         return deferred.promise;
       };

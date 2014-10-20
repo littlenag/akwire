@@ -4,11 +4,13 @@ import java.util.concurrent.TimeUnit
 
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
-//import org.slf4j.{Logger, LoggerFactory}
 import play.api.Logger
-import play.api.Application
-import securesocial.core.providers.Token
-import securesocial.core.{IdentityId, Identity}
+
+import scala.concurrent.Future
+
+//import securesocial.core.providers.Token
+//import securesocial.core.{IdentityId, Identity}
+import securesocial.core.BasicProfile
 import models.User
 
 import play.api.cache._
@@ -20,17 +22,13 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
 
   Logger.info(s"Creating AuthServicePlugin")
 
-  // For Akwire the userid is the email address
-
-  def find(providerId : scala.Predef.String, userId : scala.Predef.String) : scala.concurrent.Future[scala.Option[securesocial.core.BasicProfile]] = {
-
+  def find(providerId : String, userId : String) : Future[Option[BasicProfile]] = {
+    Future {
+      User.findOneById(new ObjectId(userId)).map(_.profile)
+    }
   }
 
-  def find(id: IdentityId): Option[Identity] = {
-    findByEmailAndProvider(id.userId, id.providerId)
-  }
-
-  def findByEmailAndProvider(email: String, providerId: String): Option[Identity] = {
+  def findByEmailAndProvider(email: String, providerId: String): Future[Option[BasicProfile]] = {
     Logger.info(s"Finding identity: ${email} ${providerId}")
     val ident = User.findByEmailAndProvider(email, providerId)
 
@@ -42,7 +40,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   // Receives a SocialUser, and NOT an Akwire User
-  def save(identity: Identity): Identity = {
+  def save(profile : securesocial.core.BasicProfile, mode : securesocial.core.services.SaveMode) : scala.concurrent.Future[U] = {
     if (identity.email.isEmpty) {
       throw new Exception("Users MUST have an email!")
     }
@@ -56,27 +54,38 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
     user
   }
 
-  def save(token: Token): Unit = {
+  def link(current : U, to : securesocial.core.BasicProfile) : scala.concurrent.Future[U] = {
+
+  }
+  def passwordInfoFor(user : U) : scala.concurrent.Future[scala.Option[securesocial.core.PasswordInfo]] = {
+
+  }
+  def updatePasswordInfo(user : U, info : securesocial.core.PasswordInfo) : scala.concurrent.Future[scala.Option[securesocial.core.BasicProfile]] = {
+
+  }
+
+  def saveToken(token : securesocial.core.providers.MailToken) : scala.concurrent.Future[securesocial.core.providers.MailToken] = {
     Logger.info(s"Saving token: ${token.uuid}")
     val duration = Duration(token.expirationTime.getMillis - DateTime.now().getMillis, TimeUnit.MILLISECONDS)
     Cache.set(token.uuid, token, duration)
   }
-
-  def findToken(uuid: String): Option[Token] = {
+  def findToken(token : scala.Predef.String) : scala.concurrent.Future[scala.Option[securesocial.core.providers.MailToken]] = {
     Logger.info(s"Looking up token: ${uuid}")
     Cache.get(uuid) match {
       case Some(t: Token) => Some(t)
       case _ => None
     }
-  }
 
-  def deleteToken(uuid: String): Unit = {
+  }
+  def deleteToken(uuid : scala.Predef.String) : scala.concurrent.Future[scala.Option[securesocial.core.providers.MailToken]] = {
     Logger.info(s"Deleteing token: ${uuid}")
     Cache.remove(uuid)
+
   }
 
-  def deleteExpiredTokens(): Unit = {
+  def deleteExpiredTokens() = {
     // Don't need to do anything in this instance since the Token already
     // has a timeout set when it was saved
+
   }
 }

@@ -6,7 +6,9 @@ import org.joda.time.DateTime
 import play.api.GlobalSettings
 import play.api.Application
 import play.api.Logger
+import plugins.auth.AuthServicePlugin
 import scaldi.play.ScaldiSupport
+import securesocial.core.{RuntimeEnvironment, AuthenticationMethod, BasicProfile}
 import securesocial.core.providers.utils.{PasswordHasher}
 
 /**
@@ -55,11 +57,15 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     val hasher = new PasswordHasher.Default(PasswordHasher.Default.Rounds)
 
-    User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER) match {
+    User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_EMAIL, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
         val pw = hasher.hash("admin")
+        val id = ObjectId.get()
+        val profile = new BasicProfile(User.AKWIRE_ADMIN_PROVIDER, id.toString, None, None, Some("admin"), Some(User.AKWIRE_ADMIN_ACCT_EMAIL), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
+
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
-        val admin = new User(ObjectId.get(), User.AKWIRE_ADMIN_ACCT_NAME, User.AKWIRE_ADMIN_PROVIDER, "admin", Some(pw), List(tr))
+        val admin = new User(id, profile, List(tr))
+
         User.save(admin)
       case _ => Logger.info("User accounts init complete")
     }

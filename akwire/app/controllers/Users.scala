@@ -1,10 +1,11 @@
 package controllers
 
 import com.mongodb.casbah.commons.MongoDBObject
+import models.{TeamRef, User}
 import org.bson.types.ObjectId
-import securesocial.core.{SecureSocial}
+import securesocial.core.{AuthenticationMethod, BasicProfile, RuntimeEnvironment, SecureSocial}
 import securesocial.core.providers.UsernamePasswordProvider
-import securesocial.core.providers.utils.BCryptPasswordHasher
+import securesocial.core.providers.utils.{PasswordHasher}
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -17,21 +18,20 @@ import play.api.libs.json._
  * play plugin. This provides a non-blocking driver for mongoDB as well as some useful additions for handling JSon.
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
-class Users extends SecureSocial with ConstraintReads {
-
-  private final val logger: Logger = LoggerFactory.getLogger(classOf[Users])
+class Users(implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with ConstraintReads {
 
   import models.User
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
-  def createUser = SecuredAction(ajaxCall = true).async(parse.json) {
+  def createUser = SecuredAction.async(parse.json) {
     implicit request =>
 
       // minLength(3) tupled
       //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
       val customReads: Reads[(String, String, String)] = ((__ \ "email").read[String](email keepAnd min(5)) and (__ \ "name").read[String] and (__ \ "password").read[String]) tupled
+      val hasher = new PasswordHasher.Default(PasswordHasher.Default.Rounds)
 
       customReads.reads(request.body).fold(
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
@@ -40,20 +40,24 @@ class Users extends SecureSocial with ConstraintReads {
           val name = res._2
           val password = res._3
 
-          val pw = (new BCryptPasswordHasher(play.api.Play.current)).hash(password)
+          //
 
           val provider = UsernamePasswordProvider.UsernamePassword
 
+          val pw = hasher.hash(password)
+          val id = ObjectId.get()
+          val profile = new BasicProfile(provider, id.toString, None, None, Some(name), Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
+
           // TODO User's should always be a member of their own private eponymous Team and other teams
           // as an admin decides
-          val user = new User(ObjectId.get(), email, provider, name, Some(pw), Nil)
+          val user = new User(id, profile, Nil)
           User.insert(user)
           Future.successful(Created(s"User Created"))
         }
       )
   }
 
-  def retrieveUsers = SecuredAction(ajaxCall = true).async {
+  def retrieveUsers = SecuredAction.async {
     implicit request =>
     Future {
       val sort = MongoDBObject("name" -> 1)
@@ -62,7 +66,7 @@ class Users extends SecureSocial with ConstraintReads {
     }
   }
 
-  def retrieveUserById(userId:String) = SecuredAction(ajaxCall = true).async {
+  def retrieveUserById(userId:String) = SecuredAction.async {
     implicit request =>
     Future {
       User.findOne(MongoDBObject("_id" -> new ObjectId(userId))) match {
@@ -72,7 +76,7 @@ class Users extends SecureSocial with ConstraintReads {
     }
   }
 
-  def retrieveUserByEmail(email:String) = SecuredAction(ajaxCall = true).async {
+  def retrieveUserByEmail(email:String) = SecuredAction.async {
     implicit request =>
       Future {
         User.findOne(MongoDBObject("mail" -> email)) match {
@@ -82,7 +86,7 @@ class Users extends SecureSocial with ConstraintReads {
       }
   }
 
-  def deleteUser(userId:String) = SecuredAction(ajaxCall = true).async {
+  def deleteUser(userId:String) = SecuredAction.async {
     implicit request =>
     Future {
       User.removeById(new ObjectId(userId))

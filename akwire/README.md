@@ -138,3 +138,19 @@ during(Weekends) phone user(Jason)
 should be able to have a 
  - list of action + target pairs
  - an action + list of targets
+
+
+--------------------------------------------
+
+Splunk/PRTG criteria
+
+is Greater than
+is Less than
+is Equal to
+is Not equal to
+Drops by
+Rises by
+
+should have a way if detecting if an incident becomes stale,
+for example with splunk there is no reason not to just resend the alert every 5 minutes, but in akwire it would detect that the triggers have stopped coming in every 5 minutes and then mark the incident as “stale”
+ - more predictive rather than just resolving them if they’ve been open too long

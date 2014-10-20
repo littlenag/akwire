@@ -173,7 +173,7 @@ trait StreamContextJson {
 
 }
 
-trait IncidentJson extends StreamContextJson {
+trait IncidentJson extends StreamContextJson with UserJson {
   import play.api.libs.json.Json
 
   import JsonUtil._
@@ -183,5 +183,5 @@ trait IncidentJson extends StreamContextJson {
   implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
   implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
 
-  implicit val incidentFormatter = Json.format[Incident]
+  implicit val incidentWriter = Json.writes[Incident]
 }

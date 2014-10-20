@@ -1,30 +1,23 @@
 (function() {
 
   controllersModule.controller('ListRoleCtrl', [
-    '$log', 'RoleService', function($log, RoleService) {
-      var ListRoleCtrl;
-      return new (ListRoleCtrl = (function() {
+    '$scope', '$log', 'RoleService', function($scope, $log, RoleService) {
 
-        function ListRoleCtrl() {
-          $log.debug("constructing ListRoleController");
-          this.roles = [];
-          this.getAllRoles();
-        }
+      $log.debug("constructing ListRoleController");
+      $scope.roles = [];
 
-        ListRoleCtrl.prototype.getAllRoles = function() {
-          var _this = this;
-          $log.debug("getAllRoles()");
-          return RoleService.getRoles().then(function(data) {
-            $log.debug("Promise returned " + data.length + " Roles");
-            return _this.roles = data;
-          }, function(error) {
-            return $log.error("Unable to get Roles: " + error);
-          });
-        };
+      $scope.getAllRoles = function() {
+        $log.debug("getAllRoles()");
+        return RoleService.getRoles().then(function(data) {
+          $log.debug("Promise returned " + data.length + " Roles");
+          $scope.roles = data;
+          return data;
+        }, function(error) {
+          return $log.error("Unable to get Roles: " + error);
+        });
+      };
 
-        return ListRoleCtrl;
-
-      })());
+      $scope.getAllRoles();
     }
   ]);
 
@@ -37,7 +30,8 @@
 
       RoleService.getRole($scope.roleId).then(function(data) {
         $log.debug("Promise returned Role(" + $scope.roleId + ")");
-        return $scope.role = data;
+        $scope.role = data;
+        return data;
       }, function(error) {
         return $log.error("Unable to get Role(" + $scope.roleId + ": " + error);
       });
@@ -57,31 +51,21 @@
   ]);
 
   controllersModule.controller('CreateRoleCtrl', [
-    '$log', '$location', 'RoleService', function($log, $location, RoleService) {
-      var CreateRoleCtrl;
-      return new (CreateRoleCtrl = (function() {
+    '$scope', '$log', '$location', 'RoleService', function($scope, $log, $location, RoleService) {
+      $log.debug("constructing CreateRoleController");
+      $scope.role = {};
 
-        function CreateRoleCtrl() {
-          $log.debug("constructing CreateRoleController");
-          this.role = {};
-        }
-
-        CreateRoleCtrl.prototype.createRole = function() {
-          var _this = this;
-          $log.debug("createRole()");
-          this.role.active = true;
-          return RoleService.createRole(this.role).then(function(data) {
-            $log.debug("Promise returned " + data + " Role");
-            _this.role = data;
-            return $location.path("/admin/role");
-          }, function(error) {
-            return $log.error("Unable to create Role: " + error);
-          });
-        };
-
-        return CreateRoleCtrl;
-
-      })());
+      $scope.createRole = function() {
+        $log.debug("createRole()");
+        $scope.role.active = true;
+        return RoleService.createRole(this.role).then(function(data) {
+          $log.debug("Promise returned " + data + " Role");
+          $scope.role = data;
+          return $location.path("/admin/role");
+        }, function(error) {
+          return $log.error("Unable to create Role: " + error);
+        });
+      };
     }
   ]);
 

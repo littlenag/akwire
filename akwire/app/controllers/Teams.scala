@@ -1,6 +1,6 @@
 package controllers
 
-import models.{RuleJson, TeamJson}
+import models.{User}
 import scaldi.{Injector, Injectable}
 import services.CoreServices
 
@@ -10,7 +10,7 @@ import org.slf4j.{LoggerFactory, Logger}
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 
-import securesocial.core.{SecureSocial}
+import securesocial.core.{RuntimeEnvironment, SecureSocial}
 
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -19,7 +19,7 @@ import com.mongodb.casbah.commons.Imports._
 
 import scala.util.{Failure, Success}
 
-class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
+class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Teams])
 
@@ -28,7 +28,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
   import models.Team
   import models.Rule
 
-  def createTeam = SecuredAction(ajaxCall = true).async(parse.json) {
+  def createTeam = SecuredAction.async(parse.json) {
     implicit request =>
 
       // minLength(3) tupled
@@ -46,7 +46,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
       )
   }
 
-  def retrieveTeams = SecuredAction(ajaxCall = true).async {
+  def retrieveTeams = SecuredAction.async {
     Future {
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
@@ -56,7 +56,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     }
   }
 
-  def retrieveTeam(teamId:String) = SecuredAction(ajaxCall = true).async {
+  def retrieveTeam(teamId:String) = SecuredAction.async {
     Future {
       Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
         case Some(team : Team) => Ok(Json.toJson(team))
@@ -65,7 +65,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     }
   }
 
-  def renameTeam(teamId:String, oldName:String, newName:String) = SecuredAction(ajaxCall = true).async {
+  def renameTeam(teamId:String, oldName:String, newName:String) = SecuredAction.async {
     Future {
       Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
         case Some(team : Team) =>
@@ -80,7 +80,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     }
   }
 
-  def deleteTeam(teamId:String) = SecuredAction(ajaxCall = true).async {
+  def deleteTeam(teamId:String) = SecuredAction.async {
     Future {
       Team.removeById(new ObjectId(teamId))
       Ok(s"Removed team with id $teamId")
@@ -91,7 +91,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
   // API Methods for dealing with Rules         //
   // ------------------------------------------ //
 
-  def createRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
+  def createRule(teamId:String) = SecuredAction.async(parse.json) { request =>
     logger.info(s"Saving rule for team: ${teamId}")
 
     // TODO check user access to team
@@ -110,7 +110,7 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     }
   }
 
-  def updateRule(teamId:String) = SecuredAction(ajaxCall = true).async(parse.json) { request =>
+  def updateRule(teamId:String) = SecuredAction.async(parse.json) { request =>
     logger.info(s"Updating rule for team: ${teamId}")
 
     // TODO check user access to team
@@ -129,19 +129,19 @@ class Teams(implicit inj: Injector) extends SecureSocial with Injectable {
     }
   }
 
-  def deleteRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
+  def deleteRule(teamId:String, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def startRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
+  def startRule(teamId:String, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def pauseRule(teamId:String, ruleId:String) = SecuredAction(ajaxCall = true).async {
+  def pauseRule(teamId:String, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }
