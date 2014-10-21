@@ -19,15 +19,15 @@
 # ./observations is for raw numeric or textual observations of deployed systems
 # ./alert is for integrating an alert from other external monitoring engines/scripts/etc
 POST    /ingest/observations       @controllers.Ingest.submitObservations
-#PUT     /ingest/observations       @controllers.Ingest.submitObservations
+#PUT     /ingest/observations      @controllers.Ingest.submitObservations
 
 POST    /ingest/alert              @controllers.Ingest.submitAlert
-#PUT     /ingest/alert              @controllers.Ingest.submitAlert
+#PUT     /ingest/alert             @controllers.Ingest.submitAlert
 
 # Single endpoint for serving AngularJS
 GET     /                          @controllers.Application.index
 GET     /randomUUID                @controllers.Application.randomUUID
-#POST    /authenticate/:provider    @controllers.Application.authenticate(provider)
+GET     /login                     @controllers.Auth.login
 
 # Detectors
 POST    /detector/create           @controllers.Detectors.createDetector

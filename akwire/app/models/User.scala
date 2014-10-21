@@ -33,7 +33,7 @@ trait UserDAO extends ModelCompanion[User, ObjectId] {
   // Queries
   def findOneByName(name: String): Option[User] = dao.findOne(MongoDBObject("name" -> name))
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[User] = dao.findOne(MongoDBObject("mail" -> email, "provider" -> providerId))
+  def findByEmailAndProvider(email: String, providerId: String): Option[User] = dao.findOne(MongoDBObject("profile.email" -> email, "profile.providerId" -> providerId))
 
   def findByUserId(id : ObjectId) = dao.findOneById(id)
 }

@@ -7,7 +7,8 @@ import play.api.Logger
 import play.api.Configuration
 import plugins.auth.AuthServicePlugin
 import scaldi.Module
-import securesocial.core.RuntimeEnvironment
+import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import services._
 
 import play.api.Play.current
@@ -20,10 +21,13 @@ class CoreModule extends Module {
   import conf.AkkaContext._
   import com.typesafe.config._
 
+  import java.lang.reflect.Constructor
+
   implicit val env = new RuntimeEnvironment.Default[User] {
     //override lazy val routes = new CustomRoutesService()
     override lazy val userService: AuthServicePlugin = new AuthServicePlugin()
     //override lazy val eventListeners = List(new MyEventListener())
+    override lazy val providers = List(UsernamePasswordProvider)
   }
 
   binding to new controllers.Application
@@ -33,6 +37,9 @@ class CoreModule extends Module {
   binding to new controllers.Roles
   binding to new controllers.Teams
   binding to new controllers.Users
+  binding to new controllers.Auth
+
+  binding to getSSController(classOf[securesocial.controllers.ProviderController])
 
   // The app classloader is our default classloader
   binding to current.classloader
@@ -53,4 +60,14 @@ class CoreModule extends Module {
   bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator
 
   Logger.debug("Binding complete")
+
+  def getSSController[A](controllerClass: Class[A]): A = {
+    val instance = controllerClass.getConstructors.find { c =>
+      val params = c.getParameterTypes
+      params.length == 1 && params(0) == classOf[RuntimeEnvironment[User]]
+    }.map {
+      _.asInstanceOf[Constructor[A]].newInstance(env)
+    }
+    instance.get
+  }
 }
