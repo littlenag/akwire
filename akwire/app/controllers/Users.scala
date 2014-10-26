@@ -60,7 +60,7 @@ class Users(implicit inj: Injector, implicit val env: RuntimeEnvironment[User]) 
   def retrieveUsers = SecuredAction.async {
     implicit request =>
     Future {
-      val sort = MongoDBObject("name" -> 1)
+      val sort = MongoDBObject("profile.userId" -> 1)
       val list = User.findAll().sort(sort).toList
       Ok(Json.arr(list)(0))
     }
@@ -79,7 +79,7 @@ class Users(implicit inj: Injector, implicit val env: RuntimeEnvironment[User]) 
   def retrieveUserByEmail(email:String) = SecuredAction.async {
     implicit request =>
       Future {
-        User.findOne(MongoDBObject("mail" -> email)) match {
+        User.findOne(MongoDBObject("profile.email" -> email)) match {
           case Some(user : User) => Ok(Json.toJson(user))
           case None => BadRequest(s"Invalid user email $email")
         }

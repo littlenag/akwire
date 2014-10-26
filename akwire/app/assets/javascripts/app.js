@@ -189,15 +189,39 @@
         });
       };
 
-      AuthService.retryAuth().then(function (user) {
-        if (user !== null) {
-          $log.info("Re-authed with User: " + angular.toJson(user));
-          $scope.setCurrentUser(user);
-        }
-      });
+//      AuthService.retryAuth().then(function (user) {
+//        if (user !== null) {
+//          $log.info("Re-authed with User: " + angular.toJson(user));
+//          $scope.setCurrentUser(user);
+//        }
+//      });
     });
 
     ///////////////////////////////////////////////////////////////////////////
+
+    app.factory('AuthInterceptor', function ($window, $q) {
+      return {
+          request: function(config) {
+              config.headers = config.headers || {};
+              if ($window.sessionStorage.getItem('token')) {
+                  //config.headers.Authorization = 'Bearer ' + $window.sessionStorage.getItem('token');
+                  config.headers['X-Auth-Token'] = $window.sessionStorage.getItem('token');
+              }
+              return config || $q.when(config);
+          },
+          response: function(response) {
+              if (response.status === 401) {
+                  // TODO: Redirect user to login page.
+              }
+              return response || $q.when(response);
+          }
+      };
+    });
+
+    // Register the previously created AuthInterceptor.
+    app.config(function ($httpProvider) {
+        $httpProvider.interceptors.push('AuthInterceptor');
+    });
 
     servicesModule.service('Session', function () {
       this.create = function (userId, userEmail, userName, teamId, teamName, teams) {
@@ -221,17 +245,21 @@
       return this;
     });
 
-    servicesModule.service('AuthService', function ($http, $log, $cookieStore, $location, $q, Session) {
+    servicesModule.service('AuthService', function ($http, $log, $cookieStore, $location, $q, Session, $window) {
       var authService = {};
 
       authService.login = function (credentials) {
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-          .post("/auth/authenticate/userpass", credentials) // /auth
+          .post("/auth/api/authenticate/userpass?builder=cookie", credentials) // token now returns a JSON token document
           .then(function(res) {
 
             $log.info("Successfully Authenticated User: " + credentials.username);
+
+            $log.info("res: " + angular.toJson(res));
+
+            $window.sessionStorage.setItem('token', res.data.token);
 
             // securesocial returns nothing useful here other than our cookie
 
