@@ -18,7 +18,8 @@ case class User(id: ObjectId,                     // object id, unique for this 
 }
 
 object User extends UserDAO with UserJson {
-  def AKWIRE_ADMIN_ACCT_EMAIL = "admin@akwire.com"
+  def AKWIRE_ADMIN_USERNAME = "admin@akwire.com"
+  def AKWIRE_ADMIN_PASSWORD = "admin"
   def AKWIRE_ADMIN_PROVIDER = UsernamePasswordProvider.UsernamePassword
 }
 

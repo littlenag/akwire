@@ -3,6 +3,7 @@ package controllers
 import com.mongodb.casbah.commons.MongoDBObject
 import models.{TeamRef, User}
 import org.bson.types.ObjectId
+import scaldi.{Injectable, Injector}
 import securesocial.core.{AuthenticationMethod, BasicProfile, RuntimeEnvironment, SecureSocial}
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.providers.utils.{PasswordHasher}
@@ -18,7 +19,7 @@ import play.api.libs.json._
  * play plugin. This provides a non-blocking driver for mongoDB as well as some useful additions for handling JSon.
  * @see https://github.com/ReactiveMongo/Play-ReactiveMongo
  */
-class Users(implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with ConstraintReads {
+class Users(implicit inj: Injector, implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with ConstraintReads with Injectable {
 
   import models.User
 
@@ -31,7 +32,6 @@ class Users(implicit val env: RuntimeEnvironment[User]) extends SecureSocial[Use
       // minLength(3) tupled
       //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
       val customReads: Reads[(String, String, String)] = ((__ \ "email").read[String](email keepAnd min(5)) and (__ \ "name").read[String] and (__ \ "password").read[String]) tupled
-      val hasher = new PasswordHasher.Default(PasswordHasher.Default.Rounds)
 
       customReads.reads(request.body).fold(
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
@@ -44,9 +44,9 @@ class Users(implicit val env: RuntimeEnvironment[User]) extends SecureSocial[Use
 
           val provider = UsernamePasswordProvider.UsernamePassword
 
-          val pw = hasher.hash(password)
+          val pw = inject[PasswordHasher].hash(password)
           val id = ObjectId.get()
-          val profile = new BasicProfile(provider, id.toString, None, None, Some(name), Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
+          val profile = new BasicProfile(provider, email, None, None, Some(name), Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
 
           // TODO User's should always be a member of their own private eponymous Team and other teams
           // as an admin decides

@@ -57,13 +57,25 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     val hasher = inject[PasswordHasher]
 
-    User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_EMAIL, User.AKWIRE_ADMIN_PROVIDER) match {
+    User.findByEmailAndProvider(User.AKWIRE_ADMIN_USERNAME, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
-        val pw = hasher.hash("admin")
+
         val id = ObjectId.get()
-        val profile = new BasicProfile(User.AKWIRE_ADMIN_PROVIDER, User.AKWIRE_ADMIN_ACCT_EMAIL, None, None, Some("admin"), Some(User.AKWIRE_ADMIN_ACCT_EMAIL), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
+
+        val profile = new BasicProfile(
+          User.AKWIRE_ADMIN_PROVIDER,
+          User.AKWIRE_ADMIN_USERNAME,
+          None,           // firstname
+          None,           // lastname
+          Some("admin"),  // fullname
+          Some(User.AKWIRE_ADMIN_USERNAME),
+          None,
+          AuthenticationMethod.UserPassword,
+          None, None,
+          Some(hasher.hash(User.AKWIRE_ADMIN_PASSWORD)))
 
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
+
         val admin = new User(id, profile, List(tr))
 
         User.save(admin)

@@ -10,6 +10,7 @@ import scaldi.Module
 import securesocial.controllers.ViewTemplates
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.providers.utils.{PasswordValidator, PasswordHasher}
+import securesocial.core.services.AvatarService
 import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import services._
 
@@ -27,22 +28,26 @@ class CoreModule extends Module {
 
   import java.lang.reflect.Constructor
 
-  val auth = new AuthServicePlugin()
-
-  val defaultHasher = new PasswordHasher.Default()
-
   implicit val env = new RuntimeEnvironment.Default[User] {
+//    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()
+//    override lazy val passwordHashers: Map[String, PasswordHasher] = Map(currentHasher.id -> currentHasher)
+
     //override lazy val routes = new CustomRoutesService()
-    override lazy val userService: AuthServicePlugin = auth
+    override lazy val userService: AuthServicePlugin = new AuthServicePlugin()
+
+    //override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)
+
+    //override lazy val avatarService: Option[AvatarService] = None
+
     //override lazy val eventListeners = List(new MyEventListener())
-    override lazy val providers : scala.collection.immutable.ListMap[String, securesocial.core.IdentityProvider] = ListMap(UsernamePasswordProvider.UsernamePassword ->
-      new UsernamePasswordProvider(auth, None,
-        new ViewTemplates.Default(this),
-        Map(defaultHasher.id -> defaultHasher)))
+    override lazy val providers : scala.collection.immutable.ListMap[String, securesocial.core.IdentityProvider] = ListMap(
+      include(new UsernamePasswordProvider(userService, avatarService, viewTemplates, passwordHashers))
+    )
   }
 
   // Used by the Global object during first boot
-  binding to defaultHasher.asInstanceOf[PasswordHasher]
+  binding to env
+  binding to env.currentHasher
 
   // Create our REST controllers
   binding to new controllers.Application
@@ -55,6 +60,7 @@ class CoreModule extends Module {
   binding to new controllers.Auth
 
   binding to getSSController(classOf[securesocial.controllers.ProviderController])
+  binding to getSSController(classOf[securesocial.controllers.LoginApi])
 
   // The app classloader is our default classloader
   binding to current.classloader

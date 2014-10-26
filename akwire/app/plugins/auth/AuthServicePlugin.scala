@@ -16,8 +16,6 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   Logger.info(s"Creating AuthServicePlugin")
 
   def find(providerId : String, userId : String) : Future[Option[BasicProfile]] = {
-    //Logger.info(s"Finding identity: ${userId} ${providerId}")
-    //Future.successful(User.findOneById(new ObjectId(userId)).map(_.profile))
     findByEmailAndProvider(userId, providerId)
   }
 
@@ -25,7 +23,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
     Logger.info(s"Finding identity: ${email} ${providerId}")
     User.findByEmailAndProvider(email, providerId) match {
       case Some(user) =>
-        Logger.info(s"Found identity: ${email} ${providerId}")
+        Logger.info(s"Found identity: ${user}")
         Future.successful(Some(user.profile))
       case None =>
         Logger.info(s"No identity: ${email} ${providerId}")
@@ -33,7 +31,9 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
     }
   }
 
-  def save(profile : BasicProfile, mode : SaveMode) : scala.concurrent.Future[User] = {
+  def save(profile : BasicProfile, mode : SaveMode) : Future[User] = {
+    Logger.info(s"Saving profile: ${profile}")
+
     if (profile.email.isEmpty) {
       throw new Exception("Users MUST have an email!")
     }
@@ -45,7 +45,17 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
         User.save(newUser)
         Future.successful(newUser)
       case SaveMode.LoggedIn =>
-        Future.failed(new RuntimeException("Only signups for now"))
+        User.findByEmailAndProvider(profile.userId, profile.providerId) match {
+          case Some(user) =>
+            Logger.info(s"Saving identity: ${user}")
+            // Add a last login time here
+            Future.successful(user)
+          case None =>
+            Logger.info(s"No identity: ${profile.userId} ${profile.providerId}")
+            Future.failed(new RuntimeException("User authenticated but no profile!"))
+        }
+      case SaveMode.PasswordChange =>
+        Future.failed(new RuntimeException("Not supported"))
     }
 
     // We could allow profile linking here, but I choose not to. Maybe later.
@@ -56,6 +66,8 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   def passwordInfoFor(user : User) : Future[Option[PasswordInfo]] = {
+    Logger.info(s"Getting password info for: ${user}")
+
     if (user.profile.email.isEmpty) {
       throw new Exception("Users MUST have an email!")
     }
@@ -80,6 +92,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   def saveToken(token : MailToken) : scala.concurrent.Future[MailToken] = {
+    Logger.error(s"Not implemented")
     Future.failed(new RuntimeException("Later"))
     //Logger.info(s"Saving token: ${token.uuid}")
     //val duration = Duration(token.expirationTime.getMillis - DateTime.now().getMillis, TimeUnit.MILLISECONDS)
@@ -87,6 +100,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   def findToken(token : String) : Future[Option[MailToken]] = {
+    Logger.error(s"Not implemented")
     Future.failed(new RuntimeException("Later"))
 
     //Logger.info(s"Looking up token: ${uuid}")
@@ -97,6 +111,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   def deleteToken(uuid : String) : Future[Option[MailToken]] = {
+    Logger.error(s"Not implemented")
     Future.failed(new RuntimeException("Later"))
 
     //Logger.info(s"Deleteing token: ${uuid}")
