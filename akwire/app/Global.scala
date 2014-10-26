@@ -55,13 +55,13 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     Logger.info("Teams init complete")
 
-    val hasher = new PasswordHasher.Default(PasswordHasher.Default.Rounds)
+    val hasher = inject[PasswordHasher]
 
     User.findByEmailAndProvider(User.AKWIRE_ADMIN_ACCT_EMAIL, User.AKWIRE_ADMIN_PROVIDER) match {
       case None =>
         val pw = hasher.hash("admin")
         val id = ObjectId.get()
-        val profile = new BasicProfile(User.AKWIRE_ADMIN_PROVIDER, id.toString, None, None, Some("admin"), Some(User.AKWIRE_ADMIN_ACCT_EMAIL), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
+        val profile = new BasicProfile(User.AKWIRE_ADMIN_PROVIDER, User.AKWIRE_ADMIN_ACCT_EMAIL, None, None, Some("admin"), Some(User.AKWIRE_ADMIN_ACCT_EMAIL), None, AuthenticationMethod.UserPassword, None, None, Some(pw))
 
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
         val admin = new User(id, profile, List(tr))

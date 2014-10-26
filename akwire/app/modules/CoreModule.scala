@@ -7,11 +7,15 @@ import play.api.Logger
 import play.api.Configuration
 import plugins.auth.AuthServicePlugin
 import scaldi.Module
+import securesocial.controllers.ViewTemplates
 import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.utils.{PasswordValidator, PasswordHasher}
 import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import services._
 
 import play.api.Play.current
+
+import scala.collection.immutable.ListMap
 
 class CoreModule extends Module {
   Logger.debug("Binding dependencies")
@@ -23,13 +27,24 @@ class CoreModule extends Module {
 
   import java.lang.reflect.Constructor
 
+  val auth = new AuthServicePlugin()
+
+  val defaultHasher = new PasswordHasher.Default()
+
   implicit val env = new RuntimeEnvironment.Default[User] {
     //override lazy val routes = new CustomRoutesService()
-    override lazy val userService: AuthServicePlugin = new AuthServicePlugin()
+    override lazy val userService: AuthServicePlugin = auth
     //override lazy val eventListeners = List(new MyEventListener())
-    override lazy val providers = List(UsernamePasswordProvider)
+    override lazy val providers : scala.collection.immutable.ListMap[String, securesocial.core.IdentityProvider] = ListMap(UsernamePasswordProvider.UsernamePassword ->
+      new UsernamePasswordProvider(auth, None,
+        new ViewTemplates.Default(this),
+        Map(defaultHasher.id -> defaultHasher)))
   }
 
+  // Used by the Global object during first boot
+  binding to defaultHasher.asInstanceOf[PasswordHasher]
+
+  // Create our REST controllers
   binding to new controllers.Application
   binding to new controllers.Agents
   binding to new controllers.Detectors

@@ -240,7 +240,7 @@
 
           }, function(err) {
             $log.error("Failed to authenticate: " + err);
-            return err;
+            return $q.reject("Failed to authenticate");
           })
           .then(function(res) {
             // Now we have the user, create the session, stash the info, return the object

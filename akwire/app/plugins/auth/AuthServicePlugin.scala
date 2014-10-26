@@ -16,13 +16,21 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   Logger.info(s"Creating AuthServicePlugin")
 
   def find(providerId : String, userId : String) : Future[Option[BasicProfile]] = {
-    Logger.info(s"Finding identity: ${userId} ${providerId}")
-    Future.successful(User.findOneById(new ObjectId(userId)).map(_.profile))
+    //Logger.info(s"Finding identity: ${userId} ${providerId}")
+    //Future.successful(User.findOneById(new ObjectId(userId)).map(_.profile))
+    findByEmailAndProvider(userId, providerId)
   }
 
   def findByEmailAndProvider(email: String, providerId: String): Future[Option[BasicProfile]] = {
     Logger.info(s"Finding identity: ${email} ${providerId}")
-    Future.successful(User.findByEmailAndProvider(email, providerId).map(_.profile))
+    User.findByEmailAndProvider(email, providerId) match {
+      case Some(user) =>
+        Logger.info(s"Found identity: ${email} ${providerId}")
+        Future.successful(Some(user.profile))
+      case None =>
+        Logger.info(s"No identity: ${email} ${providerId}")
+        Future.successful(None)
+    }
   }
 
   def save(profile : BasicProfile, mode : SaveMode) : scala.concurrent.Future[User] = {

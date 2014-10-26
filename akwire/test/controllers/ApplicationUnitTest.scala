@@ -2,16 +2,24 @@ package controllers
 
 import _root_.akka.actor.ActorSystem
 import _root_.play.api.GlobalSettings
+import models.User
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 
 import play.api.test._
 import play.api.test.Helpers._
+import plugins.auth.AuthServicePlugin
 import scaldi.play.ScaldiSupport
+import securesocial.controllers.ViewTemplates
+import securesocial.core.RuntimeEnvironment
+import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.utils.PasswordHasher
 import services.{AlertingService, CoreServices, SimpleUUIDGenerator, UUIDGenerator}
 import java.util.UUID
 
 import scaldi._
+
+import scala.collection.immutable.ListMap
 
 /**
  * We focus here on testing the controller only - not the infrastructure in front or behind it. Using dependency
@@ -25,6 +33,20 @@ class ApplicationUnitTest extends Specification with Mockito {
   "Application" should {
 
     "get uuid from rest api" in {
+
+      val auth = new AuthServicePlugin()
+
+      val defaultHasher = new PasswordHasher.Default()
+
+      implicit val env = new RuntimeEnvironment.Default[User] {
+        //override lazy val routes = new CustomRoutesService()
+        override lazy val userService: AuthServicePlugin = auth
+        //override lazy val eventListeners = List(new MyEventListener())
+        override lazy val providers : scala.collection.immutable.ListMap[String, securesocial.core.IdentityProvider] = ListMap(UsernamePasswordProvider.UsernamePassword ->
+          new UsernamePasswordProvider(auth, None,
+            new ViewTemplates.Default(this),
+            Map(defaultHasher.id -> defaultHasher)))
+      }
 
       class TestModule extends Module {
         binding to new controllers.Application
