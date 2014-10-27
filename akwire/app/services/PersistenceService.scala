@@ -1,15 +1,17 @@
 package services
 
+import akka.actor.Actor
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.MongoDBObject
 import models.core.ObservedMeasurement
 import models.Incident
 import models.alert.{DoTrigger, AlertMsg}
-import org.slf4j.{Logger, LoggerFactory}
+import scaldi.akka.AkkaInjectable
+import scaldi.{Injector, Injectable}
 
-class PersistenceService {
+import play.api.Logger
 
-  private final val Logger: Logger = LoggerFactory.getLogger(getClass)
+class PersistenceService(implicit inj: Injector) extends Injectable {
 
   private def genIncidentQuery(alert: AlertMsg) : DBObject = {
     val query = MongoDBObject(
@@ -20,11 +22,11 @@ class PersistenceService {
       "incident_key" -> alert.contextualizedStream.asDBObject
     )
 
-    return query;
+    return query
   }
 
   def init = {
-    Logger.info("Persistence Services Stopping")
+    Logger.info("Persistence Services Starting")
   }
 
   def shutdown = {
@@ -32,22 +34,22 @@ class PersistenceService {
   }
 
   def persistAlert(alert : DoTrigger) = {
-    Logger.info("Normal Alert: {}", alert);
+    Logger.info(s"Normal Alert: ${alert}")
 
     val q = genIncidentQuery(alert)
 
-    Logger.info("Looking for incidents matching query: {}", q);
+    Logger.info(s"Looking for incidents matching query: ${q}")
 
     Incident.findOne(q) match {
       case Some(i) =>
         // TODO Error once we have DoProlong in place
         val next_i = i.increment
-        Logger.info("Updating incident to: {}", next_i)
+        Logger.info(s"Updating incident to: ${next_i}")
         Incident.save(next_i)
         //integrationService.incidentProlong(next_i);
       case None =>
         val i = Incident.fromAlert(alert);
-        Logger.info("Saving new incident: {}", i);
+        Logger.info(s"Saving new incident: ${i}")
         Incident.insert(i);
         //integrationService.incidentTriggered(i);
     }
@@ -57,4 +59,14 @@ class PersistenceService {
 
   }
 
+}
+
+class PersistenceEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
+
+  val service = inject[PersistenceService]
+
+  def receive = {
+    case trigger : DoTrigger => service.persistAlert(trigger)
+    case a => Logger.error("Bad message: " + a)
+  }
 }

@@ -45,6 +45,9 @@ class CoreModule extends Module {
     )
   }
 
+  bind[ActorSystem] toNonLazy ActorSystem("Akwire") destroyWith (_.shutdown())
+  bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
+
   // Used by the Global object during first boot
   binding to env
   binding to env.currentHasher
@@ -65,19 +68,15 @@ class CoreModule extends Module {
   // The app classloader is our default classloader
   binding to current.classloader
 
-  //val alertsQueue = new scala.collection.mutable.Queue[AlertMsg]
+  // Engines (active)
+  binding toProvider new PersistenceEngine
 
-  import scala.collection.mutable.Queue
-
-  binding identifiedBy "alertsQueue" toNonLazy new scala.collection.mutable.Queue[AlertMsg]
-
+  // Services (passive)
   binding toNonLazy new IngestService initWith(_.init)
   binding toNonLazy new AlertingService initWith(_.init) destroyWith(_.shutdown)
   binding toNonLazy new PersistenceService initWith(_.init)
   binding toNonLazy new CoreServices initWith(_.init)
 
-  bind[ActorSystem] toNonLazy ActorSystem("AkkaScalaSpring") destroyWith (_.shutdown())
-  bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
   bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator
 
   Logger.debug("Binding complete")
