@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths}
 import javax.script.ScriptContext
 
 import akka.actor.ActorSystem
+import engines.RoutingEngine
 import models.alert.{DoTrigger}
 import models.core.Observation
 import models.{Contextualized, Team, Rule}
@@ -25,7 +26,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
   implicit val actorSystem = inject[ActorSystem]
 
-  val persistenceEngine = injectActorRef[PersistenceEngine]
+  val dataRouter = injectActorRef[RoutingEngine]
 
   // rules and their compiled processors mapped via the rule id
   var alertingRules = TrieMap[ObjectId, (Rule, Var)]()
@@ -193,7 +194,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
     alertingRules.get(ruleId) match {
       case Some((rule,proc)) =>
-        persistenceEngine ! DoTrigger(rule, obs.asScala.toList)
+        dataRouter ! DoTrigger(rule, obs.asScala.toList)
       case None =>
         // Should never happen
         throw new Exception("Should never happen!")

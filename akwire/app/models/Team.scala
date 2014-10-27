@@ -132,7 +132,6 @@ case class Team( id: ObjectId,
 
 object Team extends TeamDAO with TeamJson {
   def AKWIRE_ADMIN_TEAM_NAME = "Akwire Administrators"
-
 }
 
 trait TeamDAO extends ModelCompanion[Team, ObjectId] {

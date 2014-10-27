@@ -1,6 +1,7 @@
 package modules
 
 import akka.actor.ActorSystem
+import engines.RoutingEngine
 import models.User
 import models.alert.AlertMsg
 import play.api.Logger
@@ -70,6 +71,7 @@ class CoreModule extends Module {
 
   // Engines (active)
   binding toProvider new PersistenceEngine
+  binding toProvider new RoutingEngine
 
   // Services (passive)
   binding toNonLazy new IngestService initWith(_.init)

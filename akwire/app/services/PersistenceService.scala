@@ -46,12 +46,10 @@ class PersistenceService(implicit inj: Injector) extends Injectable {
         val next_i = i.increment
         Logger.info(s"Updating incident to: ${next_i}")
         Incident.save(next_i)
-        //integrationService.incidentProlong(next_i);
       case None =>
         val i = Incident.fromAlert(alert);
         Logger.info(s"Saving new incident: ${i}")
         Incident.insert(i);
-        //integrationService.incidentTriggered(i);
     }
   }
 
