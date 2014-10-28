@@ -38,8 +38,10 @@ services filters:
 
 action keywords:
  - assign (available for services? teams to?)
- - phone
- - sms
+ - notify (pass incident to the target's policy)
+ - page (invoke generic highest-level notification)
+ - call
+ - text
  - email
  - alert
  > want 'text' and 'call' as reserved words probably, use backticks for escaping names e.g. user `key`
