@@ -141,6 +141,61 @@ should be able to have a
  - list of action + target pairs
  - an action + list of targets
 
+-------------------------------------------
+
+filter action target
+
+'notify' keyword, to invoke the target's policy
+
+'page' keyword to choose most urgent method
+
+policies vs schedules
+
+pagerduty ALWAYS passes the incident/alert to the target's policy
+
+we'll have policies at the, levels of:
+ - service
+ - team
+ - user
+
+need notions of the 'this' team; 'this' user; self target
+ - 'me' for user
+ - 'team' for team?
+ - 'enterprise'	for service?
+
+write rules about incidents, to remind user if open too long
+
+[ email user("it@lqdt.com"), email user("ai@lqdt.com"), notify schedule("ai/net on-call")];
+delay 1h;
+[ email user("asad@lqdt.com"),  user("carlos@lqdt.com"), invoke_schedule("ai/net on-call")];
+delay 30m;
+
+---
+
+notify [ user("it@lqdt.com"), user("ai@lqdt.com"), schedule("ai/net on-call")]
+delay 1h
+notify [ user("asad@lqdt.com"), user("carlos@lqdt.com"), schedule("ai/net on-call")]
+delay 30m
+repeat 5 times
+
+repeat until ...
+ - acked
+
+rollup
+
+---
+
+policy ID =>
+
+schedule ID =>
+
+---
+
+how to define rotations? overlays?
+
+has tag, host, id
+
+how to define reminders and rollups
 
 --------------------------------------------
 

@@ -2,15 +2,17 @@ package engines
 
 // https://gist.github.com/kmizu/1364341
 
+import models.Incident
+
 import scala.util.parsing.combinator.RegexParsers
 import scala.collection.mutable.Map
 
 object Main {
 
-  def eval(line: String): Unit = {
+  def eval(policy: String, incident: Incident): Unit = {
     val parser = new NotificationPolicyParser
 
-    val ast = parser.parse(line).get
+    val ast = parser.parse(policy).get
 
     val interpreter = new Interpreter
 
@@ -48,7 +50,7 @@ class Interpreter {
   def eval(env:Environment, ast:AST): Value = {
     def visit(ast:AST): Value = {
       ast match{
-        case Lines(exprs) =>{
+        case Statements(exprs) =>{
           val local = new Environment(Some(env))
           exprs.foldLeft(UnitValue:Value){(result, x) => eval(local, x)}
         }
@@ -135,8 +137,18 @@ object Runtime {
 }
 
 sealed trait AST
-case class Lines(exprs:List[AST]) extends AST
+case class Statements(exprs:List[AST]) extends AST
 case class IfExpr(cond:AST, pos:AST, neg:AST) extends AST
+
+case class SeverityFilter(pattern: AST) extends AST
+case class SeverityLiteral(value: Int) extends AST
+
+case class TagFilter(pattern: AST) extends AST
+case class TagLiteral(value: String) extends AST
+
+//case class DuringFilter(pattern: AST) extends AST
+//case class DuringLiteral(value: String) extends AST
+
 case class LessOp(left: AST, right:AST) extends AST
 case class AddOp(left: AST, right:AST) extends AST
 case class SubOp(left: AST, right:AST) extends AST
@@ -152,27 +164,60 @@ case class Func(params:List[String], proc:AST) extends AST
 case class FuncDef(name: String, func: Func) extends AST
 case class FuncCall(func:AST, params:List[AST]) extends AST
 
-class NotificationPolicyParser extends RegexParsers{
-  //lines ::= expr {";" expr} [";"]
-  def lines: Parser[AST] = repsep(line, ";")<~opt(";")^^Lines
+class NotificationPolicyParser extends RegexParsers {
 
-  def line: Parser[AST] = expr | val_declaration | funcDef
+  // statements ::= expr +
+  def statements: Parser[AST] = rep(statement)^^Statements
+
+  def statement: Parser[AST] = filtered_expr | action_expr
+
+  //expr ::= filter action target | filter { statements }
+  def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
+
+  def simple_filtered_expr : Parser[AST] = filter ~ action_expr
+  def nested_filtered_expr : Parser[AST] = filter ~ "{"~>statements<~"}"
+
+  def filter: Parser[AST] = severityFilter | tagFilter //| duringFilter
+
+  def action: Parser[AST] = severityFilter | tagFilter //| duringFilter
+
+  // e.g. sev(1); sev(1 to 4); sev(not 3); sev(HIGH)
+  def severityFilter: Parser[AST] = "sev" ~ "("~>sevLiteral<~")" ^^SeverityFilter
+
+  //sevLiteral ::= ["1"-"5"]
+  def sevLiteral : Parser[AST] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+
+
+  def tagFilter: Parser[AST] = "tag" ~ "("~>tagLiteral<~")" ^^SeverityFilter
+  
+  //tagLiteral ::= ["1"-"5"]
+  def tagLiteral : Parser[AST] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+
+  
+  def duringFilter: Parser[AST] = "sev" ~ "("~>intLiteral<~")" ^^SeverityFilter
+
+  //expr ::= cond | if | printLine
+  def action_expr: Parser[AST] = assignment|condOp|ifExpr|printLine
+
+
   //expr ::= cond | if | printLine
   def expr: Parser[AST] = assignment|condOp|ifExpr|printLine
+
   //if ::= "if" "(" expr ")" expr "else" expr
   def ifExpr: Parser[AST] = "if"~"("~>expr~")"~expr~"else"~expr^^{
     case cond~_~pos~_~neg => IfExpr(cond, pos, neg)
   }
+
   //cond ::= add {"<" add}
-  def condOp: Parser[AST] = chainl1(add,
-    "<"^^{op => (left:AST, right:AST) => LessOp(left, right)})
+  def condOp: Parser[AST] = chainl1(add, "<"^^{op => (left:AST, right:AST) => LessOp(left, right)})
+
   //add ::= term {"+" term | "-" term}.
-  def add: Parser[AST] = chainl1(term,
-    "+"^^{op => (left:AST, right:AST) => AddOp(left, right)}|
+  def add: Parser[AST] = chainl1(term, "+"^^{op => (left:AST, right:AST) => AddOp(left, right)}|
       "-"^^{op => (left:AST, right:AST) => SubOp(left, right)})
+
   //term ::= factor {"*" factor}
-  def term : Parser[AST] = chainl1(funcCall,
-    "*"^^{op => (left:AST, right:AST) => MulOp(left, right)})
+  def term : Parser[AST] = chainl1(funcCall, "*"^^{op => (left:AST, right:AST) => MulOp(left, right)})
+
   def funcCall: Parser[AST] = factor~opt("("~>repsep(expr, ",")<~")")^^{
     case fac~param =>{
       param match{
@@ -182,7 +227,7 @@ class NotificationPolicyParser extends RegexParsers{
     }
   }
   //factor ::= intLiteral | stringLiteral | "(" expr ")" | "{" lines "}"
-  def factor: Parser[AST] = intLiteral | stringLiteral | ident | anonFun | "("~>expr<~")" | "{"~>lines<~"}"
+  def factor: Parser[AST] = intLiteral | stringLiteral | ident | anonFun | "("~>expr<~")" | "{"~>statements<~"}"
   //intLiteral ::= ["1"-"9"] {"0"-"9"}
   def intLiteral : Parser[AST] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
@@ -216,5 +261,5 @@ class NotificationPolicyParser extends RegexParsers{
     }
   }
 
-  def parse(str:String) = parseAll(lines, str)
+  def parse(str:String) = parseAll(statements, str)
 }
