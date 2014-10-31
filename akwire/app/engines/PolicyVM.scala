@@ -2,14 +2,15 @@ package engines
 
 // https://gist.github.com/kmizu/1364341
 
+import engines.Runtime.ActionResults
 import models.Incident
 
 import scala.util.parsing.combinator.RegexParsers
 import scala.collection.mutable.Map
 
-object Main {
+object PolicyVM {
 
-  def eval(policy: String, incident: Incident): Unit = {
+  def eval(policy: String, incident: Incident): ActionResults = {
     val parser = new NotificationPolicyParser
 
     val ast = parser.parse(policy).get
@@ -17,21 +18,29 @@ object Main {
     val interpreter = new Interpreter
 
     // And then the Environment will need to point at the next instruction to execute
-    val result = interpreter.eval(new Environment(None), ast)
+    interpreter.eval(new Environment(incident), ast)
   }
 }
 
 class Environment(val parent:Option[Environment]){
   import Runtime._
-  val variables = Map[String, Value]()
-  def apply(key: String): Value = {
+
+  var incident : Option[Incident] = None;
+
+  def this(incident_ : Incident) = {
+    this(None)
+    incident = Some(incident_)
+  }
+
+  val variables = Map[String, ActionResults]()
+  def apply(key: String): ActionResults = {
     variables.get(key).getOrElse {
       parent.map(_.apply(key)).getOrElse {
         throw new Exception("symbol'%s' not found".format(key))
       }
     }
   }
-  def set(key: String, value: Value): Value = {
+  def set(key: String, value: ActionResults): ActionResults = {
     def iset(optEnv: Option[Environment]): Unit = optEnv match {
       case Some(env) => if(env.variables.contains(key)) env(key) = value else iset(env.parent)
       case None => ()
@@ -39,7 +48,7 @@ class Environment(val parent:Option[Environment]){
     iset(Some(this))
     value
   }
-  def update(key: String, value: Value): Value = {
+  def update(key: String, value: ActionResults): ActionResults = {
     variables(key) = value
     value
   }
@@ -47,69 +56,12 @@ class Environment(val parent:Option[Environment]){
 
 class Interpreter {
   import Runtime._
-  def eval(env:Environment, ast:AST): Value = {
-    def visit(ast:AST): Value = {
-      ast match{
+  def eval(env:Environment, ast:AST): ActionResults = {
+    def visit(ast:AST): ActionResults = {
+      ast match {
         case Statements(exprs) =>{
           val local = new Environment(Some(env))
-          exprs.foldLeft(UnitValue:Value){(result, x) => eval(local, x)}
-        }
-        case IfExpr(cond, pos, neg) =>{
-          visit(cond) match {
-            case BooleanValue(true) => visit(pos)
-            case BooleanValue(false) => visit(neg)
-            case _ => sys.error("Runtime Error!")
-          }
-        }
-        case LessOp(left, right) =>{
-          (visit(left), visit(right)) match {
-            case (IntValue(lval), IntValue(rval)) => BooleanValue(lval < rval)
-            case _ => sys.error("Runtime Error!")
-          }
-        }
-        case AddOp(left, right) =>{
-          (visit(left), visit(right)) match{
-            case (IntValue(lval), IntValue(rval)) => IntValue(lval + rval)
-            case (StringValue(lval), rval) => StringValue(lval + rval)
-            case (lval, StringValue(rval)) => StringValue(lval + rval)
-            case _ => sys.error("Runtime Error!")
-          }
-        }
-        case SubOp(left, right) =>{
-          (visit(left), visit(right)) match{
-            case (IntValue(lval), IntValue(rval)) => IntValue(lval - rval)
-            case _ => sys.error("Runtime Error!")
-          }
-        }
-        case MulOp(left, right) =>{
-          (visit(left), visit(right)) match{
-            case (IntValue(lval), IntValue(rval)) => IntValue(lval * rval)
-            case _ => sys.error("Runtime Error!")
-          }
-        }
-        case IntVal(value) => IntValue(value)
-        case StringVal(value) => StringValue(value)
-        case PrintLine(value) => {
-          val v = visit(value);
-          println(v);
-          v
-        }
-        case Ident(name) => env(name)
-        case ValDeclaration(vr, value) => env(vr) = visit(value)
-        case Assignment(vr, value) => env.set(vr, visit(value))
-        case func@Func(_, _) => FunctionValue(func, Some(env))
-        case FuncDef(name, func) => env(name) = FunctionValue(func, Some(env))
-        case FuncCall(func, params) =>{
-          visit(func) match{
-            case FunctionValue(Func(fparams, proc), cenv) => {
-              val local = new Environment(cenv)
-              (fparams zip params).foreach{ case (fp, ap) =>
-                local(fp) = visit(ap)
-              }
-              eval(local, proc)
-            }
-            case _ => sys.error("Runtime Error!")
-          }
+          exprs.foldLeft(ActionResults(Nil)){(result, x) => eval(local, x)}
         }
       }
     }
@@ -118,33 +70,62 @@ class Interpreter {
 }
 
 object Runtime {
-  sealed abstract class Value
-  case class StringValue(value: String) extends Value {
-    override def toString() = value
+  case class ActionResults(results:List[ActionResult])
+
+  sealed abstract class ActionResult
+
+  case class CallResult(msg: String) extends ActionResult {
+    override def toString() = msg
   }
-  case class IntValue(value: Int) extends Value {
-    override def toString() = value.toString
+  case class EmailResult(msg: String) extends ActionResult {
+    override def toString() = msg
   }
-  case class BooleanValue(value: Boolean) extends Value {
-    override def toString() = value.toString
-  }
-  case class FunctionValue(value: Func, env: Option[Environment]) extends Value {
-    override def toString() = "function"
-  }
-  case object UnitValue extends Value {
-    override def toString() = "unit"
+  case class TextResult(msg: String) extends ActionResult {
+    override def toString() = msg
   }
 }
 
-sealed trait AST
+trait Action {
+  def invoke = throw new RuntimeException("must implement")
+}
+
+trait Target {
+  def invoke = throw new RuntimeException("must implement")
+}
+
+
+sealed trait AST {
+  var node_id = 0
+}
+
 case class Statements(exprs:List[AST]) extends AST
 case class IfExpr(cond:AST, pos:AST, neg:AST) extends AST
+case class FilterExpr(filter:AST, action:AST) extends AST
 
 case class SeverityFilter(pattern: AST) extends AST
 case class SeverityLiteral(value: Int) extends AST
 
 case class TagFilter(pattern: AST) extends AST
 case class TagLiteral(value: String) extends AST
+
+case class ActionLiteral(name:String) extends AST
+
+// Specific actions
+case class Call(target: Target) extends AST with Action
+case class Text(target: Target) extends AST with Action
+case class Email(target: Target) extends AST with Action
+
+// Generic actions
+case class Page(target: Target) extends AST with Action
+case class Notify(target: Target) extends AST with Action
+
+
+case class TargetType(name: String) extends AST
+case class TargetName(name: String) extends AST
+
+case class User(name: String) extends AST with Target
+case class Team(name: String) extends AST with Target
+case class Service(name: String) extends AST with Target
 
 //case class DuringFilter(pattern: AST) extends AST
 //case class DuringLiteral(value: String) extends AST
@@ -174,31 +155,43 @@ class NotificationPolicyParser extends RegexParsers {
   //expr ::= filter action target | filter { statements }
   def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
 
-  def simple_filtered_expr : Parser[AST] = filter ~ action_expr
+  def simple_filtered_expr : Parser[AST] = filter ~ action_expr ^^{
+    case f ~ a => FilterExpr(f,a)
+  }
+
   def nested_filtered_expr : Parser[AST] = filter ~ "{"~>statements<~"}"
 
   def filter: Parser[AST] = severityFilter | tagFilter //| duringFilter
 
-  def action: Parser[AST] = severityFilter | tagFilter //| duringFilter
+  def action_expr: Parser[AST] = actionLiteral ~ target ^^ {
+    case ActionLiteral("email") ~ t => Email(t)
+    case ActionLiteral("call") ~ t => Call(t)
+    case ActionLiteral("text") ~ t => Text(t)
+  }
+
+  def actionLiteral: Parser[ActionLiteral] = ("call" | "page" | "email" | "notify")^^ActionLiteral
+
+  def target: Parser[Target] = (targetType ~ ("("~>targetName<~")"))^^{
+    case TargetType("user") ~ tn => User(tn.name)
+    case TargetType("team") ~ tn => Team(tn.name)
+    case TargetType("service") ~ tn => Service(tn.name)
+  }
+
+  def targetType: Parser[TargetType] = ("user" | "team" | "service")^^TargetType
+
+  def targetName: Parser[TargetName] = """[A-Za-z_][a-zA-Z0-9]*""".r^?{case n => n}^^TargetName
 
   // e.g. sev(1); sev(1 to 4); sev(not 3); sev(HIGH)
-  def severityFilter: Parser[AST] = "sev" ~ "("~>sevLiteral<~")" ^^SeverityFilter
+  def severityFilter: Parser[SeverityFilter] = "sev" ~ "("~>sevLiteral<~")" ^^SeverityFilter
 
   //sevLiteral ::= ["1"-"5"]
-  def sevLiteral : Parser[AST] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+  def sevLiteral : Parser[SeverityLiteral] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+
+  def tagFilter: Parser[TagFilter] = "tag" ~ "("~>tagLiteral<~")" ^^TagFilter
+  def tagLiteral : Parser[TagLiteral] = """[A-Za-z_][a-zA-Z0-9]*""".r^^{value => TagLiteral(value.toString)}
 
 
-  def tagFilter: Parser[AST] = "tag" ~ "("~>tagLiteral<~")" ^^SeverityFilter
-  
-  //tagLiteral ::= ["1"-"5"]
-  def tagLiteral : Parser[AST] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
-
-  
-  def duringFilter: Parser[AST] = "sev" ~ "("~>intLiteral<~")" ^^SeverityFilter
-
-  //expr ::= cond | if | printLine
-  def action_expr: Parser[AST] = assignment|condOp|ifExpr|printLine
-
+  def duringFilter: Parser[AST] = "during" ~ "("~>intLiteral<~")" ^^SeverityFilter
 
   //expr ::= cond | if | printLine
   def expr: Parser[AST] = assignment|condOp|ifExpr|printLine
