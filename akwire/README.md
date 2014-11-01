@@ -196,6 +196,12 @@ how to define rotations? overlays?
 has tag, host, id
 
 how to define reminders and rollups
+ - reminders would deal with incidents entirely so it makes sense for incidents to be the primitive of choice
+ 
+set on-trigger = 
+set on-resolve, on-ack, on-suppress
+
+need to be able to query for incidents to implement reminders
 
 --------------------------------------------
 
