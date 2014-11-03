@@ -4,7 +4,6 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.slf4j.{LoggerFactory, Logger}
 import play.api.mvc._
-import play.api.data._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import com.novus.salat.dao.SalatDAO
@@ -12,15 +11,10 @@ import com.novus.salat.dao.SalatDAO
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
-import play.api.Play.current
-import play.api.PlayException
-
 import com.mongodb.casbah.commons.Imports._
-import com.mongodb.casbah.{MongoConnection}
+import com.mongodb.casbah.{MongoClient, MongoConnection}
 
 import models.mongoContext._
-
-import com.mongodb.casbah.MongoConnection
 
 /**
  * @see
@@ -36,7 +30,7 @@ class Roles extends Controller {
   import models._
   import models.Role.roleFormatter
 
-  object RolesDAO extends SalatDAO[Role, ObjectId](MongoConnection()("akwire")("roles"))
+  object RolesDAO extends SalatDAO[Role, ObjectId](MongoClient()("akwire")("roles"))
 
   def createRole = Action.async(parse.json) {
     request =>

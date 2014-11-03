@@ -59,6 +59,7 @@ trait RuleJson {
 
   implicit val ruleWriter = Json.writes[Rule]
 
+  // FIXME names should match the regex found in PolicyVM
   implicit val ruleReader : Reads[Rule] = (
       ((__ \ "id").read[ObjectId] orElse Reads.pure(ObjectId.get())) ~
       (__ \ "name").read[String] ~
@@ -135,7 +136,7 @@ object Team extends TeamDAO with TeamJson {
 }
 
 trait TeamDAO extends ModelCompanion[Team, ObjectId] {
-  def collection = MongoConnection()("akwire")("teams")
+  def collection = MongoClient()("akwire")("teams")
 
   val dao = new SalatDAO[Team, ObjectId](collection) {}
 

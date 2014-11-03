@@ -1,6 +1,6 @@
 package controllers
 
-import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.{MongoClient, MongoConnection}
 import com.mongodb.casbah.commons.MongoDBObject
 import com.novus.salat.dao.SalatDAO
 import org.bson.types.ObjectId
@@ -27,7 +27,7 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
 
   import mongoContext._
 
-  object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoConnection()("akwire")("agents"))
+  object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoClient()("akwire")("agents"))
 
   // ------------------------------------------ //
   // Using case classes + Json Writes and Reads //

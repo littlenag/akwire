@@ -4,21 +4,31 @@ package engines
 
 import engines.Runtime.ActionResults
 import models.Incident
+import org.joda.time.Duration
 
+import scala.util.{Failure, Success, Try}
 import scala.util.parsing.combinator.RegexParsers
 import scala.collection.mutable.Map
 
+import play.api.Logger
+
 object PolicyVM {
 
-  def eval(policy: String, incident: Incident): ActionResults = {
+  def eval(policy: String, incident: Incident): Try[ActionResults] = {
     val parser = new NotificationPolicyParser
 
-    val ast = parser.parse(policy).get
+    Logger.info("Compiling policy: " + policy)
 
-    val interpreter = new Interpreter
+    parser.parse(policy) match {
+      case parser.Success(result, _) =>
+        val interpreter = new Interpreter
 
-    // And then the Environment will need to point at the next instruction to execute
-    interpreter.eval(new Environment(incident), ast)
+        // And then the Environment will need to point at the next instruction to execute
+        Success(interpreter.eval(new Environment(incident), result.asInstanceOf[AST]))
+      case er: parser.NoSuccess =>
+        Logger.error("Parse error: " + er)
+        Failure(new RuntimeException(er.toString))
+    }
   }
 }
 
@@ -56,13 +66,14 @@ class Environment(val parent:Option[Environment]){
 
 class Interpreter {
   import Runtime._
-  def eval(env:Environment, ast:AST): ActionResults = {
-    def visit(ast:AST): ActionResults = {
+  def eval(env:Environment, ast:AST): List[ActionResult] = {
+    def visit(ast:AST): ActionResult = {
       ast match {
-        case Statements(exprs) =>{
+        case Policy(statements, repeat) => {
           val local = new Environment(Some(env))
-          exprs.foldLeft(ActionResults(Nil)){(result, x) => eval(local, x)}
+          statements.exprs.foldLeft(ActionResults(Nil)){(result, x) => eval(local, x)}
         }
+        case _ => List(NullResult)
       }
     }
     visit(ast)
@@ -83,6 +94,10 @@ object Runtime {
   case class TextResult(msg: String) extends ActionResult {
     override def toString() = msg
   }
+
+  case class NullResult() extends ActionResult {
+    override def toString() = ""
+  }
 }
 
 trait Action {
@@ -98,8 +113,11 @@ sealed trait AST {
   var node_id = 0
 }
 
+// By default policies don't repeat
+case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends AST
+
 case class Statements(exprs:List[AST]) extends AST
-case class IfExpr(cond:AST, pos:AST, neg:AST) extends AST
+
 case class FilterExpr(filter:AST, action:AST) extends AST
 
 case class SeverityFilter(pattern: AST) extends AST
@@ -114,6 +132,10 @@ case class ActionLiteral(name:String) extends AST
 case class Call(target: Target) extends AST with Action
 case class Text(target: Target) extends AST with Action
 case class Email(target: Target) extends AST with Action
+
+case class Wait(duration: Duration) extends AST with Action
+
+case class Repeat(count:Int, period: Option[Duration]) extends AST with Action
 
 // Generic actions
 case class Page(target: Target) extends AST with Action
@@ -130,27 +152,23 @@ case class Service(name: String) extends AST with Target
 //case class DuringFilter(pattern: AST) extends AST
 //case class DuringLiteral(value: String) extends AST
 
-case class LessOp(left: AST, right:AST) extends AST
-case class AddOp(left: AST, right:AST) extends AST
-case class SubOp(left: AST, right:AST) extends AST
-case class MulOp(left: AST, right:AST) extends AST
-case class StringVal(value: String) extends AST
-case class PrintLine(value: AST) extends AST
 case class IntVal(value: Int) extends AST
-case class Ident(name: String) extends AST
-case class Assignment(variable: String, value: AST) extends AST
-case class ValDeclaration(variable: String, value: AST) extends AST
-
-case class Func(params:List[String], proc:AST) extends AST
-case class FuncDef(name: String, func: Func) extends AST
-case class FuncCall(func:AST, params:List[AST]) extends AST
+//case class Ident(name: String) extends AST
 
 class NotificationPolicyParser extends RegexParsers {
 
   // statements ::= expr +
-  def statements: Parser[AST] = rep(statement)^^Statements
+  def policy: Parser[AST] = statements ~ opt(repeat_expr) ^^ {
+    case s ~ re => Policy(s, re)
+  }
 
-  def statement: Parser[AST] = filtered_expr | action_expr
+  def statements: Parser[Statements] = rep(statement)^^Statements
+
+  def statement: Parser[AST] = filtered_expr | action_expr | wait_expr
+
+  def repeat_expr: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
+    case t ~ du => Repeat(t.value, du)
+  }
 
   //expr ::= filter action target | filter { statements }
   def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
@@ -162,6 +180,17 @@ class NotificationPolicyParser extends RegexParsers {
   def nested_filtered_expr : Parser[AST] = filter ~ "{"~>statements<~"}"
 
   def filter: Parser[AST] = severityFilter | tagFilter //| duringFilter
+
+  def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
+    case d => Wait(d)
+  }
+
+  def duration: Parser[Duration] = intLiteral ~ ("s" | "m" | "h" | "d") ^^ {
+    case v ~ "s" => Duration.standardSeconds(v.value)
+    case v ~ "m" => Duration.standardMinutes(v.value)
+    case v ~ "h" => Duration.standardHours(v.value)
+    case v ~ "d" => Duration.standardDays(v.value)
+  }
 
   def action_expr: Parser[AST] = actionLiteral ~ target ^^ {
     case ActionLiteral("email") ~ t => Email(t)
@@ -179,7 +208,10 @@ class NotificationPolicyParser extends RegexParsers {
 
   def targetType: Parser[TargetType] = ("user" | "team" | "service")^^TargetType
 
-  def targetName: Parser[TargetName] = """[A-Za-z_][a-zA-Z0-9]*""".r^?{case n => n}^^TargetName
+  def targetName: Parser[TargetName] = (userEmailLiteral | teamOrServiceName) ^?{case n => n}^^TargetName
+
+  def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
+  def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
   // e.g. sev(1); sev(1 to 4); sev(not 3); sev(HIGH)
   def severityFilter: Parser[SeverityFilter] = "sev" ~ "("~>sevLiteral<~")" ^^SeverityFilter
@@ -193,66 +225,10 @@ class NotificationPolicyParser extends RegexParsers {
 
   def duringFilter: Parser[AST] = "during" ~ "("~>intLiteral<~")" ^^SeverityFilter
 
-  //expr ::= cond | if | printLine
-  def expr: Parser[AST] = assignment|condOp|ifExpr|printLine
-
-  //if ::= "if" "(" expr ")" expr "else" expr
-  def ifExpr: Parser[AST] = "if"~"("~>expr~")"~expr~"else"~expr^^{
-    case cond~_~pos~_~neg => IfExpr(cond, pos, neg)
-  }
-
-  //cond ::= add {"<" add}
-  def condOp: Parser[AST] = chainl1(add, "<"^^{op => (left:AST, right:AST) => LessOp(left, right)})
-
-  //add ::= term {"+" term | "-" term}.
-  def add: Parser[AST] = chainl1(term, "+"^^{op => (left:AST, right:AST) => AddOp(left, right)}|
-      "-"^^{op => (left:AST, right:AST) => SubOp(left, right)})
-
-  //term ::= factor {"*" factor}
-  def term : Parser[AST] = chainl1(funcCall, "*"^^{op => (left:AST, right:AST) => MulOp(left, right)})
-
-  def funcCall: Parser[AST] = factor~opt("("~>repsep(expr, ",")<~")")^^{
-    case fac~param =>{
-      param match{
-        case Some(p) => FuncCall(fac, p)
-        case None => fac
-      }
-    }
-  }
-  //factor ::= intLiteral | stringLiteral | "(" expr ")" | "{" lines "}"
-  def factor: Parser[AST] = intLiteral | stringLiteral | ident | anonFun | "("~>expr<~")" | "{"~>statements<~"}"
   //intLiteral ::= ["1"-"9"] {"0"-"9"}
-  def intLiteral : Parser[AST] = """[1-9][0-9]*|0""".r^^{
+  def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
-  //stringLiteral ::= "\"" {"a-zA-Z0-9.."} "\""
-  def stringLiteral : Parser[AST] = "\""~> """((?!")(\[rnfb"'\\]|[^\\]))*""".r <~"\"" ^^ StringVal
 
-  def ident :Parser[Ident] = """[A-Za-z_][a-zA-Z0-9]*""".r^?{
-    case n if n != "if" && n!= "val" && n!= "println" && n != "def" => n}^^Ident
 
-  def assignment: Parser[Assignment] = (ident <~ "=") ~ expr ^^ {
-    case v ~ value => Assignment(v.name, value)
-  }
-
-  def val_declaration:Parser[ValDeclaration] = ("val" ~> ident <~ "=") ~ expr ^^ {
-    case v ~ value => ValDeclaration(v.name, value)
-  }
-  // printLine ::= "printLn" "(" expr ")"
-  def printLine: Parser[AST] = "println"~"("~>expr<~")"^^PrintLine
-
-  def anonFun:Parser[AST] = (("(" ~> repsep(ident, ",") <~ ")") <~ "=>") ~ expr ^^ {
-    case params ~ proc => Func(params.map{_.name}, proc)
-  }
-
-  def funcDef:Parser[FuncDef] = "def"~>ident~opt("("~>repsep(ident, ",")<~")")~"="~expr^^{
-    case v~params~_~proc => {
-      val p = params match{
-        case Some(pr) => pr
-        case None => Nil
-      }
-      FuncDef(v.name, Func(p.map{_.name}, proc))
-    }
-  }
-
-  def parse(str:String) = parseAll(statements, str)
+  def parse(str:String) = parseAll(policy, str)
 }

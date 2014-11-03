@@ -1,18 +1,14 @@
 package modules
 
 import akka.actor.ActorSystem
-import engines.RoutingEngine
+import engines.{NotificationEngine, RoutingEngine}
 import models.User
-import models.alert.AlertMsg
 import play.api.Logger
 import play.api.Configuration
 import plugins.auth.AuthServicePlugin
 import scaldi.Module
-import securesocial.controllers.ViewTemplates
 import securesocial.core.providers.UsernamePasswordProvider
-import securesocial.core.providers.utils.{PasswordValidator, PasswordHasher}
-import securesocial.core.services.AvatarService
-import securesocial.core.{BasicProfile, RuntimeEnvironment}
+import securesocial.core.{RuntimeEnvironment}
 import services._
 
 import play.api.Play.current
@@ -30,17 +26,8 @@ class CoreModule extends Module {
   import java.lang.reflect.Constructor
 
   implicit val env = new RuntimeEnvironment.Default[User] {
-//    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()
-//    override lazy val passwordHashers: Map[String, PasswordHasher] = Map(currentHasher.id -> currentHasher)
-
-    //override lazy val routes = new CustomRoutesService()
     override lazy val userService: AuthServicePlugin = new AuthServicePlugin()
 
-    //override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)
-
-    //override lazy val avatarService: Option[AvatarService] = None
-
-    //override lazy val eventListeners = List(new MyEventListener())
     override lazy val providers : scala.collection.immutable.ListMap[String, securesocial.core.IdentityProvider] = ListMap(
       include(new UsernamePasswordProvider(userService, avatarService, viewTemplates, passwordHashers))
     )
@@ -71,6 +58,7 @@ class CoreModule extends Module {
 
   // Engines (active)
   binding toProvider new PersistenceEngine
+  binding toProvider new NotificationEngine
   binding toProvider new RoutingEngine
 
   // Services (passive)

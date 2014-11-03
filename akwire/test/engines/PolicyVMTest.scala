@@ -19,31 +19,32 @@ class PolicyVMTest extends Specification {
 
     "compile a simple policy" in {
 
-      val simplePolicy =
-        """
-          | email user(mark@corp.com)
-          | delay 2h
-          | email user(chris@corp.com)
-          | delay 1h
-          | repeat 3 times
-          |
-        """.stripMargin
+      running(FakeApplication()) {
+        val simplePolicy =
+          """
+            | email user(mark@corp.com)
+            | wait 2h
+            | email user(chris@corp.com)
+            | wait 1h
+            | repeat 3 times
+            |
+          """.stripMargin
 
-      val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
 
-      val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
-      ContextualizedStream(List(("host", "h1"))),
-      Impact.SEV_1,
-      Urgency.HIGH,
-      None,
-      None
-      )
+        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.SEV_1,
+          Urgency.HIGH,
+          None,
+          None
+        )
 
-      val results = PolicyVM.eval(simplePolicy, incident)
+        val results = PolicyVM.eval(simplePolicy, incident)
 
-      results must not beEmpty
+        results must beASuccessfulTry
+        //results.results must not beEmpty
+      }
     }
-
   }
-
 }

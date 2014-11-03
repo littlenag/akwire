@@ -1,16 +1,17 @@
 package engines
 
 import akka.actor.Actor
-import models.Team
 import models.alert.{DoResolve, DoTrigger}
 import play.api.Logger
 import scaldi.Injector
 import scaldi.akka.AkkaInjectable
 
 class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
+  import models.Team
+
   def receive = {
     case trigger : DoTrigger =>
-      val team = Team.findOneById(trigger.rule.teamId)
+      val t = Team.findOneById(trigger.rule.teamId)
 
       // want to compile the script against the incident
       // re-writing terms as necessary
