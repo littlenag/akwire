@@ -17,6 +17,9 @@ class PolicyVMTest extends Specification {
 
   "PolicyVM" should {
 
+    // SLA owned by alerting
+    // Unresolved state after Policy completes, boolean flag, measure of timeliness
+
     "compile a simple policy" in {
 
       running(FakeApplication()) {

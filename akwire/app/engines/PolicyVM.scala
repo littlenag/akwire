@@ -24,7 +24,8 @@ object PolicyVM {
         val interpreter = new Interpreter
 
         // And then the Environment will need to point at the next instruction to execute
-        Success(interpreter.eval(new Environment(incident), result.asInstanceOf[AST]))
+        val results = interpreter.eval(new Environment(incident), result.asInstanceOf[AST])
+        Success(ActionResults(results))
       case er: parser.NoSuccess =>
         Logger.error("Parse error: " + er)
         Failure(new RuntimeException(er.toString))
@@ -67,13 +68,13 @@ class Environment(val parent:Option[Environment]){
 class Interpreter {
   import Runtime._
   def eval(env:Environment, ast:AST): List[ActionResult] = {
-    def visit(ast:AST): ActionResult = {
+    def visit(ast:AST): List[ActionResult] = {
       ast match {
         case Policy(statements, repeat) => {
           val local = new Environment(Some(env))
-          statements.exprs.foldLeft(ActionResults(Nil)){(result, x) => eval(local, x)}
+          statements.exprs.foldLeft(List.empty[ActionResult]){(result, x) => eval(local, x)}
         }
-        case _ => List(NullResult)
+        case _ => List(NullResult())
       }
     }
     visit(ast)
