@@ -180,6 +180,16 @@ class NotificationPolicyParser extends RegexParsers {
 
   def nested_filtered_expr : Parser[AST] = filter ~ "{"~>statements<~"}"
 
+  // filters: runs a set of actions that _____
+  //  once     :: executes only one time
+  //  times(N) :: executes at most N times, where N is less than the repeat times
+  //  during   :: executes in certain well-defined windows of times (e.g. not 2am to 4am)
+  //  after    :: executes only after some amount of time has passed
+  //  before   :: executes only until some amount of time has passed
+  //
+  // global variables / state
+  //  any thing in the incident, team, service
+  //  the SLA, the priority matrix, service owner
   def filter: Parser[AST] = severityFilter | tagFilter //| duringFilter
 
   def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
