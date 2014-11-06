@@ -72,7 +72,16 @@ class Interpreter {
       ast match {
         case Policy(statements, repeat) => {
           val local = new Environment(Some(env))
-          statements.exprs.foldLeft(List.empty[ActionResult]){(result, x) => eval(local, x)}
+          eval(local, statements)
+        }
+        case Statements(exprs) => {
+          exprs.foldLeft(List.empty[ActionResult]){(result : List[ActionResult], x) => (result ::: (eval(env, x))).asInstanceOf[List[ActionResult]]}
+        }
+        case Email(User(name)) => {
+          List(EmailResult(s"emailed: $name"))
+        }
+        case Wait(duration) => {
+          List(NullResult())
         }
         case _ => List(NullResult())
       }
@@ -97,7 +106,7 @@ object Runtime {
   }
 
   case class NullResult() extends ActionResult {
-    override def toString() = ""
+    override def toString() = "<null>"
   }
 }
 
@@ -141,7 +150,6 @@ case class Repeat(count:Int, period: Option[Duration]) extends AST with Action
 // Generic actions
 case class Page(target: Target) extends AST with Action
 case class Notify(target: Target) extends AST with Action
-
 
 case class TargetType(name: String) extends AST
 case class TargetName(name: String) extends AST

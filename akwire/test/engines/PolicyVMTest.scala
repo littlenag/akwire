@@ -1,5 +1,6 @@
 package engines
 
+import engines.Runtime.ActionResult
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -43,10 +44,17 @@ class PolicyVMTest extends Specification {
           None
         )
 
-        val results = PolicyVM.eval(simplePolicy, incident)
+        val resultsTry = PolicyVM.eval(simplePolicy, incident)
 
-        results must beASuccessfulTry
-        //results.results must not beEmpty
+        resultsTry must beASuccessfulTry
+
+        val results:List[ActionResult] = resultsTry.get.results
+
+        println(s"Results: $results")
+
+        results must not beEmpty
+
+        results must have size(2)
       }
     }
   }
