@@ -81,10 +81,17 @@ class Interpreter {
       ast match {
         case Policy(statements, repeat) => {
           val local = new Environment(Some(env))
-          eval(local, statements).filterNot(_.isInstanceOf[NullResult])
+          eval(local, statements).filterNot(_.isInstanceOf[UnitResult])
         }
         case Statements(exprs) => {
           exprs.foldLeft(List.empty[ActionResult]){(result : List[ActionResult], x) => (result ::: (eval(env, x))).asInstanceOf[List[ActionResult]]}
+        }
+        case FilteredStatement(cond, statements) => {
+          if (cond.eval(env)) {
+            eval(env, statements)
+          } else {
+            List(UnitResult())
+          }
         }
         case Email(User(name)) => {
           env.transact { () =>
@@ -92,9 +99,9 @@ class Interpreter {
           }
         }
         case Wait(duration) => {
-          List(NullResult())
+          List(UnitResult())
         }
-        case _ => List(NullResult())
+        case _ => List(UnitResult())
       }
     }
     visit(ast)
@@ -116,8 +123,8 @@ object Runtime {
     override def toString() = msg
   }
 
-  case class NullResult() extends ActionResult {
-    override def toString() = "<null>"
+  case class UnitResult() extends ActionResult {
+    override def toString() = "()"
   }
 }
 
@@ -127,6 +134,10 @@ trait Action {
 
 trait Target {
   def invoke = throw new RuntimeException("must implement")
+}
+
+trait Cond {
+  def eval(env:Environment) : Boolean = throw new RuntimeException("must implement")
 }
 
 
@@ -139,13 +150,30 @@ case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends 
 
 case class Statements(exprs:List[AST]) extends AST
 
-case class FilterExpr(filter:AST, action:AST) extends AST
+case class FilteredStatement(filter:Cond, actions:AST) extends AST
 
-case class SeverityFilter(pattern: AST) extends AST
+case class SeverityFilter(pattern: AST) extends AST with Cond {
+  override def eval(env:Environment) = false
+}
 case class SeverityLiteral(value: Int) extends AST
 
-case class TagFilter(pattern: AST) extends AST
+case class TagFilter(pattern: AST) extends AST with Cond {
+  override def eval(env:Environment) = false
+}
+
 case class TagLiteral(value: String) extends AST
+
+case class TrueFilter() extends AST with Cond {
+  override def eval(env:Environment) = true
+}
+
+case class FalseFilter() extends AST with Cond {
+  override def eval(env:Environment) = false
+}
+
+case class NotFilter(cond: Cond) extends AST with Cond {
+  override def eval(env:Environment) = !cond.eval(env)
+}
 
 case class ActionLiteral(name:String) extends AST
 
@@ -184,7 +212,7 @@ class NotificationPolicyParser extends RegexParsers {
 
   def statements: Parser[Statements] = rep(statement)^^Statements
 
-  def statement: Parser[AST] = filtered_expr | action_expr | wait_expr
+  def statement: Parser[AST] = filtered_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
 
   def repeat_expr: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
     case t ~ du => Repeat(t.value, du)
@@ -193,11 +221,14 @@ class NotificationPolicyParser extends RegexParsers {
   //expr ::= filter action target | filter { statements }
   def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
 
-  def simple_filtered_expr : Parser[AST] = filter ~ action_expr ^^{
-    case f ~ a => FilterExpr(f,a)
+  def simple_filtered_expr : Parser[AST] = opt(conditional) ~ action_expr ^^{
+    case Some(f) ~ a => FilteredStatement(f,a.asInstanceOf[AST])
+    case None ~ a => FilteredStatement(TrueFilter(),a.asInstanceOf[AST])
   }
 
-  def nested_filtered_expr : Parser[AST] = filter ~ "{"~>statements<~"}"
+  def nested_filtered_expr : Parser[AST] = conditional ~ ("{"~>statements<~"}")^^{
+    case f ~ s => FilteredStatement(f,s)
+  }
 
   // filters: runs a set of actions that _____
   //  once     :: executes only one time
@@ -209,7 +240,7 @@ class NotificationPolicyParser extends RegexParsers {
   // global variables / state
   //  any thing in the incident, team, service
   //  the SLA, the priority matrix, service owner
-  def filter: Parser[AST] = severityFilter | tagFilter //| duringFilter
+  def conditional: Parser[Cond] = severityFilter | tagFilter //| duringFilter
 
   def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
@@ -222,7 +253,7 @@ class NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
-  def action_expr: Parser[AST] = actionLiteral ~ target ^^ {
+  def action_expr: Parser[Action] = actionLiteral ~ target ^^ {
     case ActionLiteral("email") ~ t => Email(t)
     case ActionLiteral("call") ~ t => Call(t)
     case ActionLiteral("text") ~ t => Text(t)

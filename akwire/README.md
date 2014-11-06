@@ -109,7 +109,6 @@ sev(1) {
   during(Weekends) phone user(Jason)
 }
 sev(2) sms team
-otherwise drop
 
 
 ----
@@ -124,9 +123,28 @@ sev(2) {
   sms team
   email team
 }
-otherwise drop
+sev(3) next to retry / stop to give up / halt to quit entirely
 
+----
 
+email team    # no filter means always match, then keyword allows chaining of policies, each policy runs to completion
+sev {
+  1 => notify policy(`on call`)
+  2 => { sms team
+         email team
+       }
+  _ => drop
+}
+
+email team    # no filter means always match, then keyword allows chaining of policies, each policy runs to completion
+sev(1) notify policy(`on call`)
+  2 => { sms team
+         email team
+       }
+  _ => drop
+}
+
+----
 
 schedule 'on-call':
 
@@ -140,6 +158,14 @@ during(Weekends) phone user(Jason)
 should be able to have a 
  - list of action + target pairs
  - an action + list of targets
+
+-------------------------------------------
+
+filter statements should have two styles:
+ - case/match
+ - if_expr
+
+probably start with if_expr
 
 -------------------------------------------
 

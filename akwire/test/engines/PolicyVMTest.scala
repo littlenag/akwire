@@ -1,6 +1,6 @@
 package engines
 
-import engines.Runtime.ActionResult
+import engines.Runtime.{EmailResult, UnitResult, ActionResult}
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -62,6 +62,12 @@ class PolicyVMTest extends Specification {
 
         results must have size(2)
       }
+    }
+
+    "action stream" in {
+      val acts : Stream[ActionResult] = Stream.Empty
+
+      acts must not beNull
     }
   }
 }
