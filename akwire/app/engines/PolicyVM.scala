@@ -43,6 +43,14 @@ class Environment(val parent:Option[Environment]){
     incident = Some(incident_)
   }
 
+  def transact[T <: ActionResult](action: () => T) : List[ActionResult] = {
+    println("pre")
+    val result = action()
+    println("post")
+
+    List(result)
+  }
+
   val variables = Map[String, ActionResults]()
   def apply(key: String): ActionResults = {
     variables.get(key).getOrElse {
@@ -67,18 +75,21 @@ class Environment(val parent:Option[Environment]){
 
 class Interpreter {
   import Runtime._
+  // FIXME this should actually be a Stream
   def eval(env:Environment, ast:AST): List[ActionResult] = {
     def visit(ast:AST): List[ActionResult] = {
       ast match {
         case Policy(statements, repeat) => {
           val local = new Environment(Some(env))
-          eval(local, statements)
+          eval(local, statements).filterNot(_.isInstanceOf[NullResult])
         }
         case Statements(exprs) => {
           exprs.foldLeft(List.empty[ActionResult]){(result : List[ActionResult], x) => (result ::: (eval(env, x))).asInstanceOf[List[ActionResult]]}
         }
         case Email(User(name)) => {
-          List(EmailResult(s"emailed: $name"))
+          env.transact { () =>
+            EmailResult(s"emailed: $name")
+          }
         }
         case Wait(duration) => {
           List(NullResult())

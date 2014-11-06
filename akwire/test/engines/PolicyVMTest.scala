@@ -18,10 +18,16 @@ class PolicyVMTest extends Specification {
 
   "PolicyVM" should {
 
+    // logic for escalation and notifications on both sides (alert rules and in the notification/escalation policies)
     // SLA owned by alerting
     // Unresolved state after Policy completes, boolean flag, measure of timeliness
 
     "compile a simple policy" in {
+
+      /**
+       * maybe make the filters more like match/case statements
+       *
+       */
 
       running(FakeApplication()) {
         val simplePolicy =
