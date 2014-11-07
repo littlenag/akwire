@@ -1,18 +1,15 @@
 package engines
 
-import engines.Runtime.{EmailResult, UnitResult, ActionResult}
+import engines.InstructionSet.Instruction
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
 import scala.concurrent._
-import duration._
 import org.specs2.mutable._
 
-import play.api.libs.json._
 import play.api.test._
 import play.api.test.Helpers._
-import java.util.concurrent.TimeUnit
 
 class PolicyVMTest extends Specification {
 
@@ -40,38 +37,36 @@ class PolicyVMTest extends Specification {
             |
           """.stripMargin
 
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
-
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
-          ContextualizedStream(List(("host", "h1"))),
-          Impact.SEV_1,
-          Urgency.HIGH,
-          None,
-          None
-        )
-
-        val clock = new Clock {
-          override def now() = new DateTime(0L)
-        }
-
-        val resultsTry = PolicyVM.eval(simplePolicy, incident, clock)
+        val resultsTry = PolicyVM.compile(simplePolicy)
 
         resultsTry must beASuccessfulTry
 
-        val results:List[ActionResult] = resultsTry.get.results
+        val results:List[Instruction] = resultsTry.get
 
         println(s"Results: $results")
 
         results must not beEmpty
 
-        results must have size(2)
+        results must have size(6)
       }
     }
 
-    "action stream" in {
-      val acts : Stream[ActionResult] = Stream.Empty
+    "run policy program" in {
+      val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
 
-      acts must not beNull
+      val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        ContextualizedStream(List(("host", "h1"))),
+        Impact.SEV_1,
+        Urgency.HIGH,
+        None,
+        None
+      )
+
+      val clock = new Clock {
+        override def now() = new DateTime(0L)
+      }
+
+      clock must not beNull
     }
   }
 }
