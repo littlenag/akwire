@@ -50,7 +50,11 @@ class PolicyVMTest extends Specification {
           None
         )
 
-        val resultsTry = PolicyVM.eval(simplePolicy, incident)
+        val clock = new Clock {
+          override def now() = new DateTime(0L)
+        }
+
+        val resultsTry = PolicyVM.eval(simplePolicy, incident, clock)
 
         resultsTry must beASuccessfulTry
 

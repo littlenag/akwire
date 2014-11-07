@@ -4,7 +4,7 @@ package engines
 
 import engines.Runtime.ActionResults
 import models.Incident
-import org.joda.time.Duration
+import org.joda.time.{DateTime, Duration}
 
 import scala.util.{Failure, Success, Try}
 import scala.util.parsing.combinator.RegexParsers
@@ -14,7 +14,7 @@ import play.api.Logger
 
 object PolicyVM {
 
-  def eval(policy: String, incident: Incident): Try[ActionResults] = {
+  def eval(policy: String, incident: Incident, clock: Clock = new StandardClock()): Try[ActionResults] = {
     val parser = new NotificationPolicyParser
 
     Logger.info("Compiling policy: " + policy)
@@ -24,7 +24,7 @@ object PolicyVM {
         val interpreter = new Interpreter
 
         // And then the Environment will need to point at the next instruction to execute
-        val results = interpreter.eval(new Environment(incident), result.asInstanceOf[AST])
+        val results = interpreter.eval(new Environment(incident, clock), result.asInstanceOf[AST])
         Success(ActionResults(results))
       case er: parser.NoSuccess =>
         Logger.error("Parse error: " + er)
@@ -33,14 +33,26 @@ object PolicyVM {
   }
 }
 
-class Environment(val parent:Option[Environment]){
+trait Clock {
+  def now(): DateTime
+}
+
+class StandardClock extends Clock {
+  def now() = DateTime.now()
+}
+
+class Environment(val parent:Option[Environment]) {
   import Runtime._
 
-  var incident : Option[Incident] = None;
+  // Child environments won't have these things
+  var level: Int = if (parent.isDefined) parent.get.level+1 else 0
+  var incident : Option[Incident] = None
+  var clock : Option[Clock] = None
 
-  def this(incident_ : Incident) = {
+  def this(incident_ : Incident, clock_ : Clock = new StandardClock()) = {
     this(None)
     incident = Some(incident_)
+    clock = Some(clock_)
   }
 
   def transact[T <: ActionResult](action: () => T) : List[ActionResult] = {
@@ -49,6 +61,22 @@ class Environment(val parent:Option[Environment]){
     println("post")
 
     List(result)
+  }
+
+  def resumeAt(when:DateTime) = {
+    while (when.isBefore(getClock.now)) {
+      Thread.sleep(1000L)
+    }
+  }
+
+  private def getClock() : Clock = {
+    clock match {
+      case Some(c) => c
+      case None => parent match {
+        case Some(p) => p.getClock()
+        case None => throw new RuntimeException("no configured clock")
+      }
+    }
   }
 
   val variables = Map[String, ActionResults]()
@@ -84,7 +112,7 @@ class Interpreter {
           eval(local, statements).filterNot(_.isInstanceOf[UnitResult])
         }
         case Statements(exprs) => {
-          exprs.foldLeft(List.empty[ActionResult]){(result : List[ActionResult], x) => (result ::: (eval(env, x))).asInstanceOf[List[ActionResult]]}
+          exprs.foldLeft(List.empty[ActionResult]){(result : List[ActionResult], x) => (result ::: (eval(env, x)))}
         }
         case FilteredStatement(cond, statements) => {
           if (cond.eval(env)) {
@@ -99,9 +127,45 @@ class Interpreter {
           }
         }
         case Wait(duration) => {
+          env.resumeAt(DateTime.now().plus(duration))
           List(UnitResult())
         }
         case _ => List(UnitResult())
+      }
+    }
+    visit(ast)
+  }
+}
+
+class Compiler {
+  import InstructionSet._
+  // FIXME this should actually be a Stream
+  def compile(ast:AST): List[Instruction] = {
+    def visit(ast:AST): List[Instruction] = {
+      ast match {
+        case Policy(statements, repeat) => {
+          compile(statements)
+        }
+        case Statements(exprs) => {
+          exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compile(x)))}
+        }
+        case FilteredStatement(cond, statements) => {
+          val ci = compile(cond)
+
+          if (cond.eval(env)) {
+            compile(statements)
+          } else {
+            Nil
+          }
+        }
+        case Email(u @ User(name)) => {
+          List(Email(u))
+        }
+        case Wait(duration) => {
+          //env.resumeAt(DateTime.now().plus(duration))
+          Nil
+        }
+        case _ => Nil
       }
     }
     visit(ast)
@@ -128,6 +192,15 @@ object Runtime {
   }
 }
 
+object InstructionSet {
+
+  sealed abstract class Instruction
+
+  case class Call(target: Target) extends Instruction
+  case class Email(target: Target) extends Instruction
+  case class Text(target: Target) extends Instruction
+}
+
 trait Action {
   def invoke = throw new RuntimeException("must implement")
 }
@@ -151,6 +224,8 @@ case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends 
 case class Statements(exprs:List[AST]) extends AST
 
 case class FilteredStatement(filter:Cond, actions:AST) extends AST
+
+case class Conditional(actions:AST) extends AST with Cond
 
 case class SeverityFilter(pattern: AST) extends AST with Cond {
   override def eval(env:Environment) = false
