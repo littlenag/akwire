@@ -37,7 +37,8 @@ object PolicyVM {
     //Logger.info("Compiling policy: " + policy)
 
     // And then the Environment will need to point at the next instruction to execute
-    val effects:Stream[Interpreter.Effect] = Interpreter.eval(new Environment(incident, clock), program)
+
+    val effects:Stream[VM.Effect] = VM.run(new Process(program, incident, clock))
 
     //effects.dropWhile(! _.isInstanceOf[Stop])
 
@@ -55,9 +56,10 @@ class StandardClock extends Clock {
   def now() = DateTime.now()
 }
 
-class Environment(val incident : Incident, val clock : Clock = new StandardClock()) {
+class Process(val program : List[Instruction], val incident : Incident, val clock : Clock = new StandardClock()) {
 
-  var programCounter = 0
+  var repeatCount = 0     // number of times the policy has executed in full
+  var programCounter = 0  // ith position into the program array, points to current instruction to execute
 
   def resumeAt(when:DateTime) = {
     while (when.isBefore(clock.now)) {
@@ -65,9 +67,12 @@ class Environment(val incident : Incident, val clock : Clock = new StandardClock
     }
   }
 
+  def pre(instruction:Instruction) = {}
+
+  def post(instruction:Instruction) = {}
 }
 
-object Interpreter {
+object VM {
   import InstructionSet._
 
   sealed abstract class Effect
@@ -94,18 +99,24 @@ object Interpreter {
   }
 
   // FIXME this should actually be a Stream
-  def eval(env:Environment, program:List[Instruction]): Stream[Effect] = {
-    def eval_helper = {
-      val effect = execute(program(env.programCounter))
-      effect match {
-        case PCD(i) =>
-          env.programCounter += i
-          eval(env, program)
-        case NextI() =>
-          env.programCounter += 1
-          eval(env, program)
+
+  def run(proc:Process): Stream[Effect] = {
+    def eval_helper: Stream[Effect] = {
+      val instruction = proc.program(proc.programCounter)
+      proc.pre(instruction)
+      execute(instruction) match {
         case Stop() =>
+          proc.post(instruction)
           Stream.Empty
+        case e =>
+          e match {
+            case PCD(i) =>
+              proc.programCounter += i
+            case NextI() =>
+              proc.programCounter += 1
+          }
+          proc.post(instruction)
+          run(proc)
       }
     }
     eval_helper
@@ -119,7 +130,17 @@ class Compiler {
     def visit(ast:AST): List[Instruction] = {
       ast match {
         case Policy(statements, repeat) => {
-          compile(statements) :+ HALT() // :: compile(repeat) :: Halt()
+          val core_program = compile(statements)
+
+          val repeat_inst = repeat match {
+            case Some(Repeat(count, Some(period))) =>
+            case Some(Repeat(count, None)) =>
+              JT()
+            case None =>
+              Nil
+          }
+
+          core_program :+ HALT() // :: compile(repeat) :: Halt()
         }
         case Statements(exprs) => {
           exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compile(x)))}
@@ -184,7 +205,7 @@ trait Target {
 }
 
 trait Cond {
-  def eval(env:Environment) : Boolean = throw new RuntimeException("must implement")
+  def eval(proc:Process) : Boolean = throw new RuntimeException("must implement")
 }
 
 sealed trait AST {
@@ -201,26 +222,27 @@ case class FilteredStatement(filter:Conditional, actions:AST) extends AST
 case class Conditional(actions:AST) extends AST with Cond
 
 case class SeverityFilter(pattern: AST) extends AST with Cond {
-  override def eval(env:Environment) = false
+  override def eval(proc:Process) = false
 }
+
 case class SeverityLiteral(value: Int) extends AST
 
 case class TagFilter(pattern: AST) extends AST with Cond {
-  override def eval(env:Environment) = false
+  override def eval(proc:Process) = false
 }
 
 case class TagLiteral(value: String) extends AST
 
 case class True() extends AST with Cond {
-  override def eval(env:Environment) = true
+  override def eval(proc:Process) = true
 }
 
 case class False() extends AST with Cond {
-  override def eval(env:Environment) = false
+  override def eval(proc:Process) = false
 }
 
 case class NotFilter(cond: Cond) extends AST with Cond {
-  override def eval(env:Environment) = !cond.eval(env)
+  override def eval(proc:Process) = !cond.eval(proc)
 }
 
 case class ActionLiteral(name:String) extends AST
