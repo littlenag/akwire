@@ -1,6 +1,7 @@
 package engines
 
 import engines.InstructionSet.Instruction
+import engines.VM.Stop
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -68,11 +69,35 @@ class PolicyVMTest extends Specification {
 
         val results:List[Instruction] = resultsTry.get
 
-        println(s"Results: $results")
+        println(s"INST: $results")
 
         results must not beEmpty
 
         results must have size(3)
+
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
+
+        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.SEV_1,
+          Urgency.HIGH,
+          None,
+          None
+        )
+
+        val clock = new Clock {
+          override def now() = new DateTime(0L)
+        }
+
+        val proc = new Process(results, incident, clock)
+
+        val effects = PolicyVM.run(proc).toList
+
+        println(s"Effects: ${effects}")
+
+        effects.dropWhile(! _.isInstanceOf[Stop])
+
+        effects must have size(3)
       }
     }
 
@@ -88,9 +113,7 @@ class PolicyVMTest extends Specification {
           """
             | email user(mark@corp.com)
             | wait 2h
-            | email user(chris@corp.com)
-            | wait 1h
-            | repeat 3 times
+            | repeat 1 times
             |
           """.stripMargin
 

@@ -36,21 +36,19 @@ object PolicyVM {
     }
   }
 
-  def run(program : List[Instruction], incident: Incident, clock: Clock = new StandardClock()) = {
+  def run(process: Process) = {
 
     // should probably name these programs
     //Logger.info("Compiling policy: " + policy)
 
     // And then the Environment will need to point at the next instruction to execute
 
-    val effects:Stream[VM.Effect] = VM.run(new Process(program, incident, clock))
+    val effects:Stream[VM.Effect] = VM.run(process)
 
     //effects.dropWhile(! _.isInstanceOf[Stop])
 
     effects
   }
-
-
 }
 
 trait Clock {
@@ -149,15 +147,15 @@ object VM {
       }
 
       proc.pre(instruction)
-      val effect = execute(instruction)
+      val effect:Effect = execute(instruction)
 
       if (effect == Stop()) {
         proc.post(instruction)
-        Stream.empty
+        Stream(effect)
       } else {
         handle(effect)
         proc.post(instruction)
-        run(proc)
+        Stream(effect) #::: run(proc)
       }
     }
     eval_helper
