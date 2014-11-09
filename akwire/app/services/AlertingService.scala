@@ -55,7 +55,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
     //require.invoke(stringReader.invoke("clojure"))
 
-    Logger.info("clojure classpath: " + System.getProperty("java.class.path"))
+    //Logger.info("clojure classpath: " + System.getProperty("java.class.path"))
 
     // FIXME this is a major security hole and will allow arbitrary code execution!
     Compiler.LOADER.bindRoot(classloader)

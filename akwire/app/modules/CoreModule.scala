@@ -16,7 +16,7 @@ import play.api.Play.current
 import scala.collection.immutable.ListMap
 
 class CoreModule extends Module {
-  Logger.debug("Binding dependencies")
+  Logger.debug("DI Start")
 
   // binding to "foo" <= IS EQUIVALENT TO => bind[String] to "foo"
 
@@ -69,7 +69,7 @@ class CoreModule extends Module {
 
   bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator
 
-  Logger.debug("Binding complete")
+  Logger.debug("DI Complete")
 
   def getSSController[A](controllerClass: Class[A]): A = {
     val instance = controllerClass.getConstructors.find { c =>

@@ -19,7 +19,64 @@ class PolicyVMTest extends Specification {
     // SLA owned by alerting
     // Unresolved state after Policy completes, boolean flag, measure of timeliness
 
-    "compile a simple policy" in {
+    "simple policy 1" in {
+
+      /**
+       * maybe make the filters more like match/case statements
+       *
+       */
+
+      running(FakeApplication()) {
+        val simplePolicy =
+          """
+            | email user(mark@corp.com)
+            |
+          """.stripMargin
+
+        val resultsTry = PolicyVM.compile(simplePolicy)
+
+        resultsTry must beASuccessfulTry
+
+        val results:List[Instruction] = resultsTry.get
+
+        println(s"Results: $results")
+
+        results must not beEmpty
+
+        results must have size(2)
+      }
+    }
+
+    "simple policy 2" in {
+
+      /**
+       * maybe make the filters more like match/case statements
+       *
+       */
+
+      running(FakeApplication()) {
+        val simplePolicy =
+          """
+            | email user(mark@corp.com)
+            | wait 2h
+            |
+          """.stripMargin
+
+        val resultsTry = PolicyVM.compile(simplePolicy)
+
+        resultsTry must beASuccessfulTry
+
+        val results:List[Instruction] = resultsTry.get
+
+        println(s"Results: $results")
+
+        results must not beEmpty
+
+        results must have size(3)
+      }
+    }
+
+    "simple policy 3" in {
 
       /**
        * maybe make the filters more like match/case statements
@@ -47,7 +104,7 @@ class PolicyVMTest extends Specification {
 
         results must not beEmpty
 
-        results must have size(6)
+        results must not have size(0)
       }
     }
 
