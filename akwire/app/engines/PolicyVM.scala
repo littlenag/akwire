@@ -4,37 +4,15 @@ package engines
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
 
 import engines.InstructionSet.Instruction
-import engines.VM.{IntValue, Value}
+import engines.VM._
 import models.Incident
 import org.joda.time.{DateTime, Duration}
 
-import scala.util.{Failure, Success, Try}
 import scala.util.parsing.combinator.RegexParsers
 
 import play.api.Logger
 
 object PolicyVM {
-
-  val VAR_CUR_COUNT = "count"
-  val VAR_MAX_REPEAT = "max"
-
-  def compile(policy: String): Try[List[Instruction]] = {
-    val parser = new NotificationPolicyParser
-
-    Logger.info("Compiling policy: " + policy)
-
-    parser.parse(policy) match {
-      case parser.Success(result, _) =>
-        val compiler = new Compiler
-
-        // And then the Environment will need to point at the next instruction to execute
-        val results = compiler.compile(result.asInstanceOf[AST])
-        Success(results)
-      case er: parser.NoSuccess =>
-        Logger.error("Parse error: " + er)
-        Failure(new RuntimeException(er.toString))
-    }
-  }
 
   def run(process: Process) = {
 
@@ -49,49 +27,65 @@ object PolicyVM {
 
     effects
   }
+
+  def load(process: Process) = {
+
+    // should probably name these programs
+    //Logger.info("Compiling policy: " + policy)
+
+    // And then the Environment will need to point at the next instruction to execute
+
+    val effects:Stream[VM.Effect] = VM.run(process)
+
+    //effects.dropWhile(! _.isInstanceOf[Stop])
+
+    effects
+  }
+
 }
 
 trait Clock {
   def now(): DateTime
+  //def tick()
 }
 
 class StandardClock extends Clock {
   def now() = DateTime.now()
 }
 
-class Process(val program : List[Instruction], val incident : Incident, val clock : Clock = new StandardClock()) {
 
-  //var repeatCount = 0     // number of times the policy has executed in full
-  var programCounter = 0  // ith position into the program array, points to current instruction to execute
+class Program(val instructions : List[Instruction]) {
 
-  def resumeAt(when:DateTime) = {
-    while (when.isBefore(clock.now)) {
-      Thread.sleep(1000L)
+  def instance(incident : Incident)(implicit vm: VM) : Process = {
+    return new Process(this, incident)
+  }
+
+  class Process(val program: Program, val incident : Incident) {
+
+    //var repeatCount = 0     // number of times the policy has executed in full
+    var programCounter = 0  // ith position into the program array, points to current instruction to execute
+
+    // These are really named memory locations
+    val variables = collection.mutable.Map[String, Value]().empty
+    def getVar(key: String): Value = {
+      variables.get(key).getOrElse {
+        throw new Exception("symbol'%s' not found".format(key))
+      }
+    }
+
+    def setVar(key: String, value: Value): Value = {
+      variables(key) = value
+      value
+    }
+
+    def run() = {
+      val effects = PolicyVM.run(proc).toList
+      effects.dropWhile(! _.isInstanceOf[Stop])
     }
   }
-
-  def pre(instruction:Instruction) = {}
-
-  def post(instruction:Instruction) = {}
-
-  // These are really named memory locations
-  val variables = collection.mutable.Map[String, Value]().empty
-  def getVar(key: String): Value = {
-    variables.get(key).getOrElse {
-      throw new Exception("symbol'%s' not found".format(key))
-    }
-  }
-
-  def setVar(key: String, value: Value): Value = {
-    variables(key) = value
-    value
-  }
-
 }
 
 object VM {
-  import InstructionSet._
-
   sealed abstract class Value
   case class StringValue(value: String) extends Value {
     override def toString() = value
@@ -113,6 +107,20 @@ object VM {
   case class NextI() extends Effect
 
   case class Stop() extends Effect
+}
+
+class VM(clock : Clock = new StandardClock()) {
+  import InstructionSet._
+
+  //    def resumeAt(when:DateTime) = {
+  //      while (when.isBefore(clock.now)) {
+  //        Thread.sleep(1000L)
+  //      }
+  //    }
+
+  def pre(instruction:Instruction) = {}
+
+  def post(instruction:Instruction) = {}
 
   def execute(inst:Instruction): Effect = {
     inst match {
@@ -134,7 +142,7 @@ object VM {
   def run(proc:Process): Stream[Effect] = {
     def eval_helper: Stream[Effect] = {
 
-      val instruction = proc.program(proc.programCounter)
+      val instruction = proc.pro(proc.programCounter)
 
       def handle(effect: Effect) = {
         effect match {
@@ -162,10 +170,32 @@ object VM {
   }
 }
 
-class Compiler {
+object Compiler {
   import InstructionSet._
-  // FIXME this should actually be a Stream
-  def compile(ast:AST): List[Instruction] = {
+
+  val VAR_CUR_COUNT = "count"
+  val VAR_MAX_REPEAT = "max"
+
+  val parser = new NotificationPolicyParser
+
+  // FIXME should return either the program or an error
+  def compile(policy: String): Either[parser.NoSuccess, Program] = {
+    Logger.info("Compiling policy: " + policy)
+
+    parser.parse(policy) match {
+      case parser.Success(result, _) =>
+
+        // And then the Environment will need to point at the next instruction to execute
+        val instructions = compileAST(result.asInstanceOf[AST])
+        Right(new Program(instructions))
+      case er: parser.NoSuccess =>
+        Logger.error("Parse error: " + er)
+        Left(er)
+    }
+  }
+
+
+  def compileAST(ast:AST): List[Instruction] = {
     def visit(ast:AST): List[Instruction] = {
       ast match {
         case Policy(statements, repeat_expr) => {
@@ -178,15 +208,15 @@ class Compiler {
 
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
-            List(PUSH(IntValue(0)), STORE(PolicyVM.VAR_CUR_COUNT), PUSH(IntValue(max)), STORE(PolicyVM.VAR_MAX_REPEAT))
+            List(PUSH(IntValue(0)), STORE(VAR_CUR_COUNT), PUSH(IntValue(max)), STORE(VAR_MAX_REPEAT))
           } else {
             Nil
           }
 
-          val body = compile(statements)
+          val body = compileAST(statements)
 
           val counter_inc = if (max > 0) {
-            List(PUSH_VAR(PolicyVM.VAR_CUR_COUNT), PUSH(IntValue(1)), STORE(PolicyVM.VAR_CUR_COUNT))
+            List(PUSH_VAR(VAR_CUR_COUNT), PUSH(IntValue(1)), STORE(VAR_CUR_COUNT))
           } else {
             Nil
           }
@@ -196,7 +226,7 @@ class Compiler {
               Nil
             case Some(Repeat(count, None)) =>
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              List(PUSH_VAR(PolicyVM.VAR_CUR_COUNT), PUSH_VAR(PolicyVM.VAR_MAX_REPEAT), CMP(), JGT(preamble.size))
+              List(PUSH_VAR(VAR_CUR_COUNT), PUSH_VAR(VAR_MAX_REPEAT), CMP(), JGT(preamble.size))
             case None =>
               Nil
           }
@@ -204,18 +234,18 @@ class Compiler {
           (preamble ::: body ::: counter_inc ::: repeat_instr) :+ HALT()
         }
         case Statements(exprs) => {
-          exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compile(x)))}
+          exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compileAST(x)))}
         }
         case FilteredStatement(Conditional(True()), statements) => {
           // Always true, no need to jump just return the branch to execute
-          compile(statements)
+          compileAST(statements)
         }
         case FilteredStatement(Conditional(False()), statements) => {
           // Always false, no need to compile the branch
           Nil
         }
         case FilteredStatement(cond, statements) => {
-          val true_branch = compile(statements)
+          val true_branch = compileAST(statements)
 
           // if the condition is false, jump past the true branch
           JF(cond, true_branch.length) :: true_branch

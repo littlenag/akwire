@@ -34,17 +34,17 @@ class PolicyVMTest extends Specification {
             |
           """.stripMargin
 
-        val resultsTry = PolicyVM.compile(simplePolicy)
+        val programTry = Compiler.compile(simplePolicy)
 
-        resultsTry must beASuccessfulTry
+        programTry.isRight must beTrue
 
-        val results:List[Instruction] = resultsTry.get
+        val program:Program = programTry.right.get
 
-        println(s"Results: $results")
+        println(s"Program: $program")
 
-        results must not beEmpty
+        program.instructions must not beEmpty
 
-        results must have size(2)
+        program.instructions must have size(2)
       }
     }
 
@@ -63,17 +63,17 @@ class PolicyVMTest extends Specification {
             |
           """.stripMargin
 
-        val resultsTry = PolicyVM.compile(simplePolicy)
+        val programTry = Compiler.compile(simplePolicy)
 
-        resultsTry must beASuccessfulTry
+        programTry.isRight must beTrue
 
-        val results:List[Instruction] = resultsTry.get
+        val program:Program = programTry.right.get
 
-        println(s"INST: $results")
+        println(s"Program: $program")
 
-        results must not beEmpty
+        program.instructions must not beEmpty
 
-        results must have size(3)
+        program.instructions must have size(3)
 
         val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
 
@@ -89,11 +89,20 @@ class PolicyVMTest extends Specification {
           override def now() = new DateTime(0L)
         }
 
-        val proc = new Process(results, incident, clock)
+        val proc : program.Process = program.instance(incident, clock)
 
-        val effects = PolicyVM.run(proc).toList
+        // need a VM object that
+        // owns the clock
+        // and handles execution of the instructions
 
-        println(s"Effects: ${effects}")
+        // the process owns its state
+
+        // load the process, run to completion
+        proc.run().toList
+
+        //val effects = PolicyVM.run(proc).toList
+
+        println(s"EFFECTS: ${effects}")
 
         effects.dropWhile(! _.isInstanceOf[Stop])
 
@@ -117,17 +126,17 @@ class PolicyVMTest extends Specification {
             |
           """.stripMargin
 
-        val resultsTry = PolicyVM.compile(simplePolicy)
+        val programTry = Compiler.compile(simplePolicy)
 
-        resultsTry must beASuccessfulTry
+        programTry.isRight must beTrue
 
-        val results:List[Instruction] = resultsTry.get
+        val program:Program = programTry.right.get
 
-        println(s"Results: $results")
+        println(s"Program: $program")
 
-        results must not beEmpty
+        program.instructions must not beEmpty
 
-        results must not have size(0)
+        program.instructions must not have size(0)
       }
     }
 

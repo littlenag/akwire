@@ -211,6 +211,12 @@ rollup
 
 ---
 
+jump to label instruction, list of labels
+
+then process the program to remove the labels
+
+---
+
 policy ID =>
 
 schedule ID =>
