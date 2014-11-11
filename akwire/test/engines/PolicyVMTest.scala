@@ -1,12 +1,9 @@
 package engines
 
-import engines.InstructionSet.Instruction
-import engines.VM.Stop
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
-import scala.concurrent._
 import org.specs2.mutable._
 
 import play.api.test._
@@ -89,7 +86,9 @@ class PolicyVMTest extends Specification {
           override def now() = new DateTime(0L)
         }
 
-        val proc : program.Process = program.instance(incident, clock)
+        implicit val vm = new VM(clock)
+
+        val proc : Process = program.instance(incident)
 
         // need a VM object that
         // owns the clock
@@ -98,7 +97,7 @@ class PolicyVMTest extends Specification {
         // the process owns its state
 
         // load the process, run to completion
-        proc.run().toList
+        val effects = proc.run()
 
         //val effects = PolicyVM.run(proc).toList
 

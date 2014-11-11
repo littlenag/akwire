@@ -21,11 +21,11 @@ object PolicyVM {
 
     // And then the Environment will need to point at the next instruction to execute
 
-    val effects:Stream[VM.Effect] = VM.run(process)
+    //val effects:Stream[VM.Effect] = VM.run(process)
 
     //effects.dropWhile(! _.isInstanceOf[Stop])
 
-    effects
+    //effects
   }
 
   def load(process: Process) = {
@@ -35,11 +35,11 @@ object PolicyVM {
 
     // And then the Environment will need to point at the next instruction to execute
 
-    val effects:Stream[VM.Effect] = VM.run(process)
+    //val effects:Stream[VM.Effect] = VM.run(process)
 
     //effects.dropWhile(! _.isInstanceOf[Stop])
 
-    effects
+    //effects
   }
 
 }
@@ -53,35 +53,39 @@ class StandardClock extends Clock {
   def now() = DateTime.now()
 }
 
+case class Registers(val pc : Int = 0, val halted : Boolean = false)
 
-class Program(val instructions : List[Instruction]) {
+class Process(val program: Program, val incident : Incident) {
 
-  def instance(incident : Incident)(implicit vm: VM) : Process = {
-    return new Process(this, incident)
+  def reset = {
+    programCounter = 0
+    variables.clear()
   }
 
-  class Process(val program: Program, val incident : Incident) {
+  private var programCounter = 0    // ith position into the program array, points to current instruction to execute
 
-    //var repeatCount = 0     // number of times the policy has executed in full
-    var programCounter = 0  // ith position into the program array, points to current instruction to execute
+  // These are really named memory locations
+  private val variables = collection.mutable.Map[String, Value]().empty
 
-    // These are really named memory locations
-    val variables = collection.mutable.Map[String, Value]().empty
-    def getVar(key: String): Value = {
-      variables.get(key).getOrElse {
-        throw new Exception("symbol'%s' not found".format(key))
-      }
+  def getVar(key: String): Value = {
+    variables.get(key).getOrElse {
+      throw new Exception("symbol'%s' not found".format(key))
     }
+  }
 
-    def setVar(key: String, value: Value): Value = {
-      variables(key) = value
-      value
-    }
+  def setVar(key: String, value: Value): Value = {
+    variables(key) = value
+    value
+  }
 
-    def run() = {
-      val effects = PolicyVM.run(proc).toList
-      effects.dropWhile(! _.isInstanceOf[Stop])
-    }
+  def run()(implicit vm: VM) = {
+    vm.run(this, Registers(programCounter))
+  }
+}
+
+class Program(val instructions : List[Instruction]) {
+  def instance(incident : Incident) : Process = {
+    return new Process(this, incident)
   }
 }
 
@@ -100,73 +104,60 @@ object VM {
     override def toString() = "unit"
   }
 
-  sealed abstract class Effect
-
-  // Program Counter Delta (instructions to move forward/backward by)
-  sealed case class PCD(val toSkip : Int = 1) extends Effect
-  case class NextI() extends Effect
-
-  case class Stop() extends Effect
+  sealed abstract class ActionResult
+  case class NotificationResult(method: TargettedAction, action: Action) extends ActionResult
+  case class EscalationResult(duration: Duration) extends ActionResult
+  case class ScriptRepeatResult(value: Boolean) extends ActionResult
 }
 
-class VM(clock : Clock = new StandardClock()) {
-  import InstructionSet._
-
-  //    def resumeAt(when:DateTime) = {
-  //      while (when.isBefore(clock.now)) {
-  //        Thread.sleep(1000L)
-  //      }
-  //    }
-
+trait Listener {
+  // Executed before every instruction
   def pre(instruction:Instruction) = {}
 
+  // Executed after every instruction
   def post(instruction:Instruction) = {}
 
-  def execute(inst:Instruction): Effect = {
-    inst match {
-      case EMAIL(who) => {
-        NextI()
-      }
-      case WAIT(duration) => {
-        NextI()
-      }
-      case HALT() =>
-        Stop()
-      case _ =>
-        throw new RuntimeException("implement me!")
+  // Target to email
+  def email(target: Target) = {}
+
+  // Duration of the timeout
+  def escalation_timeout(duration: Duration) = {}
+}
+
+class VM(listener: Listener, clock : Clock = new StandardClock()) {
+  import InstructionSet._
+
+  def resumeAt(when:DateTime) = {
+    while (when.isBefore(clock.now)) {
+      Thread.sleep(1000L)
     }
   }
 
   // FIXME this should actually be a Stream
 
-  def run(proc:Process): Stream[Effect] = {
-    def eval_helper: Stream[Effect] = {
+  // move the clock one tick forward
+  def tick(proc:Process, c: Registers): (Registers, Option[ActionResult]) = {
+    val instruction = proc.program.instructions(c.pc)
 
-      val instruction = proc.pro(proc.programCounter)
+    listener.pre(instruction)
 
-      def handle(effect: Effect) = {
-        effect match {
-          case Stop() =>
-          case PCD(i) =>
-            proc.programCounter += i
-          case NextI() =>
-            proc.programCounter += 1
-        }
+    val nextState = instruction match {
+      case EMAIL(target) => {
+        listener.email(target)
+        (c.copy(pc = c.pc + 1), None)
       }
-
-      proc.pre(instruction)
-      val effect:Effect = execute(instruction)
-
-      if (effect == Stop()) {
-        proc.post(instruction)
-        Stream(effect)
-      } else {
-        handle(effect)
-        proc.post(instruction)
-        Stream(effect) #::: run(proc)
+      case WAIT(duration) => {
+        (c.copy(pc = c.pc + 1), None)
       }
+      case HALT() =>
+        (c.copy(halted = true), None)
+      case _ =>
+        throw new RuntimeException("implement me!")
     }
-    eval_helper
+
+    listener.post(instruction)
+
+    nextState
   }
 }
 
@@ -311,6 +302,8 @@ trait Action {
   def invoke = throw new RuntimeException("must implement")
 }
 
+trait TargettedAction extends Action
+
 trait Target {
   def invoke = throw new RuntimeException("must implement")
 }
@@ -359,17 +352,17 @@ case class NotFilter(cond: Cond) extends AST with Cond {
 case class ActionLiteral(name:String) extends AST
 
 // Specific actions
-case class Call(target: Target) extends AST with Action
-case class Text(target: Target) extends AST with Action
-case class Email(target: Target) extends AST with Action
+case class Call(target: Target) extends AST with TargettedAction
+case class Text(target: Target) extends AST with TargettedAction
+case class Email(target: Target) extends AST with TargettedAction
 
 case class Wait(duration: Duration) extends AST with Action
 
 case class Repeat(count:Int, period: Option[Duration]) extends AST with Action
 
 // Generic actions
-case class Page(target: Target) extends AST with Action
-case class Notify(target: Target) extends AST with Action
+case class Page(target: Target) extends AST with TargettedAction
+case class Notify(target: Target) extends AST with TargettedAction
 
 case class TargetType(name: String) extends AST
 case class TargetName(name: String) extends AST
