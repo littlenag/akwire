@@ -53,16 +53,16 @@ class StandardClock extends Clock {
   def now() = DateTime.now()
 }
 
-case class Registers(val pc : Int = 0, val halted : Boolean = false)
+/**
+ * Register state for the policy machine
+ * @param pc The Program Counter, points to current instruction to execute
+ * @param ws Wait Start, used by the WAIT instruction to stash the start time of the interval
+ */
+case class Registers(val pc : Int = 0, val ws : Option[DateTime] = None)
 
 class Process(val program: Program, val incident : Incident) {
 
-  def reset = {
-    programCounter = 0
-    variables.clear()
-  }
-
-  private var programCounter = 0    // ith position into the program array, points to current instruction to execute
+  var registers = Registers(0, None)
 
   // These are really named memory locations
   private val variables = collection.mutable.Map[String, Value]().empty
@@ -78,9 +78,9 @@ class Process(val program: Program, val incident : Incident) {
     value
   }
 
-  def run()(implicit vm: VM) = {
-    vm.run(this, Registers(programCounter))
-  }
+//  def run()(implicit vm: VM) = {
+//    vm.tick(this, Registers(programCounter))
+//  }
 }
 
 class Program(val instructions : List[Instruction]) {
@@ -112,16 +112,18 @@ object VM {
 
 trait Listener {
   // Executed before every instruction
-  def pre(instruction:Instruction) = {}
+  def pre(instruction:Instruction)
 
   // Executed after every instruction
-  def post(instruction:Instruction) = {}
+  def post(instruction:Instruction)
 
   // Target to email
-  def email(target: Target) = {}
+  def email(target: Target)
 
   // Duration of the timeout
-  def escalation_timeout(duration: Duration) = {}
+  def wait_start(duration: Duration, startTime: DateTime)
+  def wait_continue(duration: Duration, curTime: DateTime)
+  def wait_complete(duration: Duration, endTime: DateTime)
 }
 
 class VM(listener: Listener, clock : Clock = new StandardClock()) {
@@ -135,29 +137,58 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 
   // FIXME this should actually be a Stream
 
-  // move the clock one tick forward
-  def tick(proc:Process, c: Registers): (Registers, Option[ActionResult]) = {
-    val instruction = proc.program.instructions(c.pc)
+  /**
+   * Move the clock one tick forward for the Process
+   * @param proc Process to execute
+   * @return true if still executing, false if halted
+   */
+  def tick(proc:Process): Boolean = {
+    val instruction = proc.program.instructions(proc.registers.pc)
+    val reg = proc.registers
 
     listener.pre(instruction)
 
-    val nextState = instruction match {
+    val regUpdate = instruction match {
       case EMAIL(target) => {
         listener.email(target)
-        (c.copy(pc = c.pc + 1), None)
+        Some(reg.copy(pc = reg.pc + 1))
       }
       case WAIT(duration) => {
-        (c.copy(pc = c.pc + 1), None)
+        val now = clock.now()
+        reg.ws match {
+          case Some(t) =>
+            if (t.plus(duration).isBefore(now)) {
+              // We've finished waiting, move PC to the next instruction, and clear the WAIT register
+              listener.wait_complete(duration, now)
+              Some(reg.copy(pc = reg.pc + 1, ws = None))
+            } else {
+              // Keep waiting
+              listener.wait_continue(duration, now)
+              Some(reg)
+            }
+          case None =>
+            // First time called, initialize the register
+            listener.wait_start(duration, now)
+            Some(reg.copy(ws = Some(now)))
+        }
+
       }
       case HALT() =>
-        (c.copy(halted = true), None)
+        // There is no next state once the machine has halted
+        None
       case _ =>
         throw new RuntimeException("implement me!")
     }
 
     listener.post(instruction)
 
-    nextState
+    regUpdate match {
+      case Some(reg) =>
+        proc.registers = reg
+        true
+      case None =>
+        false
+    }
   }
 }
 

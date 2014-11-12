@@ -1,13 +1,16 @@
 package engines
 
+import engines.InstructionSet.Instruction
 import models._
 import org.bson.types.ObjectId
-import org.joda.time.DateTime
+import org.joda.time.{Duration, DateTime}
 
 import org.specs2.mutable._
 
 import play.api.test._
 import play.api.test.Helpers._
+
+import scala.util.control.Breaks._
 
 class PolicyVMTest extends Specification {
 
@@ -86,7 +89,31 @@ class PolicyVMTest extends Specification {
           override def now() = new DateTime(0L)
         }
 
-        implicit val vm = new VM(clock)
+        var stream = Stream
+
+        val listener = new Listener {
+          // Executed before every instruction
+          override def pre(instruction: Instruction): Unit = {
+
+          }
+
+          override def wait_complete(duration: Duration, endTime: DateTime): Unit = {
+
+          }
+
+          // Duration of the timeout
+          override def wait_start(duration: Duration, startTime: DateTime): Unit = {}
+
+          // Executed after every instruction
+          override def post(instruction: Instruction): Unit = {}
+
+          override def wait_continue(duration: Duration, curTime: DateTime): Unit = {}
+
+          // Target to email
+          override def email(target: Target): Unit = {}
+        }
+
+        val vm = new VM(listener, clock)
 
         val proc : Process = program.instance(incident)
 
@@ -97,9 +124,7 @@ class PolicyVMTest extends Specification {
         // the process owns its state
 
         // load the process, run to completion
-        val effects = proc.run()
-
-        //val effects = PolicyVM.run(proc).toList
+        while (vm.tick(proc))
 
         println(s"EFFECTS: ${effects}")
 
