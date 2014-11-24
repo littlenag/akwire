@@ -8,6 +8,7 @@ import engines.VM._
 import models.Incident
 import org.joda.time.{DateTime, Duration}
 
+import scala.collection.mutable
 import scala.util.parsing.combinator.RegexParsers
 
 import play.api.Logger
@@ -62,6 +63,8 @@ case class Registers(val pc : Int = 0, val ws : Option[DateTime] = None)
 
 class Process(val program: Program, val incident : Incident) {
 
+  val stack = new mutable.Stack[Value]
+
   var registers = Registers(0, None)
 
   // These are really named memory locations
@@ -78,15 +81,17 @@ class Process(val program: Program, val incident : Incident) {
     value
   }
 
-//  def run()(implicit vm: VM) = {
-//    vm.tick(this, Registers(programCounter))
-//  }
+  def tick()(implicit vm: VM) = {
+    vm.tick(this)
+  }
 }
 
 class Program(val instructions : List[Instruction]) {
   def instance(incident : Incident) : Process = {
     return new Process(this, incident)
   }
+
+  override def toString() = instructions.toString()
 }
 
 object VM {
@@ -111,19 +116,22 @@ object VM {
 }
 
 trait Listener {
+  // Executed after every atomic update to the virtual machine state has been executed
+  def latch(instruction:Instruction) = {}
+
   // Executed before every instruction
-  def pre(instruction:Instruction)
+  def preTick(instruction:Instruction) = {}
 
   // Executed after every instruction
-  def post(instruction:Instruction)
+  def postTick(instruction:Instruction) = {}
 
   // Target to email
-  def email(target: Target)
+  def email(target: Target) = {}
 
   // Duration of the timeout
-  def wait_start(duration: Duration, startTime: DateTime)
-  def wait_continue(duration: Duration, curTime: DateTime)
-  def wait_complete(duration: Duration, endTime: DateTime)
+  def wait_start(duration: Duration, startTime: DateTime) = {}
+  def wait_continue(duration: Duration, curTime: DateTime) = {}
+  def wait_complete(duration: Duration, endTime: DateTime) = {}
 }
 
 class VM(listener: Listener, clock : Clock = new StandardClock()) {
@@ -144,47 +152,99 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
    */
   def tick(proc:Process): Boolean = {
     val instruction = proc.program.instructions(proc.registers.pc)
-    val reg = proc.registers
+    val oldRegisters = proc.registers
+    val stack = proc.stack
 
-    listener.pre(instruction)
+    val NEXT = Some(oldRegisters.copy(pc = oldRegisters.pc + 1))
+
+    listener.preTick(instruction)
 
     val regUpdate = instruction match {
       case EMAIL(target) => {
         listener.email(target)
-        Some(reg.copy(pc = reg.pc + 1))
+        NEXT
       }
+
       case WAIT(duration) => {
         val now = clock.now()
-        reg.ws match {
+        oldRegisters.ws match {
           case Some(t) =>
             if (t.plus(duration).isBefore(now)) {
               // We've finished waiting, move PC to the next instruction, and clear the WAIT register
               listener.wait_complete(duration, now)
-              Some(reg.copy(pc = reg.pc + 1, ws = None))
+              Some(oldRegisters.copy(pc = oldRegisters.pc + 1, ws = None))
             } else {
               // Keep waiting
               listener.wait_continue(duration, now)
-              Some(reg)
+              Some(oldRegisters)
             }
           case None =>
             // First time called, initialize the register
             listener.wait_start(duration, now)
-            Some(reg.copy(ws = Some(now)))
+            Some(oldRegisters.copy(ws = Some(now)))
         }
 
       }
+
+      case PUSH(value) =>
+        stack.push(value)
+        NEXT
+
+      case ST_VAR(variable) =>
+        val value = stack.pop()
+        proc.setVar(variable, value)
+        NEXT
+
+      case LD_VAR(variable) =>
+        val value = proc.getVar(variable)
+        stack.push(value)
+        NEXT
+
+      case ADD() =>
+        val a = stack.pop().asInstanceOf[IntValue].value
+        val b = stack.pop().asInstanceOf[IntValue].value
+        stack.push(IntValue(a + b))
+        NEXT
+
+      case CMP() =>
+        val a = stack.pop().asInstanceOf[IntValue].value
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val cmp = b.compareTo(a)
+        println(s"a $a b $b c $cmp")
+        stack.push(IntValue(cmp))
+        NEXT
+
+      case JGT(inst) =>
+        val a = stack.pop().asInstanceOf[IntValue].value
+        if (a > 0) {
+          Some(oldRegisters.copy(pc = inst, ws = None))
+        } else {
+          NEXT
+        }
+
+      case JLT(inst) =>
+        val a = stack.pop().asInstanceOf[IntValue].value
+        if (a < 0) {
+          Some(oldRegisters.copy(pc = inst, ws = None))
+        } else {
+          NEXT
+        }
+
       case HALT() =>
         // There is no next state once the machine has halted
         None
-      case _ =>
-        throw new RuntimeException("implement me!")
+      case inst =>
+        throw new RuntimeException("unimplemented: " + inst)
     }
 
-    listener.post(instruction)
+    listener.postTick(instruction)
 
     regUpdate match {
-      case Some(reg) =>
-        proc.registers = reg
+      case Some(updatedRegisters) =>
+        if (updatedRegisters != oldRegisters) {
+          listener.latch(instruction)
+        }
+        proc.registers = updatedRegisters
         true
       case None =>
         false
@@ -230,7 +290,8 @@ object Compiler {
 
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
-            List(PUSH(IntValue(0)), STORE(VAR_CUR_COUNT), PUSH(IntValue(max)), STORE(VAR_MAX_REPEAT))
+            // -1 since the first time through shouldn't contribute
+            List(PUSH(IntValue(-1)), ST_VAR(VAR_CUR_COUNT), PUSH(IntValue(max)), ST_VAR(VAR_MAX_REPEAT))
           } else {
             Nil
           }
@@ -238,7 +299,7 @@ object Compiler {
           val body = compileAST(statements)
 
           val counter_inc = if (max > 0) {
-            List(PUSH_VAR(VAR_CUR_COUNT), PUSH(IntValue(1)), STORE(VAR_CUR_COUNT))
+            List(LD_VAR(VAR_CUR_COUNT), PUSH(IntValue(1)), ADD(), ST_VAR(VAR_CUR_COUNT))
           } else {
             Nil
           }
@@ -248,7 +309,7 @@ object Compiler {
               Nil
             case Some(Repeat(count, None)) =>
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              List(PUSH_VAR(VAR_CUR_COUNT), PUSH_VAR(VAR_MAX_REPEAT), CMP(), JGT(preamble.size))
+              List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(preamble.size))
             case None =>
               Nil
           }
@@ -288,20 +349,30 @@ object Compiler {
 
 object InstructionSet {
 
+  trait Invokation
+
   sealed abstract class Instruction
 
   // Push a literal value
   case class PUSH(value: Value) extends Instruction
 
-  // Push a variable
-  case class PUSH_VAR(variable: String) extends Instruction
+  // Pop the top of the stack, discarding the value
+  case class POP() extends Instruction
+
+  // Load a variable, push its value onto the top of the stack
+  case class LD_VAR(variable: String) extends Instruction
 
   // Pop the top of the stack, save it in the named variable
-  case class STORE(variable: String) extends Instruction
+  case class ST_VAR(variable: String) extends Instruction
 
-  case class CALL(target: Target) extends Instruction
-  case class EMAIL(target: Target) extends Instruction
-  case class TEXT(target: Target) extends Instruction
+  case class PAGE(target: Target) extends Instruction with Invokation
+  case class NOTIFY(target: Target) extends Instruction with Invokation
+
+  case class EXEC(policyName: String) extends Instruction with Invokation
+
+  case class CALL(target: Target) extends Instruction with Invokation
+  case class EMAIL(target: Target) extends Instruction with Invokation
+  case class TEXT(target: Target) extends Instruction  with Invokation
 
   case class WAIT(duration: Duration) extends Instruction
 
@@ -314,7 +385,9 @@ object InstructionSet {
   // Logic OPS
   case class CMP() extends Instruction  // [a b <], -1 if a is larger, 0 if equal, 1 if b is larger
 
-  case class JGT(to : Int) extends Instruction
+  case class JGT(to : Int) extends Instruction  // greater than
+  case class JLT(to : Int) extends Instruction  // less than
+  case class JEQ(to : Int) extends Instruction  // equal to
 
   // Jump if cond evaluates to FALSE, toSkip must be a positive value with the number of instructions forward to jump
   case class JF(cond: Cond, toSkip : Int) extends Instruction
