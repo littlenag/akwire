@@ -144,8 +144,8 @@ class PolicyVMTest extends Specification {
       running(FakeApplication()) {
         val simplePolicy =
           """
-            | email user(mark@corp.com)
-            | wait 2h
+            | [email user(mark@corp.com), call user(bob@corp.com), text user(carl@corp.com), notify user(thedude@corp.com)]
+            | wait 1m
             | repeat 1 times
             |
           """.stripMargin
