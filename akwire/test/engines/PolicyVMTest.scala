@@ -1,61 +1,53 @@
 package engines
 
-import engines.InstructionSet.Instruction
+import engines.InstructionSet.{Invokation, Instruction}
 import models._
 import org.bson.types.ObjectId
-import org.joda.time.{Duration, DateTime}
+import org.joda.time.{DateTime}
+import org.specs2.mock.Mockito
 
 import org.specs2.mutable._
 
 import play.api.test._
 import play.api.test.Helpers._
 
-import scala.util.control.Breaks._
-
-class PolicyVMTest extends Specification {
+class PolicyVMTest extends Specification with Mockito {
 
   "PolicyVM" should {
+
+    val EPOCH = new DateTime(0L)
+
+    class TestListener extends Listener {
+      val latched = collection.mutable.MutableList.empty[Instruction]
+      val invokations = collection.mutable.MutableList.empty[Instruction]
+
+      override def latch(instruction: Instruction): Unit = {
+        println(s"$instruction")
+        latched += instruction
+
+        if (instruction.isInstanceOf[Invokation]) {
+          invokations += instruction
+        }
+      }
+    }
+
 
     // logic for escalation and notifications on both sides (alert rules and in the notification/escalation policies)
     // SLA owned by alerting
     // Unresolved state after Policy completes, boolean flag, measure of timeliness
 
-    "simple policy 1" in {
-
-      /**
-       * maybe make the filters more like match/case statements
-       *
-       */
-
+    "simple policy" in {
       running(FakeApplication()) {
-        val simplePolicy =
-          """
-            | email user(mark@corp.com)
-            |
-          """.stripMargin
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
 
-        val programTry = Compiler.compile(simplePolicy)
+        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.SEV_1,
+          Urgency.HIGH,
+          None,
+          None
+        )
 
-        programTry.isRight must beTrue
-
-        val program:Program = programTry.right.get
-
-        println(s"Program: $program")
-
-        program.instructions must not beEmpty
-
-        program.instructions must have size(2)
-      }
-    }
-
-    "simple policy 2" in {
-
-      /**
-       * maybe make the filters more like match/case statements
-       *
-       */
-
-      running(FakeApplication()) {
         val simplePolicy =
           """
             | email user(mark@corp.com)
@@ -75,45 +67,12 @@ class PolicyVMTest extends Specification {
 
         program.instructions must have size(3)
 
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
+        val listener = new TestListener
 
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
-          ContextualizedStream(List(("host", "h1"))),
-          Impact.SEV_1,
-          Urgency.HIGH,
-          None,
-          None
-        )
+        val clock = mock[Clock]
+        clock.now() returns (EPOCH, EPOCH.plusHours(1), EPOCH.plusHours(2), EPOCH.plusHours(3))
 
-        val clock = new Clock {
-          override def now() = new DateTime(0L)
-        }
-
-        var stream = Stream
-
-        val listener = new Listener {
-          // Executed before every instruction
-          override def pre(instruction: Instruction): Unit = {
-
-          }
-
-          override def wait_complete(duration: Duration, endTime: DateTime): Unit = {
-
-          }
-
-          // Duration of the timeout
-          override def wait_start(duration: Duration, startTime: DateTime): Unit = {}
-
-          // Executed after every instruction
-          override def post(instruction: Instruction): Unit = {}
-
-          override def wait_continue(duration: Duration, curTime: DateTime): Unit = {}
-
-          // Target to email
-          override def email(target: Target): Unit = {}
-        }
-
-        val vm = new VM(listener, clock)
+        implicit val vm = new VM(listener, clock)
 
         val proc : Process = program.instance(incident)
 
@@ -124,28 +83,35 @@ class PolicyVMTest extends Specification {
         // the process owns its state
 
         // load the process, run to completion
-        while (vm.tick(proc))
+        while (proc.tick()) {}
 
-        println(s"EFFECTS: ${effects}")
-
-        effects.dropWhile(! _.isInstanceOf[Stop])
-
-        effects must have size(3)
+        listener.invokations must have size(1)
+        listener.latched must have size(3)
       }
     }
 
-    "simple policy 3" in {
+    /**
+     | [email user(mark@corp.com), call user(bob@corp.com), text user(carl@corp.com), notify user(thedude@corp.com)]
+     | wait 1m
+     */
 
-      /**
-       * maybe make the filters more like match/case statements
-       *
-       */
-
+    "repeating policy" in {
       running(FakeApplication()) {
+
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
+
+        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.SEV_1,
+          Urgency.HIGH,
+          None,
+          None
+        )
+
         val simplePolicy =
           """
-            | [email user(mark@corp.com), call user(bob@corp.com), text user(carl@corp.com), notify user(thedude@corp.com)]
-            | wait 1m
+            | email user(mark@corp.com)
+            | wait 1h
             | repeat 1 times
             |
           """.stripMargin
@@ -160,7 +126,30 @@ class PolicyVMTest extends Specification {
 
         program.instructions must not beEmpty
 
-        program.instructions must not have size(0)
+        program.instructions must have size(15)
+
+        val listener = new TestListener
+
+        val clock = mock[Clock]
+        var i = 0
+        clock.now() answers { _ =>
+          i += 10
+          EPOCH.plusMinutes(i)
+        }
+
+        implicit val vm = new VM(listener, clock)
+
+        val proc : Process = program.instance(incident)
+
+        // load the process, run to completion
+        var ticks = 0
+        while (proc.tick()) {
+          ticks += 1
+        }
+
+        //ticks must be equalTo(3)
+        listener.invokations must have size(2)
+        listener.latched must have size(26)
       }
     }
 
