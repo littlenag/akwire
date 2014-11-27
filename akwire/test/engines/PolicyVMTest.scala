@@ -153,22 +153,63 @@ class PolicyVMTest extends Specification with Mockito {
       }
     }
 
-    "run policy program" in {
-      val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
+    "filtering policy" in {
+      running(FakeApplication()) {
 
-      val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
-        ContextualizedStream(List(("host", "h1"))),
-        Impact.SEV_1,
-        Urgency.HIGH,
-        None,
-        None
-      )
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.SEV_1)
 
-      val clock = new Clock {
-        override def now() = new DateTime(0L)
+        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.SEV_1,
+          Urgency.HIGH,
+          None,
+          None
+        )
+
+        val simplePolicy =
+          """
+            | sev(1) call user(sev1@corp.com)
+            | sev(2) email user(sev2@corp.com)
+            | wait 1h
+            | repeat 1 times
+            |
+          """.stripMargin
+
+        val programTry = Compiler.compile(simplePolicy)
+
+        programTry.isRight must beTrue
+
+        val program:Program = programTry.right.get
+
+        println(s"Program: $program")
+
+        program.instructions must not beEmpty
+
+        program.instructions must have size(15)
+
+        val listener = new TestListener
+
+        val clock = mock[Clock]
+        var i = 0
+        clock.now() answers { _ =>
+          i += 10
+          EPOCH.plusMinutes(i)
+        }
+
+        implicit val vm = new VM(listener, clock)
+
+        val proc : Process = program.instance(incident)
+
+        // load the process, run to completion
+        var ticks = 0
+        while (proc.tick()) {
+          ticks += 1
+        }
+
+        //ticks must be equalTo(3)
+        listener.invokations must have size(2)
+        listener.latched must have size(26)
       }
-
-      clock must not beNull
     }
   }
 }

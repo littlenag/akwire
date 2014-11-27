@@ -13,38 +13,6 @@ import scala.util.parsing.combinator.RegexParsers
 
 import play.api.Logger
 
-object PolicyVM {
-
-  def run(process: Process) = {
-
-    // should probably name these programs
-    //Logger.info("Compiling policy: " + policy)
-
-    // And then the Environment will need to point at the next instruction to execute
-
-    //val effects:Stream[VM.Effect] = VM.run(process)
-
-    //effects.dropWhile(! _.isInstanceOf[Stop])
-
-    //effects
-  }
-
-  def load(process: Process) = {
-
-    // should probably name these programs
-    //Logger.info("Compiling policy: " + policy)
-
-    // And then the Environment will need to point at the next instruction to execute
-
-    //val effects:Stream[VM.Effect] = VM.run(process)
-
-    //effects.dropWhile(! _.isInstanceOf[Stop])
-
-    //effects
-  }
-
-}
-
 trait Clock {
   def now(): DateTime
   //def tick()
@@ -389,11 +357,11 @@ object InstructionSet {
   case class JLT(to : Int) extends Instruction  // less than
   case class JEQ(to : Int) extends Instruction  // equal to
 
-  // Jump if cond evaluates to FALSE, toSkip must be a positive value with the number of instructions forward to jump
-  case class JF(cond: Cond, toSkip : Int) extends Instruction
+  // Jump if top-stack value is FALSE
+  case class JF(to : Int) extends Instruction
 
-  // Jump if cond evaluates to TRUE, toSkip must be a positive value with the number of instructions forward to jump
-  case class JT(cond: Cond, toSkip : Int) extends Instruction
+  // Jump if top-stack value is TRUE
+  case class JT(to : Int) extends Instruction
 
   // Jump unconditionally, toSkip must be a positive value with the number of instructions forward to jump
   case class JMP(toSkip : Int) extends Instruction

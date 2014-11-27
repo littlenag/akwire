@@ -136,14 +136,6 @@ sev {
   _ => drop
 }
 
-email team    # no filter means always match, then keyword allows chaining of policies, each policy runs to completion
-sev(1) notify policy(`on call`)
-  2 => { sms team
-         email team
-       }
-  _ => drop
-}
-
 ----
 
 schedule 'on-call':
