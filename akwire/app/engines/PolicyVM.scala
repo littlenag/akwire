@@ -15,7 +15,6 @@ import play.api.Logger
 
 trait Clock {
   def now(): DateTime
-  //def tick()
 }
 
 class StandardClock extends Clock {
@@ -49,6 +48,13 @@ class Process(val program: Program, val incident : Incident) {
     value
   }
 
+  def property(key: String): Value = {
+    key match {
+      case "incident.severity" => IntValue(incident.impact.id)
+      case _ => throw new Exception(s"Runtime Error: property '$key' not found")
+    }
+  }
+
   def tick()(implicit vm: VM) = {
     vm.tick(this)
   }
@@ -63,28 +69,28 @@ class Program(val instructions : List[Instruction]) {
 }
 
 object VM {
+
   sealed abstract class Value
+
   case class StringValue(value: String) extends Value {
     override def toString() = value
   }
+
   case class IntValue(value: Int) extends Value {
     override def toString() = value.toString
   }
+
   case class BooleanValue(value: Boolean) extends Value {
     override def toString() = value.toString
   }
+
   case object UnitValue extends Value {
     override def toString() = "unit"
   }
-
-  sealed abstract class ActionResult
-  case class NotificationResult(method: TargettedAction, action: Action) extends ActionResult
-  case class EscalationResult(duration: Duration) extends ActionResult
-  case class ScriptRepeatResult(value: Boolean) extends ActionResult
 }
 
 trait Listener {
-  // Executed after every atomic update to the virtual machine state has been executed
+  // Executed after every atomic update to the virtual machine state, i.e. change to the machine state registers, has been executed
   def latch(instruction:Instruction) = {}
 
   // Executed before every instruction
@@ -96,7 +102,13 @@ trait Listener {
   // Target to email
   def email(target: Target) = {}
 
-  // Duration of the timeout
+  // Target to call
+  def call(target: Target) = {}
+
+  // Target to notify
+  def notify(target: Target) = {}
+
+  // Hooks to tell what state the wait is in.
   def wait_start(duration: Duration, startTime: DateTime) = {}
   def wait_continue(duration: Duration, curTime: DateTime) = {}
   def wait_complete(duration: Duration, endTime: DateTime) = {}
@@ -104,14 +116,6 @@ trait Listener {
 
 class VM(listener: Listener, clock : Clock = new StandardClock()) {
   import InstructionSet._
-
-  def resumeAt(when:DateTime) = {
-    while (when.isBefore(clock.now)) {
-      Thread.sleep(1000L)
-    }
-  }
-
-  // FIXME this should actually be a Stream
 
   /**
    * Move the clock one tick forward for the Process
@@ -287,25 +291,25 @@ object Compiler {
         case Statements(exprs) => {
           exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compileAST(x)))}
         }
-        case FilteredStatement(Conditional(True()), statements) => {
+        case ConditionalAction(BooleanVal(true), statements) => {
           // Always true, no need to jump just return the branch to execute
           compileAST(statements)
         }
-        case FilteredStatement(Conditional(False()), statements) => {
+        case ConditionalAction(BooleanVal(false), statements) => {
           // Always false, no need to compile the branch
           Nil
         }
-        case FilteredStatement(cond, statements) => {
+        case ConditionalAction(cond, statements) => {
+          val condition = compileAST(cond)
           val true_branch = compileAST(statements)
 
           // if the condition is false, jump past the true branch
-          JF(cond, true_branch.length) :: true_branch
+          condition ::: (JF(true_branch.length) :: true_branch)
         }
         case Email(u @ User(name)) => {
           List(EMAIL(u))
         }
         case Wait(duration) => {
-          //env.resumeAt(DateTime.now().plus(duration))
           List(WAIT(duration))
         }
         case _ => Nil
@@ -370,125 +374,120 @@ object InstructionSet {
   case class HALT() extends Instruction
 }
 
-trait Action {
-  def invoke = throw new RuntimeException("must implement")
-}
+trait Target
 
-trait TargettedAction extends Action
-
-trait Target {
-  def invoke = throw new RuntimeException("must implement")
-}
-
-trait Cond {
-  def eval(proc:Process) : Boolean = throw new RuntimeException("must implement")
-}
-
-sealed trait AST {
-  var node_id = 0
-}
+sealed trait AST
 
 // By default policies don't repeat
 case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends AST
 
 case class Statements(exprs:List[AST]) extends AST
 
-case class FilteredStatement(filter:Conditional, actions:AST) extends AST
+case class Cases(cases:List[AST]) extends AST
 
-case class Conditional(actions:AST) extends AST with Cond
+case class ConditionalAction(expr:AST, actions:AST) extends AST
 
-case class SeverityFilter(pattern: AST) extends AST with Cond {
-  override def eval(proc:Process) = false
-}
+case class LT(l:AST, r:AST) extends AST    // <
+case class LTE(l:AST, r:AST) extends AST   // <=
+case class EQ(l:AST, r:AST) extends AST    // =
+case class GT(l:AST, r:AST) extends AST    // >
+case class GTE(l:AST, r:AST) extends AST   // >=
 
-case class SeverityLiteral(value: Int) extends AST
+case class AND(l:AST, r:AST) extends AST   // a and b
+case class OR(l:AST, r:AST) extends AST    // a or b
+case class NOT(c:AST) extends AST          // ! a
 
-case class TagFilter(pattern: AST) extends AST with Cond {
-  override def eval(proc:Process) = false
-}
+// filters: runs a set of actions that _____
+//  once     :: executes only one time
+//  times(N) :: executes at most N times, where N is less than the repeat times
+//  during   :: executes in certain well-defined windows of times (e.g. not 2am to 4am)
+//  after    :: executes only after some amount of time has passed
+//  before   :: executes only until some amount of time has passed
+//
+// global variables / state
+//  any thing in the incident, user, team, service
+//  the SLA, the priority matrix, service owner
 
-case class TagLiteral(value: String) extends AST
-
-case class True() extends AST with Cond {
-  override def eval(proc:Process) = true
-}
-
-case class False() extends AST with Cond {
-  override def eval(proc:Process) = false
-}
-
-case class NotFilter(cond: Cond) extends AST with Cond {
-  override def eval(proc:Process) = !cond.eval(proc)
-}
-
-case class ActionLiteral(name:String) extends AST
+//case class SeverityFilter(pattern: AST) extends AST with Cond
+//case class SeverityLiteral(value: Int) extends AST
+//case class TagFilter(pattern: AST) extends AST with Cond
+//case class TagLiteral(value: String) extends AST
+//case class DuringFilter(pattern: AST) extends AST
+//case class DuringLiteral(value: String) extends AST
 
 // Specific actions
-case class Call(target: Target) extends AST with TargettedAction
-case class Text(target: Target) extends AST with TargettedAction
-case class Email(target: Target) extends AST with TargettedAction
+case class Call(target: Target) extends AST
+case class Text(target: Target) extends AST
+case class Email(target: Target) extends AST
 
-case class Wait(duration: Duration) extends AST with Action
+case class Wait(duration: Duration) extends AST
 
-case class Repeat(count:Int, period: Option[Duration]) extends AST with Action
+case class Repeat(count:Int, period: Option[Duration]) extends AST
 
 // Generic actions
-case class Page(target: Target) extends AST with TargettedAction
-case class Notify(target: Target) extends AST with TargettedAction
+case class Page(target: Target) extends AST
+case class Notify(target: Target) extends AST
 
-case class TargetType(name: String) extends AST
 case class TargetName(name: String) extends AST
 
 case class User(name: String) extends AST with Target
 case class Team(name: String) extends AST with Target
 case class Service(name: String) extends AST with Target
 
-//case class DuringFilter(pattern: AST) extends AST
-//case class DuringLiteral(value: String) extends AST
-
 case class IntVal(value: Int) extends AST
-//case class Ident(name: String) extends AST
+case class BooleanVal(value: Boolean) extends AST
+case class Property(name: String) extends AST
 
 class NotificationPolicyParser extends RegexParsers {
 
   // statements ::= expr +
-  def policy: Parser[AST] = statements ~ opt(repeat_expr) ^^ {
+  def policy: Parser[AST] = statements ~ opt(repeat) ^^ {
     case s ~ re => Policy(s, re)
   }
 
   def statements: Parser[Statements] = rep(statement)^^Statements
 
-  def statement: Parser[AST] = filtered_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
+  def statement: Parser[AST] = line | block | wait_st // | next_expr | halt_expr | escalate | invoke schedule/policy
 
-  def repeat_expr: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
+  def repeat: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
     case t ~ du => Repeat(t.value, du)
   }
 
-  //expr ::= filter action target | filter { statements }
-  def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
-
-  def simple_filtered_expr : Parser[AST] = opt(conditional) ~ action_expr ^^{
-    case Some(f) ~ a => FilteredStatement(f,a.asInstanceOf[AST])
-    case None ~ a => FilteredStatement(Conditional(True()),a.asInstanceOf[AST])
+  def line : Parser[AST] = opt(conditional) ~ action_expr ^^{
+    case Some(cond) ~ action => ConditionalAction(cond,action)
+    case None ~ action => ConditionalAction(BooleanVal(true),action)
   }
 
-  def nested_filtered_expr : Parser[AST] = conditional ~ ("{"~>statements<~"}")^^{
-    case f ~ s => FilteredStatement(f,s)
+  def block : Parser[AST] = property ~ ("{" ~> cases <~ "}")^^{
+    case p ~ c => ConditionalAction(p,c)
   }
 
-  // filters: runs a set of actions that _____
-  //  once     :: executes only one time
-  //  times(N) :: executes at most N times, where N is less than the repeat times
-  //  during   :: executes in certain well-defined windows of times (e.g. not 2am to 4am)
-  //  after    :: executes only after some amount of time has passed
-  //  before   :: executes only until some amount of time has passed
-  //
-  // global variables / state
-  //  any thing in the incident, team, service
-  //  the SLA, the priority matrix, service owner
-  def conditional: Parser[Conditional] = severityFilter | tagFilter //| duringFilter
+  def cases : Parser[AST] = rep(case_line)^^Cases
+  
+  def case_line: Parser[AST] = terminal ~ "=>" ~ statement
 
-  def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
+  def conditional: Parser[AST] = ( "(" ~> conditional <~ ")") | logic_op | compare_op | terminal
+
+  def logic_op: Parser[AST] = and | or | not
+
+  def and: Parser[AST] = (conditional ~ ("and" | "&&") ~ conditional)^^{case l~_~r => AND(l,r)}
+  def or: Parser[AST] = (conditional ~ ("or" | "||") ~ conditional)^^{case l~_~r => OR(l,r)}
+  def not: Parser[AST] = ("!" ~> conditional)^^{case c => NOT(c)}
+
+  def compare_op: Parser[AST] = lt | gt | lte | gte | eq
+
+  def terminal: Parser[AST] = intLiteral | boolLiteral | property
+
+
+  def lt: Parser[AST] = (conditional ~ "<" ~ conditional)^^{case l~_~r => LT(l,r)}
+  def lte: Parser[AST] = (conditional ~ "<=" ~ conditional)^^{case l~_~r => LTE(l,r)}
+
+  def eq: Parser[AST] = (conditional ~ "=" ~ conditional)^^{case l~_~r => EQ(l,r)}
+
+  def gt: Parser[AST] = (conditional ~ ">" ~ conditional)^^{case l~_~r => GT(l,r)}
+  def gte: Parser[AST] = (conditional ~ ">=" ~ conditional)^^{case l~_~r => GTE(l,r)}
+
+  def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
   }
 
@@ -499,48 +498,46 @@ class NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
-  def action_expr: Parser[Action] = actionLiteral ~ target ^^ {
-    case ActionLiteral("email") ~ t => Email(t)
-    case ActionLiteral("call") ~ t => Call(t)
-    case ActionLiteral("text") ~ t => Text(t)
+  def action_expr: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
+    case "email" ~ t => Email(t)
+    case "call" ~ t => Call(t)
+    case "text" ~ t => Text(t)
   }
 
-  def actionLiteral: Parser[ActionLiteral] = ("call" | "page" | "email" | "notify")^^ActionLiteral
-
-  def target: Parser[Target] = (targetType ~ ("("~>targetName<~")"))^^{
-    case TargetType("user") ~ tn => User(tn.name)
-    case TargetType("team") ~ tn => Team(tn.name)
-    case TargetType("service") ~ tn => Service(tn.name)
+  def target: Parser[Target] = (("user" | "team" | "service") ~ ("("~>targetName<~")"))^^{
+    case "user" ~ tn => User(tn.name)
+    case "team" ~ tn => Team(tn.name)
+    case "service" ~ tn => Service(tn.name)
   }
-
-  def targetType: Parser[TargetType] = ("user" | "team" | "service")^^TargetType
 
   def targetName: Parser[TargetName] = (userEmailLiteral | teamOrServiceName) ^?{case n => n}^^TargetName
 
   def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
   def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
-  // e.g. sev(1); sev(1 to 4); sev(not 3); sev(HIGH)
-  def severityFilter: Parser[Conditional] = "sev" ~ "("~>sevLiteral<~")" ^^{
-    case l => Conditional(SeverityFilter(SeverityLiteral(l.value)))
-  }
-
   //sevLiteral ::= ["1"-"5"]
-  def sevLiteral : Parser[SeverityLiteral] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+  //def sevLiteral : Parser[SeverityLiteral] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+  //def tagLiteral : Parser[TagLiteral] = """[A-Za-z_][a-zA-Z0-9]*""".r^^{value => TagLiteral(value.toString)}
 
-  def tagFilter: Parser[Conditional] = "tag" ~ "("~>tagLiteral<~")" ^^{
-    case t => Conditional(TagFilter(TagLiteral(t.value)))
-  }
-
-  def tagLiteral : Parser[TagLiteral] = """[A-Za-z_][a-zA-Z0-9]*""".r^^{value => TagLiteral(value.toString)}
-
-
-  def duringFilter: Parser[AST] = "during" ~ "("~>intLiteral<~")" ^^SeverityFilter
 
   //intLiteral ::= ["1"-"9"] {"0"-"9"}
   def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
 
+  def boolLiteral : Parser[BooleanVal] = ("true" | "false")^^{
+    case "true" => BooleanVal(true)
+    case "false" => BooleanVal(false)
+  }
+
+  // Must be one of:
+  // user ::= the user the policy belongs to (may be empty)
+  // team ::= the team the policy belongs to (may be empty)
+  // service ::= the service the policy belongs to (may be empty)
+  // context ::= guaranteed to be one of the above where appropriate
+  // incident ::= incident to process
+  // rule ::= rule that triggered the incident
+  // xxx.foo ::= foo is the name of the property to access
+  def property: Parser[Property] = """incident\.[A-Za-z_][a-zA-Z0-9]*""".r^^Property
 
   def parse(str:String) = parseAll(policy, str)
 }
