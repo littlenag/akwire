@@ -464,7 +464,7 @@ class NotificationPolicyParser extends RegexParsers {
 
   def cases : Parser[AST] = rep(case_line)^^Cases
   
-  def case_line: Parser[AST] = terminal ~ "=>" ~ statement
+  //def case_line: Parser[AST] = terminal ~ "=>" ~ statement
 
   def conditional: Parser[AST] = ( "(" ~> conditional <~ ")") | logic_op | compare_op | terminal
 
