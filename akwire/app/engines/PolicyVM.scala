@@ -3,7 +3,7 @@ package engines
 // https://gist.github.com/kmizu/1364341
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
 
-import engines.InstructionSet.{LBL, Instruction}
+import engines.InstructionSet._
 import engines.VM._
 import models.Incident
 import org.joda.time.{DateTime, Duration}
@@ -15,7 +15,6 @@ import play.api.Logger
 
 trait Clock {
   def now(): DateTime
-  //def tick()
 }
 
 class StandardClock extends Clock {
@@ -55,6 +54,13 @@ class Process(val program: Program, val incident : Incident) {
     0
   }
 
+  def property(key: String): Value = {
+    key match {
+      case "incident.severity" => IntValue(incident.impact.id)
+      case _ => throw new Exception(s"Runtime Error: property '$key' not found")
+    }
+  }
+
   def tick()(implicit vm: VM) = {
     vm.tick(this)
   }
@@ -69,28 +75,28 @@ class Program(val instructions : List[Instruction]) {
 }
 
 object VM {
+
   sealed abstract class Value
+
   case class StringValue(value: String) extends Value {
     override def toString() = value
   }
+
   case class IntValue(value: Int) extends Value {
     override def toString() = value.toString
   }
+
   case class BooleanValue(value: Boolean) extends Value {
     override def toString() = value.toString
   }
+
   case object UnitValue extends Value {
     override def toString() = "unit"
   }
-
-  sealed abstract class ActionResult
-  case class NotificationResult(method: TargettedAction, action: Action) extends ActionResult
-  case class EscalationResult(duration: Duration) extends ActionResult
-  case class ScriptRepeatResult(value: Boolean) extends ActionResult
 }
 
 trait Listener {
-  // Executed after every atomic update to the virtual machine state has been executed
+  // Executed after every atomic update to the virtual machine state, i.e. change to the machine state registers, has been executed
   def latch(instruction:Instruction) = {}
 
   // Executed before every instruction
@@ -102,7 +108,13 @@ trait Listener {
   // Target to email
   def email(target: Target) = {}
 
-  // Duration of the timeout
+  // Target to call
+  def call(target: Target) = {}
+
+  // Target to notify
+  def notify(target: Target) = {}
+
+  // Hooks to tell what state the wait is in.
   def wait_start(duration: Duration, startTime: DateTime) = {}
   def wait_continue(duration: Duration, curTime: DateTime) = {}
   def wait_complete(duration: Duration, endTime: DateTime) = {}
@@ -110,14 +122,6 @@ trait Listener {
 
 class VM(listener: Listener, clock : Clock = new StandardClock()) {
   import InstructionSet._
-
-  def resumeAt(when:DateTime) = {
-    while (when.isBefore(clock.now)) {
-      Thread.sleep(1000L)
-    }
-  }
-
-  // FIXME this should actually be a Stream
 
   /**
    * Move the clock one tick forward for the Process
@@ -324,7 +328,6 @@ object Compiler {
           List(EMAIL(u))
         }
         case Wait(duration) => {
-          //env.resumeAt(DateTime.now().plus(duration))
           List(WAIT(duration))
         }
         case _ => Nil
@@ -369,6 +372,16 @@ object InstructionSet {
   case class MUL() extends Instruction
   case class DIV() extends Instruction
 
+  case class LT(l:AST, r:AST) extends AST    // <
+  case class LTE(l:AST, r:AST) extends AST   // <=
+  case class EQ(l:AST, r:AST) extends AST    // =
+  case class GT(l:AST, r:AST) extends AST    // >
+  case class GTE(l:AST, r:AST) extends AST   // >=
+
+  case class AND(l:AST, r:AST) extends AST   // a and b
+  case class OR(l:AST, r:AST) extends AST    // a or b
+  case class NOT(c:AST) extends AST          // ! a
+
   // Logic OPS
   case class CMP() extends Instruction  // [a b <], -1 if a is larger, 0 if equal, 1 if b is larger
 
@@ -410,20 +423,23 @@ case class ConditionalStatement(cond:AST, pos:AST, neg:AST) extends AST
 
 case class ActionLiteral(name:String) extends AST
 
+// global variables / state
+//  any thing in the incident, user, team, service
+//  the SLA, the priority matrix, service owner
+
 // Specific actions
-case class Call(target: Target) extends AST with TargettedAction
-case class Text(target: Target) extends AST with TargettedAction
-case class Email(target: Target) extends AST with TargettedAction
+case class Call(target: Target) extends AST
+case class Text(target: Target) extends AST
+case class Email(target: Target) extends AST
 
-case class Wait(duration: Duration) extends AST with Action
+case class Wait(duration: Duration) extends AST
 
-case class Repeat(count:Int, period: Option[Duration]) extends AST with Action
+case class Repeat(count:Int, period: Option[Duration]) extends AST
 
 // Generic actions
-case class Page(target: Target) extends AST with TargettedAction
-case class Notify(target: Target) extends AST with TargettedAction
+case class Page(target: Target) extends AST
+case class Notify(target: Target) extends AST
 
-case class TargetType(name: String) extends AST
 case class TargetName(name: String) extends AST
 
 case class User(name: String) extends AST with Target
@@ -448,13 +464,14 @@ case class TrueVal() extends AST
 case class FalseVal() extends AST
 case class NotExpr(cond: Cond) extends AST
 case class IntVal(value: Int) extends AST
+case class BooleanVal(value: Boolean) extends AST
 
 case class Property(context: String, field: String) extends AST
 
 class NotificationPolicyParser extends RegexParsers {
 
   // statements ::= expr +
-  def policy: Parser[AST] = statements ~ opt(repeat_expr) ^^ {
+  def policy: Parser[AST] = statements ~ opt(repeat) ^^ {
     case s ~ re => Policy(s, re)
   }
 
@@ -462,7 +479,7 @@ class NotificationPolicyParser extends RegexParsers {
 
   def statement: Parser[AST] = conditional_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
 
-  def repeat_expr: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
+  def repeat: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
     case t ~ du => Repeat(t.value, du)
   }
 
@@ -513,7 +530,7 @@ class NotificationPolicyParser extends RegexParsers {
 
   // incidents can be suppressed
 
-  def conditional: Parser[AST] = eqOp | gtOp
+  def conditional: Parser[AST] = eqOp | gtOp | logic_op | compare_op | terminal
 
   def eqOp: Parser[AST] = (terminal ~ "=" ~ terminal)^^{
     case l ~ _ ~ r => EqOp(l, r)
@@ -523,11 +540,27 @@ class NotificationPolicyParser extends RegexParsers {
     case l ~ _ ~ r => GtOp(l, r)
   }
 
-  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | property
+  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property
 
   def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
   }
+
+  def logic_op: Parser[AST] = and | or | not
+
+  def and: Parser[AST] = (conditional ~ ("and" | "&&") ~ conditional)^^{case l~_~r => AND(l,r)}
+  def or: Parser[AST] = (conditional ~ ("or" | "||") ~ conditional)^^{case l~_~r => OR(l,r)}
+  def not: Parser[AST] = ("!" ~> conditional)^^{case c => NOT(c)}
+
+  def compare_op: Parser[AST] = lt | gt | lte | gte | eq
+
+  def lt: Parser[AST] = (conditional ~ "<" ~ conditional)^^{case l~_~r => LT(l,r)}
+  def lte: Parser[AST] = (conditional ~ "<=" ~ conditional)^^{case l~_~r => LTE(l,r)}
+
+  def eq: Parser[AST] = (conditional ~ "=" ~ conditional)^^{case l~_~r => EQ(l,r)}
+
+  def gt: Parser[AST] = (conditional ~ ">" ~ conditional)^^{case l~_~r => GT(l,r)}
+  def gte: Parser[AST] = (conditional ~ ">=" ~ conditional)^^{case l~_~r => GTE(l,r)}
 
   def duration: Parser[Duration] = intLiteral ~ ("s" | "m" | "h" | "d") ^^ {
     case v ~ "s" => Duration.standardSeconds(v.value)
@@ -536,21 +569,17 @@ class NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
-  def action_expr: Parser[Action] = actionLiteral ~ target ^^ {
-    case ActionLiteral("email") ~ t => Email(t)
-    case ActionLiteral("call") ~ t => Call(t)
-    case ActionLiteral("text") ~ t => Text(t)
+  def action_expr: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
+    case "email" ~ t => Email(t)
+    case "call" ~ t => Call(t)
+    case "text" ~ t => Text(t)
   }
 
-  def actionLiteral: Parser[ActionLiteral] = ("call" | "page" | "email" | "notify")^^ActionLiteral
-
-  def target: Parser[Target] = (targetType ~ ("("~>targetName<~")"))^^{
-    case TargetType("user") ~ tn => User(tn.name)
-    case TargetType("team") ~ tn => Team(tn.name)
-    case TargetType("service") ~ tn => Service(tn.name)
+  def target: Parser[Target] = (("user" | "team" | "service") ~ ("("~>targetName<~")"))^^{
+    case "user" ~ tn => User(tn.name)
+    case "team" ~ tn => Team(tn.name)
+    case "service" ~ tn => Service(tn.name)
   }
-
-  def targetType: Parser[TargetType] = ("user" | "team" | "service")^^TargetType
 
   def targetName: Parser[TargetName] = (userEmailLiteral | teamOrServiceName) ^?{case n => n}^^TargetName
 
@@ -567,6 +596,14 @@ class NotificationPolicyParser extends RegexParsers {
   // global variables / state
   //  any thing in the incident, team, service
   //  the SLA, the priority matrix, service owner
+  // Must be one of:
+  // user ::= the user the policy belongs to (may be empty)
+  // team ::= the team the policy belongs to (may be empty)
+  // service ::= the service the policy belongs to (may be empty)
+  // context ::= guaranteed to be one of the above where appropriate
+  // incident ::= incident to process
+  // rule ::= rule that triggered the incident
+  // xxx.foo ::= foo is the name of the property to access
   def property : Parser[Property] = ("incident" | "team" | "user" | "service" | "policy") ~ "." ~ """[a-zA-Z0-9_]*""".r^? {
     case c ~ _ ~ n => Property(c, n)
   }
@@ -575,6 +612,12 @@ class NotificationPolicyParser extends RegexParsers {
   // policy.max_iterations :: INT = total number of cycles the policy will perform, equal to 1 plus the value in the repeat statement
   // policy.is_first_iter :: BOOL = equivaltent to "policy.iteration = 0"
   // policy.is_last_iter :: BOOL = equivalent to "policy.iteration + 1 = policy.max_iterations"
+
+  def boolLiteral : Parser[BooleanVal] = ("true" | "false")^^{
+    case "true" => BooleanVal(true)
+    case "false" => BooleanVal(false)
+  }
+
 
   def parse(str:String) = parseAll(policy, str)
 }
