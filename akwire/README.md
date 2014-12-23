@@ -256,3 +256,43 @@ things you can monitor:
  - application logic
  - business logic
 
+--------------------------------------------
+
+Need to get true ITIL terms defined
+ - severity or impact, urgency
+ - event, alarm, alert, incident
+
+--------------------------------------------
+
+monitoring systems should have status dashboards and records of incidents, they are not a ticketing system, they should integrate with a ticketing system
+
+--------------------------------------------
+
+probably want to have a normalized severity model, with option types or path 
+types for accessing the fields that would be present in other systems alerts
+
+incident.severity for normalized severity
+
+incident.source match {
+ case source("nagios") => incident.severity
+ 
+may either need path-dependent types or an Option type
+
+--------------------------------------------
+
+what if this were to be a typed lisp? then i could rewrite in clojure 
+
+the clojure alerting rules need to look a lot more like jut rules
+
+source | filters | @sink
+
+what would happen if this were just re-written to a clojure program?
+ - user will want to have logic like
+ - for incidents like host = "h1" then notify me
+ 
+i would want a quiet hours feature
+
+ if between 12am and 4am then
+ 
+ end
+ 

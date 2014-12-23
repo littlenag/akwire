@@ -96,6 +96,19 @@ aperiodically driven code:
  - alert
 
 
+notions that impact data types, semantics:
+ - periodic vs aperiodic
+ - structured vs unstructured
+   - string vs numeric
+   - object vs primitive
+ - various notions of severity/impact
+ - time sensitivity or priority 
+ - interestingness to badness continuum
+
+events usually high priority, logs low priority
+events structured, logs usually unstructured (and cannot force structure on logs, just won't work)
+events can be alarms/alerts, logs can have severity but are less actionable
+
 want to support a hybrid active/passive plugin system
  - active are scheduled
  - passive are exposed via API

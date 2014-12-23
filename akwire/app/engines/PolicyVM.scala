@@ -3,7 +3,7 @@ package engines
 // https://gist.github.com/kmizu/1364341
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
 
-import engines.InstructionSet.Instruction
+import engines.InstructionSet.{LBL, Instruction}
 import engines.VM._
 import models.Incident
 import org.joda.time.{DateTime, Duration}
@@ -31,6 +31,8 @@ case class Registers(val pc : Int = 0, val ws : Option[DateTime] = None)
 
 class Process(val program: Program, val incident : Incident) {
 
+  // also need a label map => map of label indexes to PC values
+
   val stack = new mutable.Stack[Value]
 
   var registers = Registers(0, None)
@@ -47,6 +49,10 @@ class Process(val program: Program, val incident : Incident) {
   def setVar(key: String, value: Value): Value = {
     variables(key) = value
     value
+  }
+
+  def mapLabel(label:LBL) : Int = {
+    0
   }
 
   def tick()(implicit vm: VM) = {
@@ -182,18 +188,18 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
         stack.push(IntValue(cmp))
         NEXT
 
-      case JGT(inst) =>
+      case JGT(lbl) =>
         val a = stack.pop().asInstanceOf[IntValue].value
         if (a > 0) {
-          Some(oldRegisters.copy(pc = inst, ws = None))
+          Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
         }
 
-      case JLT(inst) =>
+      case JLT(lbl) =>
         val a = stack.pop().asInstanceOf[IntValue].value
         if (a < 0) {
-          Some(oldRegisters.copy(pc = inst, ws = None))
+          Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
         }
@@ -228,7 +234,15 @@ object Compiler {
 
   val parser = new NotificationPolicyParser
 
-  // FIXME should return either the program or an error
+  class LabelMaker(val start:Int = 0) {
+    var cur = start
+
+    def next() = {
+      cur = cur + 1
+      LBL(cur)
+    }
+  }
+
   def compile(policy: String): Either[parser.NoSuccess, Program] = {
     Logger.info("Compiling policy: " + policy)
 
@@ -236,6 +250,7 @@ object Compiler {
       case parser.Success(result, _) =>
 
         // And then the Environment will need to point at the next instruction to execute
+        implicit val labelMaker = new LabelMaker()
         val instructions = compileAST(result.asInstanceOf[AST])
         Right(new Program(instructions))
       case er: parser.NoSuccess =>
@@ -244,8 +259,7 @@ object Compiler {
     }
   }
 
-
-  def compileAST(ast:AST): List[Instruction] = {
+  private def compileAST(ast:AST)(implicit labeller: LabelMaker): List[Instruction] = {
     def visit(ast:AST): List[Instruction] = {
       ast match {
         case Policy(statements, repeat_expr) => {
@@ -272,34 +286,39 @@ object Compiler {
             Nil
           }
 
+          val body_start = labeller.next()
+
           val repeat_instr = repeat_expr match {
             case Some(Repeat(count, Some(period))) =>
               Nil
             case Some(Repeat(count, None)) =>
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(preamble.size))
+              List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(body_start))
             case None =>
               Nil
           }
 
-          (preamble ::: body ::: counter_inc ::: repeat_instr) :+ HALT()
+          ((preamble :+ body_start) ::: (body ::: counter_inc ::: repeat_instr)) :+ HALT()
         }
         case Statements(exprs) => {
           exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compileAST(x)))}
         }
-        case FilteredStatement(Conditional(True()), statements) => {
-          // Always true, no need to jump just return the branch to execute
-          compileAST(statements)
-        }
-        case FilteredStatement(Conditional(False()), statements) => {
-          // Always false, no need to compile the branch
-          Nil
-        }
-        case FilteredStatement(cond, statements) => {
-          val true_branch = compileAST(statements)
+        case ConditionalStatement(cond, pos, neg) => {
+          val cond_expr = compileAST(cond)
 
+          val true_branch = compileAST(pos)
+
+          val false_branch_label = labeller.next()
+          val after_label = labeller.next()
+
+          val false_branch = compileAST(pos)
+
+          // The cond branch must result in a boolean value on the top of the stack
           // if the condition is false, jump past the true branch
-          JF(cond, true_branch.length) :: true_branch
+          cond_expr ::: List(JF(false_branch_label)) :::
+          true_branch ::: List(JMP(after_label), false_branch_label) :::
+          false_branch :::
+          List(after_label)
         }
         case Email(u @ User(name)) => {
           List(EMAIL(u))
@@ -353,73 +372,41 @@ object InstructionSet {
   // Logic OPS
   case class CMP() extends Instruction  // [a b <], -1 if a is larger, 0 if equal, 1 if b is larger
 
-  case class JGT(to : Int) extends Instruction  // greater than
-  case class JLT(to : Int) extends Instruction  // less than
-  case class JEQ(to : Int) extends Instruction  // equal to
+  case class JGT(to : LBL) extends Instruction  // greater than
+  case class JLT(to : LBL) extends Instruction  // less than
+  case class JEQ(to : LBL) extends Instruction  // equal to
 
   // Jump if top-stack value is FALSE
-  case class JF(to : Int) extends Instruction
+  case class JF(to : LBL) extends Instruction
 
   // Jump if top-stack value is TRUE
-  case class JT(to : Int) extends Instruction
+  case class JT(to : LBL) extends Instruction
 
   // Jump unconditionally, toSkip must be a positive value with the number of instructions forward to jump
-  case class JMP(toSkip : Int) extends Instruction
+  case class JMP(to : LBL) extends Instruction
+
+  case class LBL(label : Int) extends Instruction
 
   // Stop execution immediately
   case class HALT() extends Instruction
 }
 
-trait Action {
-  def invoke = throw new RuntimeException("must implement")
-}
+trait Action
 
 trait TargettedAction extends Action
 
-trait Target {
-  def invoke = throw new RuntimeException("must implement")
-}
+trait Target
 
-trait Cond {
-  def eval(proc:Process) : Boolean = throw new RuntimeException("must implement")
-}
+trait Cond
 
-sealed trait AST {
-  var node_id = 0
-}
+sealed trait AST
 
 // By default policies don't repeat
 case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends AST
 
 case class Statements(exprs:List[AST]) extends AST
 
-case class FilteredStatement(filter:Conditional, actions:AST) extends AST
-
-case class Conditional(actions:AST) extends AST with Cond
-
-case class SeverityFilter(pattern: AST) extends AST with Cond {
-  override def eval(proc:Process) = false
-}
-
-case class SeverityLiteral(value: Int) extends AST
-
-case class TagFilter(pattern: AST) extends AST with Cond {
-  override def eval(proc:Process) = false
-}
-
-case class TagLiteral(value: String) extends AST
-
-case class True() extends AST with Cond {
-  override def eval(proc:Process) = true
-}
-
-case class False() extends AST with Cond {
-  override def eval(proc:Process) = false
-}
-
-case class NotFilter(cond: Cond) extends AST with Cond {
-  override def eval(proc:Process) = !cond.eval(proc)
-}
+case class ConditionalStatement(cond:AST, pos:AST, neg:AST) extends AST
 
 case class ActionLiteral(name:String) extends AST
 
@@ -443,11 +430,26 @@ case class User(name: String) extends AST with Target
 case class Team(name: String) extends AST with Target
 case class Service(name: String) extends AST with Target
 
-//case class DuringFilter(pattern: AST) extends AST
-//case class DuringLiteral(value: String) extends AST
+// Basic Ops
 
+case class EqOp(left: AST, right:AST) extends AST
+case class GtOp(left: AST, right:AST) extends AST
+case class GteOp(left: AST, right:AST) extends AST
+case class LtOp(left: AST, right:AST) extends AST
+case class LteOp(left: AST, right:AST) extends AST
+
+// MomentVal?
+//case class TimeRangeVal(value: String) extends AST
+//case class DateRangeVal(value: String) extends AST
+
+case class ImpactVal(value: Int) extends AST
+case class TagVal(value: String) extends AST
+case class TrueVal() extends AST
+case class FalseVal() extends AST
+case class NotExpr(cond: Cond) extends AST
 case class IntVal(value: Int) extends AST
-//case class Ident(name: String) extends AST
+
+case class Property(context: String, field: String) extends AST
 
 class NotificationPolicyParser extends RegexParsers {
 
@@ -458,35 +460,70 @@ class NotificationPolicyParser extends RegexParsers {
 
   def statements: Parser[Statements] = rep(statement)^^Statements
 
-  def statement: Parser[AST] = filtered_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
+  def statement: Parser[AST] = conditional_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
 
   def repeat_expr: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
     case t ~ du => Repeat(t.value, du)
   }
 
-  //expr ::= filter action target | filter { statements }
-  def filtered_expr: Parser[AST] = simple_filtered_expr | nested_filtered_expr
-
-  def simple_filtered_expr : Parser[AST] = opt(conditional) ~ action_expr ^^{
-    case Some(f) ~ a => FilteredStatement(f,a.asInstanceOf[AST])
-    case None ~ a => FilteredStatement(Conditional(True()),a.asInstanceOf[AST])
+  def conditional_expr: Parser[AST] =
+    ("if" ~> conditional <~ "then") ~
+    (statements) ~
+    ("else" ~> statements <~ "end")^^{
+    case c ~ p ~ n => ConditionalStatement(c,p,n)
   }
 
-  def nested_filtered_expr : Parser[AST] = conditional ~ ("{"~>statements<~"}")^^{
-    case f ~ s => FilteredStatement(f,s)
+  // Flow control
+  //  if          :: executes blocks of actions conditionally
+  //  wait        :: wait a set amount of time (e.g. 2h)
+  //  wait_until  :: waits until some time (e.g. 2am)
+  //  escalate    :: increases the urgency one level and repeats the policy, if already at maximum urgency then just repeats
+  //  escalate_to :: halts the policy and passes the incident to the named policy
+  //  halt        :: halts the policy, takes an optional message
+  //  abandon     :: halts the policy, takes an optional message
+  //  repeat      :: repeats the policy up to N times
+
+  // Functions to use as part of conditional flow control:
+  //  during   :: true if the current time is in the specified time-window (e.g. not 2am to 4am)
+  //  running  :: returns a duration specifying how long the policy has been executing, may be compared to another duration object (e.g. 4h)
+  //  runs     :: returns an int true the first N times through the policy, false afterwards
+
+  // Incident lifecycle
+  //  start in 'new' state
+  //  if policy exists, move to 'alerting'
+  //  if policy does not exist, move to 'open'
+  //  if policy halts early, move to 'open'
+  //  if policy abandons early or times out, move to 'abandoned'
+
+  // At any point a user can intervene and ack an incident, or just immediately archive the incident
+  // new/open -> ack -> resolve (manually opened incidents only) -> archive
+  // new/open -> ack -> archive
+  // archive -> ack
+
+  // At any point a rule can fired a Resolved Alert and resolve an incident
+  // * -> resolve (auto) -> archive
+
+  // should be able to handle suppressed notifications in a policy (subscribe rules)
+
+  // statements appearing after the repeat are assumed to execute once the alert has been acked
+
+  // any policy that ceases execution before the incident is acked, puts the incident into an "abandoned" state
+  // abandoned incidents should appear at the top of any incident dashboard, along with incidents that have been
+  // open overly long and are close to becoming abandoned
+
+  // incidents can be suppressed
+
+  def conditional: Parser[AST] = eqOp | gtOp
+
+  def eqOp: Parser[AST] = (terminal ~ "=" ~ terminal)^^{
+    case l ~ _ ~ r => EqOp(l, r)
   }
 
-  // filters: runs a set of actions that _____
-  //  once     :: executes only one time
-  //  times(N) :: executes at most N times, where N is less than the repeat times
-  //  during   :: executes in certain well-defined windows of times (e.g. not 2am to 4am)
-  //  after    :: executes only after some amount of time has passed
-  //  before   :: executes only until some amount of time has passed
-  //
-  // global variables / state
-  //  any thing in the incident, team, service
-  //  the SLA, the priority matrix, service owner
-  def conditional: Parser[Conditional] = severityFilter | tagFilter //| duringFilter
+  def gtOp: Parser[AST] = (terminal ~ ">" ~ terminal)^^{
+    case l ~ _ ~ r => GtOp(l, r)
+  }
+
+  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | property
 
   def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
@@ -520,27 +557,24 @@ class NotificationPolicyParser extends RegexParsers {
   def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
   def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
-  // e.g. sev(1); sev(1 to 4); sev(not 3); sev(HIGH)
-  def severityFilter: Parser[Conditional] = "sev" ~ "("~>sevLiteral<~")" ^^{
-    case l => Conditional(SeverityFilter(SeverityLiteral(l.value)))
-  }
+  def impactLiteral : Parser[ImpactVal] = """sev\([1-5]\)""".r^^{value => ImpactVal(value.toInt)}
 
-  //sevLiteral ::= ["1"-"5"]
-  def sevLiteral : Parser[SeverityLiteral] = """[1-5]""".r^^{value => SeverityLiteral(value.toInt)}
+  def tagLiteral : Parser[TagVal] = """tag([A-Za-z_][a-zA-Z0-9]*)""".r^^{value => TagVal(value.toString)}
 
-  def tagFilter: Parser[Conditional] = "tag" ~ "("~>tagLiteral<~")" ^^{
-    case t => Conditional(TagFilter(TagLiteral(t.value)))
-  }
-
-  def tagLiteral : Parser[TagLiteral] = """[A-Za-z_][a-zA-Z0-9]*""".r^^{value => TagLiteral(value.toString)}
-
-
-  def duringFilter: Parser[AST] = "during" ~ "("~>intLiteral<~")" ^^SeverityFilter
-
-  //intLiteral ::= ["1"-"9"] {"0"-"9"}
   def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
 
+  // global variables / state
+  //  any thing in the incident, team, service
+  //  the SLA, the priority matrix, service owner
+  def property : Parser[Property] = ("incident" | "team" | "user" | "service" | "policy") ~ "." ~ """[a-zA-Z0-9_]*""".r^? {
+    case c ~ _ ~ n => Property(c, n)
+  }
+
+  // policy.iteration :: INT = number of complete cycles through policy, starts at 0, increments after each repeat statement
+  // policy.max_iterations :: INT = total number of cycles the policy will perform, equal to 1 plus the value in the repeat statement
+  // policy.is_first_iter :: BOOL = equivaltent to "policy.iteration = 0"
+  // policy.is_last_iter :: BOOL = equivalent to "policy.iteration + 1 = policy.max_iterations"
 
   def parse(str:String) = parseAll(policy, str)
 }

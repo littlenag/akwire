@@ -26,6 +26,5 @@ class ApplicationIT extends Specification {
         contentType(home) must beSome.which(_ == "text/html")
       }
     }
-
   }
 }

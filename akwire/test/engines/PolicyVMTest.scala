@@ -168,8 +168,11 @@ class PolicyVMTest extends Specification with Mockito {
 
         val simplePolicy =
           """
-            | sev(1) call user(sev1@corp.com)
-            | sev(2) email user(sev2@corp.com)
+            | if incident.impact == SEV(1) then
+            |   call user(sev1@corp.com)
+            | else
+            |   email user(sev2@corp.com)
+            | end
             | wait 1h
             | repeat 1 times
             |
