@@ -30,7 +30,17 @@ case class Registers(val pc : Int = 0, val ws : Option[DateTime] = None)
 
 class Process(val program: Program, val incident : Incident) {
 
-  // also need a label map => map of label indexes to PC values
+  // map of labels to PC offset for that label
+  val labels = collection.mutable.Map[LBL, Int]().empty
+
+  program.instructions.zipWithIndex.foreach {
+    case (lbl:LBL, idx) =>
+      if (labels.contains(lbl)) {
+        throw new RuntimeException("Invalide byte-code -- duplicate label found: " + lbl)
+      } else {
+        labels += ((lbl, idx))
+      }
+  }
 
   val stack = new mutable.Stack[Value]
 
@@ -50,9 +60,7 @@ class Process(val program: Program, val incident : Incident) {
     value
   }
 
-  def mapLabel(label:LBL) : Int = {
-    0
-  }
+  def mapLabel(label:LBL) : Int = labels(label)
 
   def property(key: String): Value = {
     key match {
@@ -208,6 +216,11 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
           NEXT
         }
 
+      case LBL(index) => {
+        // Label's get skipped
+        NEXT
+      }
+
       case HALT() =>
         // There is no next state once the machine has halted
         None
@@ -263,14 +276,14 @@ object Compiler {
     }
   }
 
-  private def compileAST(ast:AST)(implicit labeller: LabelMaker): List[Instruction] = {
+  private def compileAST(ast:AST)(implicit labeler: LabelMaker): List[Instruction] = {
     def visit(ast:AST): List[Instruction] = {
       ast match {
         case Policy(statements, repeat_expr) => {
 
           // Extract the number of times to loop
           val max = repeat_expr match {
-            case Some(Repeat(count, _)) => count
+            case Some(Attempts(count, _)) => count
             case None => 0
           }
 
@@ -290,21 +303,20 @@ object Compiler {
             Nil
           }
 
-          val body_start = labeller.next()
-
-          val repeat_instr = repeat_expr match {
-            case Some(Repeat(count, Some(period))) =>
-              Nil
-            case Some(Repeat(count, None)) =>
+          val (repeat_instr, body_start) = repeat_expr match {
+            case Some(Attempts(count, Some(period))) =>
+              (Nil, Nil)
+            case Some(Attempts(count, None)) =>
+              val body_start = labeler.next()
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(body_start))
+              (List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(body_start)), List(body_start))
             case None =>
-              Nil
+              (Nil, Nil)
           }
 
-          ((preamble :+ body_start) ::: (body ::: counter_inc ::: repeat_instr)) :+ HALT()
+          preamble ::: body_start ::: body ::: counter_inc ::: repeat_instr ::: List(HALT())
         }
-        case Statements(exprs) => {
+        case Block(exprs) => {
           exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compileAST(x)))}
         }
         case ConditionalStatement(cond, pos, neg) => {
@@ -312,8 +324,8 @@ object Compiler {
 
           val true_branch = compileAST(pos)
 
-          val false_branch_label = labeller.next()
-          val after_label = labeller.next()
+          val false_branch_label = labeler.next()
+          val after_label = labeler.next()
 
           val false_branch = compileAST(pos)
 
@@ -330,7 +342,7 @@ object Compiler {
         case Wait(duration) => {
           List(WAIT(duration))
         }
-        case _ => Nil
+        case x => throw new RuntimeException("implement me: " + x)
       }
     }
     visit(ast)
@@ -412,20 +424,35 @@ trait Target
 
 trait Cond
 
-sealed trait AST
+sealed trait AST {
+  // type
+  // duration
+  //  wait has a definite duration
+  //  wait_until has an indefinite duration
+
+  // don't want policies that take more than 24hours to complete, may have to disallow multiple wait_until's in the same path
+  // could have a ramp up time that doesn't count...
+  // could have it so that you can't wait until after the time specified by your first wait_until
+  //   - or wait until's to have be monotonically increasing in all paths and not more than 24h?
+  //   - really can't combine wait's and wait_untils
+
+  // global variables / state
+  //  any thing in the incident, user, team, service
+  //  the SLA, the priority matrix, service owner
+
+}
 
 // By default policies don't repeat
-case class Policy(statements:Statements, repeat: Option[Repeat] = None) extends AST
+case class Policy(block:Block, attempt: Option[Attempts] = None) extends AST
 
-case class Statements(exprs:List[AST]) extends AST
+case class Block(statements:List[AST]) extends AST
 
 case class ConditionalStatement(cond:AST, pos:AST, neg:AST) extends AST
 
-case class ActionLiteral(name:String) extends AST
+// List of conditions and their statements
+case class ConditionalList(blocks:List[(AST, AST)], neg:AST) extends AST
 
-// global variables / state
-//  any thing in the incident, user, team, service
-//  the SLA, the priority matrix, service owner
+case class ActionLiteral(name:String) extends AST
 
 // Specific actions
 case class Call(target: Target) extends AST
@@ -434,7 +461,8 @@ case class Email(target: Target) extends AST
 
 case class Wait(duration: Duration) extends AST
 
-case class Repeat(count:Int, period: Option[Duration]) extends AST
+// count must be > 1, period must be >= longest path through the policy
+case class Attempts(count:Int, period: Option[Duration]) extends AST
 
 // Generic actions
 case class Page(target: Target) extends AST
@@ -466,69 +494,97 @@ case class NotExpr(cond: Cond) extends AST
 case class IntVal(value: Int) extends AST
 case class BooleanVal(value: Boolean) extends AST
 
+case class UnitVal() extends AST
+
+// Representing an empty blocks of statements
+case class Empty() extends AST
+
 case class Property(context: String, field: String) extends AST
+
+// Flow control:
+//  attempt     :: executes the policy up to N times, may only occur once at the start of the policy, N must be > 1, optional duration
+//  if          :: executes blocks of actions conditionally
+//  wait        :: wait a set amount of time (e.g. 2h)
+//  wait_until  :: waits until some time (e.g. 2am)
+//  escalate    :: increases the urgency one level and repeats the policy, if already at maximum urgency then just repeats
+//  escalate_to :: halts the policy and passes the incident to the named policy
+//  halt        :: halts the policy, takes an optional message
+//  abandon     :: halts the policy, takes an optional message
+//  next        :: ? start execution of the next iteration, if no iterations left then abandon's the incident (should be a path dependent statement)
+//  repeat?
+
+// Functions to use as part of conditional flow control:
+//  during   :: true if the current time is in the specified time-window (e.g. not 2am to 4am)
+//  running  :: returns a duration specifying how long the policy has been executing, may be compared to another duration object (e.g. 4h)
+//  runs     :: returns an int true the first N times through the policy, false afterwards
+//  regex    :: returns true if the regex matches
+//
+
+// Incident lifecycle
+//  start in 'new' state
+//  if policy exists, move to 'alerting'
+//  if policy does not exist, move to 'open'
+//  if policy halts early, move to 'open'
+//  if policy abandons early or times out, move to 'abandoned'
+
+// At any point a user can intervene and ack an incident, or just immediately archive the incident
+// new/open -> ack -> resolve (manually opened incidents only) -> archive
+// new/open -> ack -> archive
+// archive -> ack
+
+// At any point a rule can fired a Resolved Alert and resolve an incident
+// * -> resolve (auto) -> archive
+
+// should be able to handle suppressed notifications in a policy (subscribe rules)
+
+// statements appearing after the repeat are assumed to execute once the alert has been acked
+
+// any policy that ceases execution before the incident is acked, puts the incident into an "abandoned" state
+// abandoned incidents should appear at the top of any incident dashboard, along with incidents that have been
+// open overly long and are close to becoming abandoned
+
+// incidents can be suppressed
 
 class NotificationPolicyParser extends RegexParsers {
 
   // statements ::= expr +
-  def policy: Parser[AST] = statements ~ opt(repeat) ^^ {
-    case s ~ re => Policy(s, re)
+  def policy: Parser[AST] = opt(attempt_st) ~ statements ^^ {
+    case at ~ body => Policy(body, at)
   }
 
-  def statements: Parser[Statements] = rep(statement)^^Statements
+  def statements: Parser[Block] = rep(statement)^^Block
 
-  def statement: Parser[AST] = conditional_expr | wait_expr // | next_expr | halt_expr | escalate | invoke schedule/policy
+  def statement: Parser[AST] = action_st | wait_st | cond_1 | cond_2 | cond_n // | next_st | halt_st | escalate | invoke schedule/policy
 
-  def repeat: Parser[Repeat] = (("repeat" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
-    case t ~ du => Repeat(t.value, du)
+  def attempt_st: Parser[Attempts] = (("attempt" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
+    case t ~ du if t.value > 1 => Attempts(t.value, du)
   }
 
-  def conditional_expr: Parser[AST] =
+  def cond_1: Parser[AST] =
+    ("if" ~> conditional <~ "then") ~ (statements <~ "end")^^{
+      case c ~ p => ConditionalStatement(c,p,UnitVal())
+  }
+
+  def cond_2: Parser[AST] =
     ("if" ~> conditional <~ "then") ~
-    (statements) ~
+    statements ~
     ("else" ~> statements <~ "end")^^{
     case c ~ p ~ n => ConditionalStatement(c,p,n)
   }
 
-  // Flow control
-  //  if          :: executes blocks of actions conditionally
-  //  wait        :: wait a set amount of time (e.g. 2h)
-  //  wait_until  :: waits until some time (e.g. 2am)
-  //  escalate    :: increases the urgency one level and repeats the policy, if already at maximum urgency then just repeats
-  //  escalate_to :: halts the policy and passes the incident to the named policy
-  //  halt        :: halts the policy, takes an optional message
-  //  abandon     :: halts the policy, takes an optional message
-  //  repeat      :: repeats the policy up to N times
-
-  // Functions to use as part of conditional flow control:
-  //  during   :: true if the current time is in the specified time-window (e.g. not 2am to 4am)
-  //  running  :: returns a duration specifying how long the policy has been executing, may be compared to another duration object (e.g. 4h)
-  //  runs     :: returns an int true the first N times through the policy, false afterwards
-
-  // Incident lifecycle
-  //  start in 'new' state
-  //  if policy exists, move to 'alerting'
-  //  if policy does not exist, move to 'open'
-  //  if policy halts early, move to 'open'
-  //  if policy abandons early or times out, move to 'abandoned'
-
-  // At any point a user can intervene and ack an incident, or just immediately archive the incident
-  // new/open -> ack -> resolve (manually opened incidents only) -> archive
-  // new/open -> ack -> archive
-  // archive -> ack
-
-  // At any point a rule can fired a Resolved Alert and resolve an incident
-  // * -> resolve (auto) -> archive
-
-  // should be able to handle suppressed notifications in a policy (subscribe rules)
-
-  // statements appearing after the repeat are assumed to execute once the alert has been acked
-
-  // any policy that ceases execution before the incident is acked, puts the incident into an "abandoned" state
-  // abandoned incidents should appear at the top of any incident dashboard, along with incidents that have been
-  // open overly long and are close to becoming abandoned
-
-  // incidents can be suppressed
+  def cond_n: Parser[AST] =
+    ("if" ~> conditional <~ "then") ~ statements ~
+    rep(("elif" ~> conditional <~ "then") ~ statements) ~
+    (("else" ~> statements <~ "end") | "end")^^{
+      case c1 ~ b1 ~ blocks ~ (otherwise:AST) =>
+        // Destructured into pairs of conditions and their statements
+        val l = for (block <- blocks) yield (block._1, block._2)
+        ConditionalList(List((c1,b1)) ::: l,otherwise)
+      case c1 ~ b1 ~ blocks ~ (end:String) =>
+        // Destructured into pairs of conditions and their statements
+        val l = for (block <- blocks) yield (block._1, block._2)
+        ConditionalList(List((c1,b1)) ::: l,UnitVal())
+  }
 
   def conditional: Parser[AST] = eqOp | gtOp | logic_op | compare_op | terminal
 
@@ -542,7 +598,7 @@ class NotificationPolicyParser extends RegexParsers {
 
   def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property
 
-  def wait_expr: Parser[AST] = ("wait" ~> duration)^^{
+  def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
   }
 
@@ -569,7 +625,7 @@ class NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
-  def action_expr: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
+  def action_st: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
     case "email" ~ t => Email(t)
     case "call" ~ t => Call(t)
     case "text" ~ t => Text(t)
@@ -617,7 +673,6 @@ class NotificationPolicyParser extends RegexParsers {
     case "true" => BooleanVal(true)
     case "false" => BooleanVal(false)
   }
-
 
   def parse(str:String) = parseAll(policy, str)
 }

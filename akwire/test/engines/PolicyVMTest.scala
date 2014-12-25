@@ -108,11 +108,11 @@ class PolicyVMTest extends Specification with Mockito {
           None
         )
 
+        //            | attempt 2 times
         val simplePolicy =
           """
             | email user(mark@corp.com)
             | wait 1h
-            | repeat 1 times
             |
           """.stripMargin
 
@@ -126,7 +126,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         program.instructions must not beEmpty
 
-        program.instructions must have size(15)
+        program.instructions must have size(16)
 
         val listener = new TestListener
 
@@ -168,12 +168,12 @@ class PolicyVMTest extends Specification with Mockito {
 
         //  during(2am to 4am) email user(allincidents@corp.com, rollup)
 
+        // | attempt 2 times every 1h
         val simplePolicy =
           """
-            | sev = 1 call user(sev1@corp.com)
-            | sev = 2 email user(sev2@corp.com)
-            | wait 1h
-            | repeat 1 times
+            | if (incident.impact = SEV(1) then
+            |   call user(sev1@corp.com)
+            | end
             |
           """.stripMargin
 
@@ -227,6 +227,7 @@ class PolicyVMTest extends Specification with Mockito {
           None
         )
 
+        // | attempt 2 times
         val simplePolicy =
           """
             | if incident.impact == SEV(1) then
@@ -235,8 +236,6 @@ class PolicyVMTest extends Specification with Mockito {
             |   email user(sev2@corp.com)
             | end
             | wait 1h
-            | repeat 1 times
-            |
           """.stripMargin
 
         val programTry = Compiler.compile(simplePolicy)
