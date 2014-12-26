@@ -21,6 +21,18 @@ object Impact extends Enumeration {
   val SEV_3 = Value("SEV-3")     // Something went wrong, and the system may or may not continue.
   val SEV_2 = Value("SEV-2")     // Something went wrong, and the system cannot continue.
   val SEV_1 = Value("SEV-1")     // Something went wrong, and the system cannot continue.
+
+  // these feel like types/levels for alerts
+  // DEBUG
+  // INFO
+  // WARNING
+  // ERROR
+  // CRITICAL
+
+  //
+
+  // http://wiki.en.it-processmaps.com/index.php/Checklist_Incident_Priority
+
 }
 
 // urgency is something that humans have to know about

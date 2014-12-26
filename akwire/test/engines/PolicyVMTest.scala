@@ -171,7 +171,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times every 1h
         val simplePolicy =
           """
-            | if (incident.impact = SEV(1) then
+            | if incident.impact = I(1) then
             |   call user(sev1@corp.com)
             | end
             |
@@ -230,7 +230,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times
         val simplePolicy =
           """
-            | if incident.impact == SEV(1) then
+            | if incident.impact = I(1) then
             |   call user(sev1@corp.com)
             | else
             |   email user(sev2@corp.com)

@@ -40,6 +40,7 @@ class Process(val program: Program, val incident : Incident) {
       } else {
         labels += ((lbl, idx))
       }
+    case _ =>
   }
 
   val stack = new mutable.Stack[Value]
@@ -384,16 +385,6 @@ object InstructionSet {
   case class MUL() extends Instruction
   case class DIV() extends Instruction
 
-  case class LT(l:AST, r:AST) extends AST    // <
-  case class LTE(l:AST, r:AST) extends AST   // <=
-  case class EQ(l:AST, r:AST) extends AST    // =
-  case class GT(l:AST, r:AST) extends AST    // >
-  case class GTE(l:AST, r:AST) extends AST   // >=
-
-  case class AND(l:AST, r:AST) extends AST   // a and b
-  case class OR(l:AST, r:AST) extends AST    // a or b
-  case class NOT(c:AST) extends AST          // ! a
-
   // Logic OPS
   case class CMP() extends Instruction  // [a b <], -1 if a is larger, 0 if equal, 1 if b is larger
 
@@ -482,6 +473,10 @@ case class GteOp(left: AST, right:AST) extends AST
 case class LtOp(left: AST, right:AST) extends AST
 case class LteOp(left: AST, right:AST) extends AST
 
+case class AndOp(l:AST, r:AST) extends AST   // a and b
+case class OrOp(l:AST, r:AST) extends AST    // a or b
+case class NotOp(c:AST) extends AST          // ! a
+
 // MomentVal?
 //case class TimeRangeVal(value: String) extends AST
 //case class DateRangeVal(value: String) extends AST
@@ -561,20 +556,20 @@ class NotificationPolicyParser extends RegexParsers {
   }
 
   def cond_1: Parser[AST] =
-    ("if" ~> conditional <~ "then") ~ (statements <~ "end")^^{
+    ("if" ~> expr <~ "then") ~ (statements <~ "end")^^{
       case c ~ p => ConditionalStatement(c,p,UnitVal())
   }
 
   def cond_2: Parser[AST] =
-    ("if" ~> conditional <~ "then") ~
+    ("if" ~> expr <~ "then") ~
     statements ~
     ("else" ~> statements <~ "end")^^{
     case c ~ p ~ n => ConditionalStatement(c,p,n)
   }
 
   def cond_n: Parser[AST] =
-    ("if" ~> conditional <~ "then") ~ statements ~
-    rep(("elif" ~> conditional <~ "then") ~ statements) ~
+    ("if" ~> expr <~ "then") ~ statements ~
+    rep(("elif" ~> expr <~ "then") ~ statements) ~
     (("else" ~> statements <~ "end") | "end")^^{
       case c1 ~ b1 ~ blocks ~ (otherwise:AST) =>
         // Destructured into pairs of conditions and their statements
@@ -586,37 +581,35 @@ class NotificationPolicyParser extends RegexParsers {
         ConditionalList(List((c1,b1)) ::: l,UnitVal())
   }
 
-  def conditional: Parser[AST] = eqOp | gtOp | logic_op | compare_op | terminal
+  def expr: Parser[AST] = logic_op | compare_op | terminal
 
-  def eqOp: Parser[AST] = (terminal ~ "=" ~ terminal)^^{
-    case l ~ _ ~ r => EqOp(l, r)
-  }
+  def terminal: Parser[AST] = factor
 
-  def gtOp: Parser[AST] = (terminal ~ ">" ~ terminal)^^{
-    case l ~ _ ~ r => GtOp(l, r)
-  }
-
-  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property
+  def factor: Parser[AST] = ( "(" ~> expr <~ ")") | impactLiteral | tagLiteral | intLiteral | boolLiteral | property
 
   def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
   }
 
-  def logic_op: Parser[AST] = and | or | not
+  def logic_op: Parser[AST] = andOp | orOp | notOp
 
-  def and: Parser[AST] = (conditional ~ ("and" | "&&") ~ conditional)^^{case l~_~r => AND(l,r)}
-  def or: Parser[AST] = (conditional ~ ("or" | "||") ~ conditional)^^{case l~_~r => OR(l,r)}
-  def not: Parser[AST] = ("!" ~> conditional)^^{case c => NOT(c)}
+  def condOp: Parser[AST] = chainl1(terminal,
+    "<"^^{op => (left:AST, right:AST) => LtOp(left, right)}
+  )
+
+  def andOp: Parser[AST] = (terminal ~ "&&" ~ expr)^^{case l~_~r => AndOp(l,r)}
+  def orOp: Parser[AST] = (terminal ~ "||" ~ expr)^^{case l~_~r => OrOp(l,r)}
+  def notOp: Parser[AST] = ("!" ~> expr)^^{case c => NotOp(c)}
 
   def compare_op: Parser[AST] = lt | gt | lte | gte | eq
 
-  def lt: Parser[AST] = (conditional ~ "<" ~ conditional)^^{case l~_~r => LT(l,r)}
-  def lte: Parser[AST] = (conditional ~ "<=" ~ conditional)^^{case l~_~r => LTE(l,r)}
+  def lt: Parser[AST] = (terminal ~ "<" ~ terminal)^^{case l~_~r => LtOp(l,r)}
+  def lte: Parser[AST] = (terminal ~ "<=" ~ terminal)^^{case l~_~r => LteOp(l,r)}
 
-  def eq: Parser[AST] = (conditional ~ "=" ~ conditional)^^{case l~_~r => EQ(l,r)}
+  def eq: Parser[AST] = (terminal ~ "=" ~ terminal)^^{case l~_~r => EqOp(l,r)}
 
-  def gt: Parser[AST] = (conditional ~ ">" ~ conditional)^^{case l~_~r => GT(l,r)}
-  def gte: Parser[AST] = (conditional ~ ">=" ~ conditional)^^{case l~_~r => GTE(l,r)}
+  def gt: Parser[AST] = (terminal ~ ">" ~ terminal)^^{case l~_~r => GtOp(l,r)}
+  def gte: Parser[AST] = (terminal ~ ">=" ~ terminal)^^{case l~_~r => GteOp(l,r)}
 
   def duration: Parser[Duration] = intLiteral ~ ("s" | "m" | "h" | "d") ^^ {
     case v ~ "s" => Duration.standardSeconds(v.value)
@@ -642,9 +635,9 @@ class NotificationPolicyParser extends RegexParsers {
   def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
   def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
-  def impactLiteral : Parser[ImpactVal] = """sev\([1-5]\)""".r^^{value => ImpactVal(value.toInt)}
+  def impactLiteral : Parser[ImpactVal] = """I\([1-5]\)""".r^^{value => ImpactVal(value.toInt)}
 
-  def tagLiteral : Parser[TagVal] = """tag([A-Za-z_][a-zA-Z0-9]*)""".r^^{value => TagVal(value.toString)}
+  def tagLiteral : Parser[TagVal] = """tag\([A-Za-z_][a-zA-Z0-9]*\)""".r^^{value => TagVal(value.toString)}
 
   def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
