@@ -19,14 +19,14 @@ class PolicyVMTest extends Specification with Mockito {
 
     class TestListener extends Listener {
       val latched = collection.mutable.MutableList.empty[Instruction]
-      val invokations = collection.mutable.MutableList.empty[Instruction]
+      val invocations = collection.mutable.MutableList.empty[Instruction]
 
       override def latch(instruction: Instruction): Unit = {
         println(s"$instruction")
         latched += instruction
 
         if (instruction.isInstanceOf[Invokation]) {
-          invokations += instruction
+          invocations += instruction
         }
       }
     }
@@ -85,7 +85,7 @@ class PolicyVMTest extends Specification with Mockito {
         // load the process, run to completion
         while (proc.tick()) {}
 
-        listener.invokations must have size(1)
+        listener.invocations must have size(1)
         listener.latched must have size(3)
       }
     }
@@ -148,7 +148,7 @@ class PolicyVMTest extends Specification with Mockito {
         }
 
         //ticks must be equalTo(3)
-        listener.invokations must have size(2)
+        listener.invocations must have size(2)
         listener.latched must have size(26)
       }
     }
@@ -171,7 +171,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times every 1h
         val simplePolicy =
           """
-            | if incident.impact = I(1) then
+            | if incident.impact == I(1) then
             |   call user(sev1@corp.com)
             | end
             |
@@ -209,7 +209,7 @@ class PolicyVMTest extends Specification with Mockito {
         }
 
         //ticks must be equalTo(3)
-        listener.invokations must have size(2)
+        listener.invocations must have size(2)
         listener.latched must have size(26)
       }
     }
@@ -230,7 +230,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times
         val simplePolicy =
           """
-            | if incident.impact = I(1) then
+            | if incident.impact == I(1) then
             |   call user(sev1@corp.com)
             | else
             |   email user(sev2@corp.com)

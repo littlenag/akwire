@@ -581,11 +581,9 @@ class NotificationPolicyParser extends RegexParsers {
         ConditionalList(List((c1,b1)) ::: l,UnitVal())
   }
 
-  def expr: Parser[AST] = logic_op | compare_op | terminal
+  def expr: Parser[AST] = compare_op | logic_op | terminal | ( "(" ~> expr <~ ")")
 
-  def terminal: Parser[AST] = factor
-
-  def factor: Parser[AST] = ( "(" ~> expr <~ ")") | impactLiteral | tagLiteral | intLiteral | boolLiteral | property
+  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property
 
   def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
@@ -597,8 +595,8 @@ class NotificationPolicyParser extends RegexParsers {
     "<"^^{op => (left:AST, right:AST) => LtOp(left, right)}
   )
 
-  def andOp: Parser[AST] = (terminal ~ "&&" ~ expr)^^{case l~_~r => AndOp(l,r)}
-  def orOp: Parser[AST] = (terminal ~ "||" ~ expr)^^{case l~_~r => OrOp(l,r)}
+  def andOp: Parser[AST] = (expr ~ "&&" ~ expr)^^{case l~_~r => AndOp(l,r)}
+  def orOp: Parser[AST] = (expr ~ "||" ~ expr)^^{case l~_~r => OrOp(l,r)}
   def notOp: Parser[AST] = ("!" ~> expr)^^{case c => NotOp(c)}
 
   def compare_op: Parser[AST] = lt | gt | lte | gte | eq
@@ -606,7 +604,8 @@ class NotificationPolicyParser extends RegexParsers {
   def lt: Parser[AST] = (terminal ~ "<" ~ terminal)^^{case l~_~r => LtOp(l,r)}
   def lte: Parser[AST] = (terminal ~ "<=" ~ terminal)^^{case l~_~r => LteOp(l,r)}
 
-  def eq: Parser[AST] = (terminal ~ "=" ~ terminal)^^{case l~_~r => EqOp(l,r)}
+  def eq: Parser[AST] = (terminal ~ "==" ~ terminal)^^{case l~_~r => EqOp(l,r)}
+  def notEq: Parser[AST] = (terminal ~ "!=" ~ terminal)^^{case l~_~r => NotOp(EqOp(l,r))}
 
   def gt: Parser[AST] = (terminal ~ ">" ~ terminal)^^{case l~_~r => GtOp(l,r)}
   def gte: Parser[AST] = (terminal ~ ">=" ~ terminal)^^{case l~_~r => GteOp(l,r)}
@@ -635,7 +634,7 @@ class NotificationPolicyParser extends RegexParsers {
   def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
   def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
-  def impactLiteral : Parser[ImpactVal] = """I\([1-5]\)""".r^^{value => ImpactVal(value.toInt)}
+  def impactLiteral : Parser[ImpactVal] = ("I"~>"("~>"""[1-5]""".r<~")")^^{value => ImpactVal(value.toInt)}
 
   def tagLiteral : Parser[TagVal] = """tag\([A-Za-z_][a-zA-Z0-9]*\)""".r^^{value => TagVal(value.toString)}
 
