@@ -16,11 +16,11 @@ object Impact extends Enumeration {
 //  val CLEAR = Value("CLEAR")   // Everything is OK and if anything was wrong in the past its now fixed. Will resolve active situations when received.
 //  val INFO = Value("INFO")     // Purely informational in nature, may or may not indicate that anything has gone wrong.
 
-  val SEV_5 = Value("SEV-5")     // Something small went wrong, and the system will continue operating.
-  val SEV_4 = Value("SEV-4")     // Something larger went wrong, and the system will continue operating.
-  val SEV_3 = Value("SEV-3")     // Something went wrong, and the system may or may not continue.
-  val SEV_2 = Value("SEV-2")     // Something went wrong, and the system cannot continue.
-  val SEV_1 = Value("SEV-1")     // Something went wrong, and the system cannot continue.
+  val I_5 = Value("I-5")     // Something small went wrong, and the system will continue operating.
+  val I_4 = Value("I-4")     // Something larger went wrong, and the system will continue operating.
+  val I_3 = Value("I-3")     // Something went wrong, and the system may or may not continue.
+  val I_2 = Value("I-2")     // Something went wrong, and the system cannot continue.
+  val I_1 = Value("I-1")     // Something went wrong, and the system cannot continue.
 
   // these feel like types/levels for alerts
   // DEBUG
@@ -79,7 +79,7 @@ trait RuleJson {
       ((__ \ "active").read[Boolean] orElse Reads.pure(true)) ~
 //      (__ \ "meta").readNullable[JsObject] ~
 //      (__ \ "sop").readNullable[String] ~
-      ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.SEV_5))
+      ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.I_5))
   )(Rule.apply _)
 }
 
@@ -93,7 +93,7 @@ case class Rule( id: ObjectId,
 //                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
 //                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
 
-                 impact: Impact.Value = Impact.SEV_5
+                 impact: Impact.Value = Impact.I_5
 
 /*
                  urgency: Urgency.Value = Urgency.NONE,

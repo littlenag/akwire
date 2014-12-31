@@ -193,25 +193,60 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
         stack.push(IntValue(a + b))
         NEXT
 
-      case CMP() =>
-        val a = stack.pop().asInstanceOf[IntValue].value
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val cmp = b.compareTo(a)
-        println(s"a $a b $b c $cmp")
-        stack.push(IntValue(cmp))
+      case EQB() =>
+        val a = stack.pop()
+        val b = stack.pop()
+
+        //println(s"a $a b $b")
+
+        (a, b) match {
+          case (x:BooleanValue, y:BooleanValue) =>
+            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
+          case (m,n) =>
+            throw new RuntimeException(s"Expected two BooleanVals: Got ${m.getClass} ${n.getClass}")
+        }
+
         NEXT
 
-      case JGT(lbl) =>
-        val a = stack.pop().asInstanceOf[IntValue].value
-        if (a > 0) {
+      case EQI() =>
+        val a = stack.pop()
+        val b = stack.pop()
+
+        //println(s"a $a b $b")
+
+        (a, b) match {
+          case (x:IntValue, y:IntValue) =>
+            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
+          case (m,n) =>
+            throw new RuntimeException(s"Expected two IntVals: Got ${m.getClass} ${n.getClass}")
+        }
+
+        NEXT
+
+      case EQS() =>
+        val a = stack.pop()
+        val b = stack.pop()
+
+        //println(s"a $a b $b")
+
+        (a, b) match {
+          case (x:StringValue, y:StringValue) =>
+            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
+          case (m,n) =>
+            throw new RuntimeException(s"Expected two StringVals: Got ${m.getClass} ${n.getClass}")
+        }
+
+        NEXT
+
+      case JT(lbl) =>
+        if (stack.pop().asInstanceOf[BooleanValue].value) {
           Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
         }
 
-      case JLT(lbl) =>
-        val a = stack.pop().asInstanceOf[IntValue].value
-        if (a < 0) {
+      case JF(lbl) =>
+        if (!stack.pop().asInstanceOf[BooleanValue].value) {
           Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
@@ -226,7 +261,7 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
         // There is no next state once the machine has halted
         None
       case inst =>
-        throw new RuntimeException("unimplemented: " + inst)
+        throw new RuntimeException("[vm] unimplemented: " + inst)
     }
 
     listener.postTick(instruction)
@@ -247,8 +282,8 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 object Compiler {
   import InstructionSet._
 
-  val VAR_CUR_COUNT = "count"
-  val VAR_MAX_REPEAT = "max"
+  val VAR_CUR_ITER = "cur_iter"
+  val VAR_MAX_ITER = "max_iter"
 
   val parser = new NotificationPolicyParser
 
@@ -291,7 +326,7 @@ object Compiler {
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
             // -1 since the first time through shouldn't contribute
-            List(PUSH(IntValue(-1)), ST_VAR(VAR_CUR_COUNT), PUSH(IntValue(max)), ST_VAR(VAR_MAX_REPEAT))
+            List(PUSH(IntValue(-1)), ST_VAR(VAR_CUR_ITER), PUSH(IntValue(max)), ST_VAR(VAR_MAX_ITER))
           } else {
             Nil
           }
@@ -299,7 +334,7 @@ object Compiler {
           val body = compileAST(statements)
 
           val counter_inc = if (max > 0) {
-            List(LD_VAR(VAR_CUR_COUNT), PUSH(IntValue(1)), ADD(), ST_VAR(VAR_CUR_COUNT))
+            List(LD_VAR(VAR_CUR_ITER), PUSH(IntValue(1)), ADD(), ST_VAR(VAR_CUR_ITER))
           } else {
             Nil
           }
@@ -310,7 +345,7 @@ object Compiler {
             case Some(Attempts(count, None)) =>
               val body_start = labeler.next()
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              (List(LD_VAR(VAR_CUR_COUNT), LD_VAR(VAR_MAX_REPEAT), CMP(), JLT(body_start)), List(body_start))
+              (List(LD_VAR(VAR_CUR_ITER), LD_VAR(VAR_MAX_ITER), LT(), JT(body_start)), List(body_start))
             case None =>
               (Nil, Nil)
           }
@@ -343,7 +378,27 @@ object Compiler {
         case Wait(duration) => {
           List(WAIT(duration))
         }
-        case x => throw new RuntimeException("implement me: " + x)
+
+        case EqOp(l,r) => {
+          // FIXME check the types of these expressions!
+          val l_branch = compileAST(l)
+          val r_branch = compileAST(r)
+
+          l_branch ::: r_branch ::: List(EQI())
+        }
+
+        case NotOp(op) => {
+          // FIXME check the types of these expressions!
+          val branch = compileAST(op)
+
+          branch ::: List(NEG())
+        }
+
+        case Property(context, field) =>
+
+          List(LD_VAR(context))
+
+        case x => throw new RuntimeException("[compiler] implement me: " + x)
       }
     }
     visit(ast)
@@ -385,12 +440,19 @@ object InstructionSet {
   case class MUL() extends Instruction
   case class DIV() extends Instruction
 
-  // Logic OPS
-  case class CMP() extends Instruction  // [a b <], -1 if a is larger, 0 if equal, 1 if b is larger
+  // Expects two Int values on the stack, pushes a boolean
+  case class GT() extends Instruction   // greater than
+  case class GTE() extends Instruction  // greater than / equal
+  case class LT() extends Instruction   // less than
+  case class LTE() extends Instruction  // less than / equal
 
-  case class JGT(to : LBL) extends Instruction  // greater than
-  case class JLT(to : LBL) extends Instruction  // less than
-  case class JEQ(to : LBL) extends Instruction  // equal to
+  // Equal To: pops top two values, pushes a BooleanValue
+  case class EQI() extends Instruction  // IntValue
+  case class EQS() extends Instruction  // StringValue
+  case class EQB() extends Instruction  // BooleanValue
+
+  // Negate - flips a boolean value
+  case class NEG() extends Instruction
 
   // Jump if top-stack value is FALSE
   case class JF(to : LBL) extends Instruction
