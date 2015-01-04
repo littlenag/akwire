@@ -108,9 +108,9 @@ class PolicyVMTest extends Specification with Mockito {
           None
         )
 
-        //            | attempt 2 times
         val simplePolicy =
           """
+            | attempt 2 times
             | email user(mark@corp.com)
             | wait 1h
             |
@@ -149,7 +149,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         //ticks must be equalTo(3)
         listener.invocations must have size(2)
-        listener.latched must have size(26)
+        listener.latched must have size(28)
       }
     }
 
@@ -187,7 +187,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         program.instructions must not beEmpty
 
-        program.instructions must have size(15)
+        program.instructions must have size(10)
 
         val listener = new TestListener
 
@@ -209,7 +209,7 @@ class PolicyVMTest extends Specification with Mockito {
         }
 
         //ticks must be equalTo(3)
-        listener.invocations must have size(2)
+        listener.invocations must have size(1)
         listener.latched must have size(26)
       }
     }

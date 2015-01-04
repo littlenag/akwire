@@ -5,7 +5,7 @@ package engines
 
 import engines.InstructionSet._
 import engines.VM._
-import models.Incident
+import models.{Impact, Incident}
 import org.joda.time.{DateTime, Duration}
 
 import scala.collection.mutable
@@ -51,8 +51,12 @@ class Process(val program: Program, val incident : Incident) {
   private val variables = collection.mutable.Map[String, Value]().empty
 
   def getVar(key: String): Value = {
-    variables.get(key).getOrElse {
-      throw new Exception("symbol'%s' not found".format(key))
+    if (key.startsWith("incident.")) {
+      property(key)
+    } else {
+      variables.get(key).getOrElse {
+        throw new Exception("var '%s' not found".format(key))
+      }
     }
   }
 
@@ -63,9 +67,9 @@ class Process(val program: Program, val incident : Incident) {
 
   def mapLabel(label:LBL) : Int = labels(label)
 
-  def property(key: String): Value = {
+  private def property(key: String): Value = {
     key match {
-      case "incident.severity" => IntValue(incident.impact.id)
+      case "incident.impact" => MiscValue(incident.impact)
       case _ => throw new Exception(s"Runtime Error: property '$key' not found")
     }
   }
@@ -96,6 +100,10 @@ object VM {
   }
 
   case class BooleanValue(value: Boolean) extends Value {
+    override def toString() = value.toString
+  }
+
+  case class MiscValue(value: Any) extends Value {
     override def toString() = value.toString
   }
 
@@ -188,54 +196,58 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
         NEXT
 
       case ADD() =>
-        val a = stack.pop().asInstanceOf[IntValue].value
         val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
         stack.push(IntValue(a + b))
         NEXT
 
-      case EQB() =>
-        val a = stack.pop()
-        val b = stack.pop()
-
-        //println(s"a $a b $b")
-
-        (a, b) match {
-          case (x:BooleanValue, y:BooleanValue) =>
-            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
-          case (m,n) =>
-            throw new RuntimeException(s"Expected two BooleanVals: Got ${m.getClass} ${n.getClass}")
-        }
-
+      case SUB() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(IntValue(a - b))
         NEXT
 
-      case EQI() =>
-        val a = stack.pop()
-        val b = stack.pop()
-
-        //println(s"a $a b $b")
-
-        (a, b) match {
-          case (x:IntValue, y:IntValue) =>
-            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
-          case (m,n) =>
-            throw new RuntimeException(s"Expected two IntVals: Got ${m.getClass} ${n.getClass}")
-        }
-
+      case MUL() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(IntValue(a * b))
         NEXT
 
-      case EQS() =>
+      case DIV() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(IntValue(a / b))
+        NEXT
+
+      case GT() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(BooleanValue(a > b))
+        NEXT
+
+      case GTE() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(BooleanValue(a >= b))
+        NEXT
+
+      case LT() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(BooleanValue(a < b))
+        NEXT
+
+      case LTE() =>
+        val b = stack.pop().asInstanceOf[IntValue].value
+        val a = stack.pop().asInstanceOf[IntValue].value
+        stack.push(BooleanValue(a <= b))
+        NEXT
+
+      case EQ() =>
         val a = stack.pop()
         val b = stack.pop()
 
-        //println(s"a $a b $b")
-
-        (a, b) match {
-          case (x:StringValue, y:StringValue) =>
-            stack.push(BooleanValue(x.value.compareTo(y.value) == 0))
-          case (m,n) =>
-            throw new RuntimeException(s"Expected two StringVals: Got ${m.getClass} ${n.getClass}")
-        }
-
+        stack.push(BooleanValue(a == b))
         NEXT
 
       case JT(lbl) =>
@@ -325,8 +337,7 @@ object Compiler {
 
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
-            // -1 since the first time through shouldn't contribute
-            List(PUSH(IntValue(-1)), ST_VAR(VAR_CUR_ITER), PUSH(IntValue(max)), ST_VAR(VAR_MAX_ITER))
+            List(PUSH(IntValue(0)), ST_VAR(VAR_CUR_ITER), PUSH(IntValue(max)), ST_VAR(VAR_MAX_ITER))
           } else {
             Nil
           }
@@ -380,23 +391,34 @@ object Compiler {
         }
 
         case EqOp(l,r) => {
-          // FIXME check the types of these expressions!
           val l_branch = compileAST(l)
           val r_branch = compileAST(r)
 
-          l_branch ::: r_branch ::: List(EQI())
+          l_branch ::: r_branch ::: List(EQ())
         }
 
         case NotOp(op) => {
-          // FIXME check the types of these expressions!
-          val branch = compileAST(op)
-
-          branch ::: List(NEG())
+          compileAST(op) ::: List(NEG())
         }
 
         case Property(context, field) =>
+          List(LD_VAR(context + "." + field))
 
-          List(LD_VAR(context))
+        case ImpactVal(n) => {
+          List(PUSH(MiscValue(Impact(n))))
+        }
+
+        case Call(target) => {
+          List(CALL(target))
+        }
+
+        case Email(target) => {
+          List(EMAIL(target))
+        }
+
+        case Text(target) => {
+          List(TEXT(target))
+        }
 
         case x => throw new RuntimeException("[compiler] implement me: " + x)
       }
@@ -447,9 +469,7 @@ object InstructionSet {
   case class LTE() extends Instruction  // less than / equal
 
   // Equal To: pops top two values, pushes a BooleanValue
-  case class EQI() extends Instruction  // IntValue
-  case class EQS() extends Instruction  // StringValue
-  case class EQB() extends Instruction  // BooleanValue
+  case class EQ() extends Instruction
 
   // Negate - flips a boolean value
   case class NEG() extends Instruction
@@ -507,7 +527,7 @@ case class ConditionalList(blocks:List[(AST, AST)], neg:AST) extends AST
 
 case class ActionLiteral(name:String) extends AST
 
-// Specific actions
+// Specific actions, probably want to abstract the method out, more like a function call
 case class Call(target: Target) extends AST
 case class Text(target: Target) extends AST
 case class Email(target: Target) extends AST
@@ -601,6 +621,8 @@ case class Property(context: String, field: String) extends AST
 // open overly long and are close to becoming abandoned
 
 // incidents can be suppressed
+
+// base the grammar on java: https://github.com/antlr/grammars-v4/blob/master/java/Java.g4
 
 class NotificationPolicyParser extends RegexParsers {
 
