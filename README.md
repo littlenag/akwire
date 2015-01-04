@@ -192,3 +192,36 @@ Environmental:
  - HVAC
  - PDU
  - Temp/Humidity
+
+
+================
+
+more notes
+
+metric engine : {
+  db/persistence : {
+    charts, dashboards (i.e. visualizations)
+    reports, trending
+    broad analytics
+  }
+  
+  alert engine : {
+    incidents (persistant status dashboard)
+    notifications (for waking folks up)
+  }
+}
+
+this may have been the flow for metrics and events
+
+alerts
+incidents
+notifications
+—
+want a management story for all three
+
+Notification Routing
+------
+Team: 
+level: App, hw, vm, net
+Location
+
