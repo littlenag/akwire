@@ -427,6 +427,26 @@ object Compiler {
   }
 }
 
+object BinaryOpType extends Enumeration {
+  type BinaryOpType = Value
+  val ADD, SUB, MUL, DIV,  GT, GTE, LT, LTE, EQ = Value
+}
+
+object UnaryOpType extends Enumeration {
+  type UnaryOpType = Value
+  val NEG = Value
+}
+
+object Channel extends Enumeration {
+  type Channel = Value
+  val CALL, EMAIL, TEXT
+}
+
+object NagLevel extends Enumeration {
+  val NagLevel = Value
+  val HIGHEST, LOWEST, DEFAULT = Value
+}
+
 object InstructionSet {
 
   trait Invokation
@@ -454,22 +474,10 @@ object InstructionSet {
   case class EMAIL(target: Target) extends Instruction with Invokation
   case class TEXT(target: Target) extends Instruction  with Invokation
 
+  case class NOTIFY(target: Target, means: Option[Channel]) extends Instruction  with Invokation
+
+
   case class WAIT(duration: Duration) extends Instruction
-
-  // Math OPS
-  case class ADD() extends Instruction
-  case class SUB() extends Instruction
-  case class MUL() extends Instruction
-  case class DIV() extends Instruction
-
-  // Expects two Int values on the stack, pushes a boolean
-  case class GT() extends Instruction   // greater than
-  case class GTE() extends Instruction  // greater than / equal
-  case class LT() extends Instruction   // less than
-  case class LTE() extends Instruction  // less than / equal
-
-  // Equal To: pops top two values, pushes a BooleanValue
-  case class EQ() extends Instruction
 
   // Negate - flips a boolean value
   case class NEG() extends Instruction
