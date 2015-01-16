@@ -3,6 +3,7 @@ package engines
 // https://gist.github.com/kmizu/1364341
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
 
+import engines.Handoff.{EmailTarget, TextTarget, CallTarget, DeliveryDirections}
 import engines.InstructionSet._
 import engines.VM._
 import models.{Impact, Incident}
@@ -155,7 +156,7 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
     listener.preTick(instruction)
 
     val regUpdate = instruction match {
-      case EMAIL(target) => {
+      case EmailTarget(target) => {
         listener.email(target)
         NEXT
       }
@@ -383,9 +384,7 @@ object Compiler {
           false_branch :::
           List(after_label)
         }
-        case Email(u @ User(name)) => {
-          List(EMAIL(u))
-        }
+
         case Wait(duration) => {
           List(WAIT(duration))
         }
@@ -409,15 +408,15 @@ object Compiler {
         }
 
         case Call(target) => {
-          List(CALL(target))
+          List(INVOKE(target, CallTarget()))
         }
 
         case Email(target) => {
-          List(EMAIL(target))
+          List(INVOKE(target, EmailTarget()))
         }
 
         case Text(target) => {
-          List(TEXT(target))
+          List(INVOKE(target, TextTarget()))
         }
 
         case x => throw new RuntimeException("[compiler] implement me: " + x)
@@ -437,14 +436,29 @@ object UnaryOpType extends Enumeration {
   val NEG = Value
 }
 
-object Channel extends Enumeration {
-  type Channel = Value
-  val CALL, EMAIL, TEXT
-}
+object Handoff {
+  abstract class DeliveryDirections
 
-object NagLevel extends Enumeration {
-  val NagLevel = Value
-  val HIGHEST, LOWEST, DEFAULT = Value
+  // No handoff to another policy
+  abstract class ConcreteChannel extends DeliveryDirections
+
+  case class CallTarget() extends ConcreteChannel
+  case class TextTarget() extends ConcreteChannel
+  case class EmailTarget() extends ConcreteChannel
+  case class AssignTarget() extends ConcreteChannel              // no means, just assign the incident to the target
+  case class CustomChannel(method:String) extends ConcreteChannel
+
+  // Hand the incident over to the target's default policy
+  abstract class LevelOfEffort extends DeliveryDirections
+  
+  case class PageTarget() extends LevelOfEffort       // most intrusive, force most bothersome method for target
+  case class NotifyTarget() extends LevelOfEffort     // normal alert, no overrides
+  case class TellTarget() extends LevelOfEffort       // least intrusive, choose least disturbing method for target
+
+  // there's also thingxs like:
+  //  - running a script
+  //  - invoking an http api / webhook
+  //  - opening a ticket
 }
 
 object InstructionSet {
@@ -465,17 +479,7 @@ object InstructionSet {
   // Pop the top of the stack, save it in the named variable
   case class ST_VAR(variable: String) extends Instruction
 
-  case class PAGE(target: Target) extends Instruction with Invokation
-  case class NOTIFY(target: Target) extends Instruction with Invokation
-
-  case class EXEC(policyName: String) extends Instruction with Invokation
-
-  case class CALL(target: Target) extends Instruction with Invokation
-  case class EMAIL(target: Target) extends Instruction with Invokation
-  case class TEXT(target: Target) extends Instruction  with Invokation
-
-  case class NOTIFY(target: Target, means: Option[Channel]) extends Instruction  with Invokation
-
+  case class INVOKE(target: Target, directions: DeliveryDirections) extends Instruction with Invokation
 
   case class WAIT(duration: Duration) extends Instruction
 
@@ -709,6 +713,7 @@ class NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
+  // invoke policy(foo)
   def action_st: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
     case "email" ~ t => Email(t)
     case "call" ~ t => Call(t)
