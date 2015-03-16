@@ -225,3 +225,13 @@ Team:
 level: App, hw, vm, net
 Location
 
+================
+
+Change from embedding clojure/reimann to a more gattling like system
+ - static scala files that we load the classes from
+ - these classes can be instantiated to create rules
+ - add a new -> new type of rule
+ - deliver several rule types with the code, but allow new ones to be loaded
+ - use akka streams instead of reimann
+ - scala should use a dsl to expose parameters that might need configuration
+ - might even want to create a simple dsl for expressing the stream logic

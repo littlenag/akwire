@@ -2,6 +2,7 @@ package engines
 
 // https://gist.github.com/kmizu/1364341
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
+// https://golang.org/ref/spec#Expression
 
 import engines.Handoff.{EmailTarget, TextTarget, CallTarget, DeliveryDirections}
 import engines.InstructionSet._
@@ -428,7 +429,7 @@ object Compiler {
 
 object BinaryOpType extends Enumeration {
   type BinaryOpType = Value
-  val ADD, SUB, MUL, DIV,  GT, GTE, LT, LTE, EQ = Value
+  val ADD, SUB, MUL, DIV, GT, GTE, LT, LTE, EQ = Value
 }
 
 object UnaryOpType extends Enumeration {
@@ -455,7 +456,7 @@ object Handoff {
   case class NotifyTarget() extends LevelOfEffort     // normal alert, no overrides
   case class TellTarget() extends LevelOfEffort       // least intrusive, choose least disturbing method for target
 
-  // there's also thingxs like:
+  // there's also things like:
   //  - running a script
   //  - invoking an http api / webhook
   //  - opening a ticket
@@ -501,13 +502,7 @@ object InstructionSet {
   case class HALT() extends Instruction
 }
 
-trait Action
-
-trait TargettedAction extends Action
-
 trait Target
-
-trait Cond
 
 sealed trait AST {
   // type
@@ -579,7 +574,7 @@ case class ImpactVal(value: Int) extends AST
 case class TagVal(value: String) extends AST
 case class TrueVal() extends AST
 case class FalseVal() extends AST
-case class NotExpr(cond: Cond) extends AST
+case class NotExpr(cond: AST) extends AST
 case class IntVal(value: Int) extends AST
 case class BooleanVal(value: Boolean) extends AST
 

@@ -9,6 +9,7 @@ import models.{mongoContext, Agent, AgentId}
 
 class Dao(implicit inj: Injector) extends Injectable {
 
+  // FIXME move this to using LazyLogging
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Dao])
 
   /** The agents collection */
