@@ -1,10 +1,10 @@
 name := """akwire"""
 
-version := "0.1-SNAPSHOT"
+version := "0.2-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.11.5"
 
 /** JAVA DEPS **/
 libraryDependencies ++= Seq(
@@ -19,9 +19,9 @@ libraryDependencies ++= Seq(
   "org.mongodb" %% "casbah" % "2.7.3",
   "com.novus" %% "salat" % "1.9.9",
   // SCALDI for dependency injection
-  "org.scaldi" %% "scaldi" % "0.4",
-  "org.scaldi" %% "scaldi-play" % "0.4",
-  "org.scaldi" %% "scaldi-akka" % "0.4",
+  "org.scaldi" %% "scaldi" % "0.5.4",
+  "org.scaldi" %% "scaldi-play" % "0.5.4",
+  "org.scaldi" %% "scaldi-akka" % "0.5.4",
   // For user authentication and sign in
   "ws.securesocial" %% "securesocial" % "3.0-M1"
 )
