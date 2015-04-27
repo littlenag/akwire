@@ -26,10 +26,16 @@ libraryDependencies ++= Seq(
   "ws.securesocial" %% "securesocial" % "3.0-M1"
 )
 
-/** CLOJURE DEPS (Using clojure and reimann for a rules engine (instead of esper)) **/
+/** WEBJARS (client-side dependencies) **/
 libraryDependencies ++= Seq(
-  "org.clojure" % "clojure" % "1.6.0",
-  "org.clojure" % "tools.logging" % "0.2.6",
-  "org.clojure" % "math.numeric-tower" % "0.0.4"
+  "org.webjars" %% "webjars-play" % "2.3.0-2",
+  "org.webjars.bower" % "angular" % "1.3.14",
+  "org.webjars.bower" % "angular-resource" % "1.3.14",
+  "org.webjars.bower" % "angular-cookies" % "1.3.14",
+  "org.webjars.bower" % "angular-sanitize" % "1.3.14",
+  "org.webjars.bower" % "angular-route" % "1.3.14",
+  "org.webjars.bower" % "angular-bootstrap" % "0.12.1",
+  "org.webjars.bower" % "bootstrap" % "3.3.4",
+  "org.webjars.bower" % "ng-table" % "0.5.4"
 )
 
