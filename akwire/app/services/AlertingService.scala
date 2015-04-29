@@ -43,7 +43,6 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
   def shutdown = {
     Logger.info("Alerting Services stopping")
     alertingRules.keys.map(unloadAlertingRule(_))
-    //clojure.eval("(remove-ns akwire)")
   }
 
   // TODO this should be a blocking call to provide back pressure
@@ -56,11 +55,8 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
   def loadAlertingRule(team:Team, rule:Rule) = {
 
-    val ruleNS = s"akwire.rules.ID_${rule.id}"
-
     alertingRules.get(rule.id) match {
       case Some(loadedRule) =>
-
         Logger.info("Updating rule, rule body: ")
 
       case None =>
@@ -85,21 +81,20 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
    * @return The rule that was running
    */
   def unloadAlertingRule(ruleId:ObjectId) : Option[Rule] = {
-    alertingRules.get(ruleId) match {
-      case None => None
-      case Some(rule) =>
-        Logger.info(s"Unloading rule: ${rule}")
+    val rule = alertingRules.get(ruleId)
 
-        for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
-          destroyRule(resolvingRule.id)
-          // TODO send an InterAlert message for any loaded Rules
-          //persistenceEngine ! DoInter(rule, entry)
-        }
+    Logger.info(s"Unloading rule: ${rule}")
 
-        destroyRule(rule.id)
-        alertingRules = alertingRules - ruleId
-        Some(rule)
+    for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
+      destroyRule(resolvingRule.id)
+      // TODO send an InterAlert message for any loaded Rules
+      //persistenceEngine ! DoInter(rule, entry)
     }
+
+    rule.map(r => destroyRule(r.id))
+
+    alertingRules = alertingRules - ruleId
+    Some(rule)
   }
 
   /** Go through a java ArrayList since Java is our glue here */
