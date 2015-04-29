@@ -1,8 +1,7 @@
 package services
 
-import java.nio.charset.{StandardCharsets, Charset}
+import java.nio.charset.{Charset}
 import java.nio.file.{Files, Paths}
-import javax.script.ScriptContext
 
 import akka.actor.ActorSystem
 import engines.RoutingEngine
@@ -12,13 +11,9 @@ import models.{Contextualized, Team, Rule}
 import org.bson.types.ObjectId
 import scaldi.akka.AkkaInjectable
 import scaldi.{Injector}
-import util.ClojureScriptEngineFactory
-import util.ClojureScriptEngine
 import scala.collection.concurrent.TrieMap
 
 import play.api.Logger
-
-import clojure.lang.{Var, RT, Compiler}
 
 class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
@@ -29,12 +24,10 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
   val dataRouter = injectActorRef[RoutingEngine]
 
   // rules and their compiled processors mapped via the rule id
-  var alertingRules = TrieMap[ObjectId, (Rule, Var)]()
+  var alertingRules = TrieMap[ObjectId, Rule]()
 
   // TODO rules and their rules, the rules need to know their StreamContext!!!
   var resolvingRules = TrieMap[ObjectId, List[Rule]]()
-
-  val clojure = new ClojureScriptEngineFactory().getScriptEngine.asInstanceOf[ClojureScriptEngine]
 
   def readFile(path: String, encoding: Charset) : String = {
     val encoded = Files.readAllBytes(Paths.get(path));
@@ -43,36 +36,6 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
   def init = {
     Logger.info("Alerting Service starting")
-
-    // probably load a whole bunch of clojure related stuff here
-    // set the class path directory
-    // load security policies
-    // load streams functions
-    // make clojure aware of the observation classes
-
-    // start the runtime
-    // allocate a threadpool to the runtime
-
-    //require.invoke(stringReader.invoke("clojure"))
-
-    //Logger.info("clojure classpath: " + System.getProperty("java.class.path"))
-
-    // FIXME this is a major security hole and will allow arbitrary code execution!
-    Compiler.LOADER.bindRoot(classloader)
-
-    val bindings = clojure.createBindings()
-
-    bindings.put("akwire-bindings/alert-engine", this)
-
-    clojure.getContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
-
-    //val text = io.Source.fromInputStream(getClass.getResourceAsStream("Time.clj")).mkString
-
-    clojure.eval(readFile("/home/mark/proj/akwire/akwire/conf/Time.clj", StandardCharsets.UTF_8), clojure.getContext)
-    clojure.eval(readFile("/home/mark/proj/akwire/akwire/conf/Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
-//    clojure.eval(io.Source.fromInputStream(getClass.getResourceAsStream("Time.clj")).mkString, clojure.getContext)
-//    clojure.eval(readFile("classpath://Streams.clj", StandardCharsets.UTF_8), clojure.getContext)
-    //Play.application.resourceAsStream("/foo/case0.json")
 
     Logger.info("Alerting Services running")
   }
@@ -86,9 +49,9 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
-    for (ar <- alertingRules) {
-      ar._2._2.invoke(obs)
-    }
+    //for (ar <- alertingRules) {
+    //  ar._2.invoke(obs)
+    //}
   }
 
   def loadAlertingRule(team:Team, rule:Rule) = {
@@ -96,66 +59,20 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
     val ruleNS = s"akwire.rules.ID_${rule.id}"
 
     alertingRules.get(rule.id) match {
-      case Some((loadedRule,proc)) =>
-        val ruleText = s"""(ns $ruleNS)
-          | (def rule-text (partial ${rule.text}))
-           """.stripMargin
+      case Some(loadedRule) =>
 
-        Logger.info("Updating rule, rule body: " + ruleText)
-        clojure.eval(ruleText)
+        Logger.info("Updating rule, rule body: ")
 
       case None =>
 
-        val ruleText = s"""
-        | (ns $ruleNS
-        |   (:require akwire.streams)
-        |   (:use akwire.streams))
-        | (def rule-id (org.bson.types.ObjectId. "${rule.id}"))
-        | (defn trigger [events]
-        |   (if (list? events)
-        |     (.triggerAlert akwire-bindings/alert-engine rule-id (java.util.ArrayList. (map make-obs events)))
-        |     (.triggerAlert akwire-bindings/alert-engine rule-id (java.util.ArrayList. (map make-obs [events])))
-        |   )
-        | )
-        |
-        | (def rule-text (partial ${rule.text}))
-        |
-        | (defn process-observation [observation]
-        |   (apply (partial ${rule.text}) [(make-event observation)]))
-        |
-        | (defn process-event [event]
-        |   (apply (partial ${rule.text}) [event]))
-        |
-        | (defn process [observation]
-        |   (apply rule-text [(make-event observation)])
-        | )
-        |
-        """.stripMargin
+        Logger.info("New rule, compiling complete rule body: ")
 
-        Logger.info("New rule, compiling complete rule body: " + ruleText)
-
-        clojure.eval(ruleText)
-
-        val proc = RT.`var`(ruleNS, "process")
-
-        Logger.debug(s"Hook loaded as: ${ruleNS}")
-
-        alertingRules.put(rule.id, (rule, proc))
+        alertingRules.put(rule.id, rule)
     }
   }
 
   private def destroyRule(ruleId:ObjectId) = {
-    val ruleName = s"rules.ID_${ruleId}"
-
-    // Install a default rule that just returns the event
-    val ruleText = s"""(ns $ruleName)
-          | (def rule-text (fn [e] e))
-           """.stripMargin
-
-    Logger.info("Updating rule, rule body: " + ruleText)
-    clojure.eval(ruleText)
-
-    // TODO need a real way to release the rules, maybe (ns-unmap (find-ns 'user) 'foo) could help
+    Logger.info("Updating rule, rule body: ")
   }
 
   // Assumes that the Alerting Rule has already been loaded
@@ -168,21 +85,21 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
    * @return The rule that was running
    */
   def unloadAlertingRule(ruleId:ObjectId) : Option[Rule] = {
-    val (rule, _) = alertingRules(ruleId)
+    alertingRules.get(ruleId) match {
+      case None => None
+      case Some(rule) =>
+        Logger.info(s"Unloading rule: ${rule}")
 
-    if (rule == null) { return None }
+        for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
+          destroyRule(resolvingRule.id)
+          // TODO send an InterAlert message for any loaded Rules
+          //persistenceEngine ! DoInter(rule, entry)
+        }
 
-    Logger.info(s"Unloading rule: ${rule}")
-
-    for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
-      destroyRule(resolvingRule.id)
-      // TODO send an InterAlert message for any loaded Rules
-      //persistenceEngine ! DoInter(rule, entry)
+        destroyRule(rule.id)
+        alertingRules = alertingRules - ruleId
+        Some(rule)
     }
-
-    destroyRule(rule.id)
-    alertingRules = alertingRules - ruleId
-    Some(rule)
   }
 
   /** Go through a java ArrayList since Java is our glue here */
@@ -193,7 +110,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
     import scala.collection.JavaConverters._
 
     alertingRules.get(ruleId) match {
-      case Some((rule,proc)) =>
+      case Some(rule) =>
         dataRouter ! DoTrigger(rule, obs.asScala.toList)
       case None =>
         // Should never happen

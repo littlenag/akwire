@@ -25,6 +25,7 @@ class PolicyVMTest extends Specification with Mockito {
         println(s"$instruction")
         latched += instruction
 
+        // Keep track of how many notifications we've done
         if (instruction.isInstanceOf[Invokation]) {
           invocations += instruction
         }
