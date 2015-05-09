@@ -94,7 +94,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
     rule.map(r => destroyRule(r.id))
 
     alertingRules = alertingRules - ruleId
-    Some(rule)
+    rule
   }
 
   /** Go through a java ArrayList since Java is our glue here */
