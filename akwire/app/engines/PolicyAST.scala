@@ -1,5 +1,6 @@
 package engines
 
+import models.{Urgency, Impact}
 import org.joda.time.Duration
 
 trait Target
@@ -87,11 +88,11 @@ object PolicyAST {
   //case class TimeRangeVal(value: String) extends AST
   //case class DateRangeVal(value: String) extends AST
 
-  case class ImpactLevel(lvl: Int) extends AST
-  case class UrgencyLevel(lvl: Int) extends AST
+  case class ImpactVal(value: Impact.Value) extends AST
+  case class UrgencyVal(value: Urgency.Value) extends AST
 
   // P = f(I,U)
-  case class PriorityLevel(lvl: Int) extends AST
+  //case class PriorityVal(value: Priority.Value) extends AST
 
   case class TagVal(value: String) extends AST
 

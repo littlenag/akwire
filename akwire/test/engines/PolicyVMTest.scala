@@ -18,12 +18,16 @@ class PolicyVMTest extends Specification with Mockito {
     val EPOCH = new DateTime(0L)
 
     class TestListener extends Listener {
-      val history = collection.mutable.MutableList.empty[Instruction]
+      type Step = (Instruction, Registers, Registers)
+
+      val completeHistory = collection.mutable.MutableList.empty[Step]
+
       val invocations = collection.mutable.MutableList.empty[Instruction]
 
-      override def latchStateChange(instruction: Instruction): Unit = {
+      override def latchStateChange(instruction: Instruction, newState:Registers, oldState:Registers): Unit = {
         println(s"*$instruction")
-        history += instruction
+
+        completeHistory += Tuple3(instruction, newState, oldState)
 
         // Keep track of how many notifications we've done
         if (instruction.isInstanceOf[Invokation]) {
@@ -39,12 +43,12 @@ class PolicyVMTest extends Specification with Mockito {
 
     "simple policy" in {
       running(FakeApplication()) {
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.I_1)
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
-          Impact.I_1,
-          Urgency.HIGH,
+          Impact.IL_1,
+          Urgency.UL_0,
           None,
           None
         )
@@ -56,13 +60,11 @@ class PolicyVMTest extends Specification with Mockito {
             |
           """.stripMargin
 
-        val programTry = Compiler.compile(simplePolicy)
+        val programTry = PolicyCompiler.compile(simplePolicy)
 
         programTry.isRight must beTrue
 
         val program:Program = programTry.right.get
-
-        println(s"Program: $program")
 
         program.instructions must not beEmpty
 
@@ -87,7 +89,7 @@ class PolicyVMTest extends Specification with Mockito {
         while (proc.tick()) {}
 
         listener.invocations must have size(1)
-        listener.history must have size(3)
+        listener.completeHistory must have size(3)
       }
     }
 
@@ -99,12 +101,12 @@ class PolicyVMTest extends Specification with Mockito {
     "repeating policy" in {
       running(FakeApplication()) {
 
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.I_1)
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
-          Impact.I_1,
-          Urgency.HIGH,
+          Impact.IL_1,
+          Urgency.UL_0,
           None,
           None
         )
@@ -117,13 +119,11 @@ class PolicyVMTest extends Specification with Mockito {
             |
           """.stripMargin
 
-        val programTry = Compiler.compile(simplePolicy)
+        val programTry = PolicyCompiler.compile(simplePolicy)
 
         programTry.isRight must beTrue
 
         val program:Program = programTry.right.get
-
-        println(s"Program: $program")
 
         program.instructions must not beEmpty
 
@@ -150,19 +150,20 @@ class PolicyVMTest extends Specification with Mockito {
 
         //ticks must be equalTo(3)
         listener.invocations must have size(2)
-        listener.history must have size(28)
+        listener.completeHistory must have size(28)
       }
     }
 
     "filtering policy" in {
       running(FakeApplication()) {
 
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.I_1)
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.IL_1)
 
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        val incident = new Incident(ObjectId.get(), true, false, false,
+          new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
-          Impact.I_1,
-          Urgency.HIGH,
+          Impact.IL_1,
+          Urgency.UL_0,
           None,
           None
         )
@@ -178,17 +179,15 @@ class PolicyVMTest extends Specification with Mockito {
             |
           """.stripMargin
 
-        val programTry = Compiler.compile(simplePolicy)
+        val programTry = PolicyCompiler.compile(simplePolicy)
 
         programTry.isRight must beTrue
 
         val program:Program = programTry.right.get
 
-        println(s"Program: $program")
-
         program.instructions must not beEmpty
 
-        program.instructions must have size(10)
+        program.instructions must have size(8)
 
         val listener = new TestListener
 
@@ -211,19 +210,19 @@ class PolicyVMTest extends Specification with Mockito {
 
         //ticks must be equalTo(3)
         listener.invocations must have size(1)
-        listener.history must have size(26)
+        listener.completeHistory must have size(7)
       }
     }
 
     "matching policy" in {
       running(FakeApplication()) {
 
-        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.I_1)
+        val rule = new Rule(ObjectId.get(), "r1", "...", true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
-          Impact.I_1,
-          Urgency.HIGH,
+          Impact.IL_1,
+          Urgency.UL_0,
           None,
           None
         )
@@ -239,13 +238,11 @@ class PolicyVMTest extends Specification with Mockito {
             | wait 1h
           """.stripMargin
 
-        val programTry = Compiler.compile(simplePolicy)
+        val programTry = PolicyCompiler.compile(simplePolicy)
 
         programTry.isRight must beTrue
 
         val program:Program = programTry.right.get
-
-        println(s"Program: $program")
 
         program.instructions must not beEmpty
 

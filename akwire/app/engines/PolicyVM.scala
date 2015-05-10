@@ -5,8 +5,8 @@ package engines
 // https://golang.org/ref/spec#Expression
 
 import engines.InstructionSet._
-import engines.VM._
-import models.{Impact, Incident}
+import engines.Primitives._
+import models.{Urgency, Impact, Incident}
 import org.joda.time.{DateTime, Duration}
 
 import scala.collection.mutable
@@ -69,7 +69,7 @@ class Process(val program: Program, val incident : Incident) {
 
   private def property(key: String): Value = {
     key match {
-      case "incident.impact" => MiscValue(incident.impact)
+      case "incident.impact" => ImpactValue(incident.impact)
       case _ => throw new Exception(s"Runtime Error: property '$key' not found")
     }
   }
@@ -87,7 +87,7 @@ class Program(val instructions : List[Instruction]) {
   override def toString() = instructions.toString()
 }
 
-object VM {
+object Primitives {
 
   sealed abstract class Value
 
@@ -98,6 +98,18 @@ object VM {
   case class IntValue(value: Int) extends Value {
     override def toString() = value.toString
   }
+
+  case class ImpactValue(value: Impact.Value) extends Value {
+    override def toString() = value.toString
+  }
+
+  case class UrgencyValue(value: Urgency.Value) extends Value {
+    override def toString() = value.toString
+  }
+
+//  case class PriorityValue(value: Priority.Value) extends Value {
+//    override def toString() = value.toString
+//  }
 
   case class BooleanValue(value: Boolean) extends Value {
     override def toString() = value.toString
@@ -116,14 +128,17 @@ trait Listener {
   // Executed after every atomic update to the virtual machine state,
   // i.e. change to the machine state registers, has been executed.
   // This is distinct from being called after every instruction has finished,
-  // which is what postTick captures.
-  def latchStateChange(instruction:Instruction) = {}
+  // which is what `completed` captures.
+  def latchStateChange(instruction:Instruction, newState:Registers, oldState:Registers) = {}
 
-  // Executed before every instruction
-  def preTick(instruction:Instruction) = {}
+  // Executed after every instruction that completes its execution
+  def completed(instruction:Instruction, newState:Registers, oldState:Registers) = {}
 
-  // Executed after every instruction
-  def postTick(instruction:Instruction) = {}
+  // Executed before every instruction regardless of completion
+  def preTick(instruction:Instruction, state:Registers) = {}
+
+  // Executed after every instruction regardless of completion
+  def postTick(instruction:Instruction, state:Registers) = {}
 
   // Target to email
   def email(target: Target) = {}
@@ -155,9 +170,9 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 
     val NEXT = Some(registers.copy(pc = registers.pc + 1))
 
-    listener.preTick(instruction)
+    listener.preTick(instruction, registers)
 
-    val regUpdate = instruction match {
+    val nextState = instruction match {
       case INVOKE(target, directions) => {
         listener.email(target)
         NEXT
@@ -249,25 +264,29 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
       case EQ() =>
         val a = stack.pop()
         val b = stack.pop()
+        Logger.trace(s"$a == $b")
         stack.push(BooleanValue(a == b))
         NEXT
 
       case JT(lbl) =>
         if (stack.pop().asInstanceOf[BooleanValue].value) {
-          Some(registers.copy(pc = proc.mapLabel(lbl), ws = None))
+          Some(registers.copy(pc = proc.mapLabel(lbl)))
         } else {
           NEXT
         }
 
       case JF(lbl) =>
         if (!stack.pop().asInstanceOf[BooleanValue].value) {
-          Some(registers.copy(pc = proc.mapLabel(lbl), ws = None))
+          Some(registers.copy(pc = proc.mapLabel(lbl)))
         } else {
           NEXT
         }
 
+      case JMP(lbl) =>
+        Some(registers.copy(pc = proc.mapLabel(lbl)))
+
+      // Label's get skipped
       case LBL(index) => {
-        // Label's get skipped
         NEXT
       }
 
@@ -278,14 +297,20 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
         throw new RuntimeException("[vm] unimplemented: " + inst)
     }
 
-    listener.postTick(instruction)
 
-    regUpdate match {
+    nextState match {
       case Some(newRegisters) =>
         if (newRegisters != registers) {
           listener.latchStateChange(instruction, newRegisters, registers)
         }
+
+        if (newRegisters.pc != registers.pc) {
+          listener.completed(instruction, newRegisters, registers)
+        }
+
         proc.registers = newRegisters
+        listener.postTick(instruction, proc.registers)
+        // This should return an object, not a bool. Oh well.
         true
       case None =>
         false

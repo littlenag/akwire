@@ -1,11 +1,11 @@
 package engines
 
 import engines.Handoff.{TextTarget, EmailTarget, CallTarget}
-import engines.VM.{MiscValue, IntValue}
-import models.Impact
+import engines.Primitives._
+import models.{Urgency, Impact}
 import play.api.Logger
 
-object Compiler {
+object PolicyCompiler {
   import InstructionSet._
   import PolicyAST._
 
@@ -31,8 +31,11 @@ object Compiler {
 
         // And then the Environment will need to point at the next instruction to execute
         implicit val labelMaker = new LabelMaker()
-        val instructions = compileAST(result.asInstanceOf[AST])
-        Right(new Program(instructions))
+        val ast = result.asInstanceOf[AST]
+        val program = new Program(compileAST(ast))
+        Logger.info(s"ast: #$ast")
+        Logger.info(s"program: $program")
+        Right(program)
       case er: parser.NoSuccess =>
         Logger.error("Parse error: " + er)
         Left(er)
@@ -78,9 +81,25 @@ object Compiler {
 
           preamble ::: body_start ::: body ::: counter_inc ::: repeat_instr ::: List(HALT())
         }
+
         case Block(exprs) => {
           exprs.foldLeft(List.empty[Instruction]){(result : List[Instruction], x) => (result ::: (compileAST(x)))}
         }
+
+        case ConditionalStatement(cond, pos, empty:Empty) => {
+          val cond_expr = compileAST(cond)
+
+          val true_branch = compileAST(pos)
+
+          val after_label = labeler.next()
+
+          // The cond branch must result in a boolean value on the top of the stack
+          // if the condition is false, jump past the true branch
+          cond_expr ::: List(JF(after_label)) :::
+          true_branch ::: List(JMP(after_label)) :::
+          List(after_label)
+        }
+
         case ConditionalStatement(cond, pos, neg) => {
           val cond_expr = compileAST(cond)
 
@@ -89,7 +108,7 @@ object Compiler {
           val false_branch_label = labeler.next()
           val after_label = labeler.next()
 
-          val false_branch = compileAST(pos)
+          val false_branch = compileAST(neg)
 
           // The cond branch must result in a boolean value on the top of the stack
           // if the condition is false, jump past the true branch
@@ -117,8 +136,12 @@ object Compiler {
         case Property(context, field) =>
           List(LD_VAR(context + "." + field))
 
-        case ImpactLevel(n) => {
-          List(PUSH(MiscValue(Impact(n))))
+        case ImpactVal(n) => {
+          List(PUSH(ImpactValue(n)))
+        }
+
+        case UrgencyVal(n) => {
+          List(PUSH(UrgencyValue(n)))
         }
 
         case Call(target) => {

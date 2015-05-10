@@ -16,22 +16,19 @@ import models.mongoContext._
 object Impact extends Enumeration {
   type Impact = Value
 
-  val I_5 = Value("I-5")     // Something small went wrong, and the system will continue operating.
-  val I_4 = Value("I-4")     // Something larger went wrong, and the system will continue operating.
-  val I_3 = Value("I-3")     // Something went wrong, and the system may or may not continue.
-  val I_2 = Value("I-2")     // Something went wrong, and the system cannot continue.
-  val I_1 = Value("I-1")     // Something went wrong, and the system cannot continue.
+  val IL_0 = Value("IL-0")
+  val IL_1 = Value("IL-1")
+  val IL_2 = Value("IL-2")
+  val IL_3 = Value("IL-3")
+  val IL_4 = Value("IL-4")
+  val IL_5 = Value("IL-5")
 
   // FIXME implement CLEARing logic via an optional filter on the stream of events
 
-  // these feel like typical types/levels for alerts
-  // DEBUG
-  // INFO
-  // WARNING
-  // ERROR
-  // CRITICAL
-
-  //
+  // lots of naming schemes:
+  // DEBUG, INFO, WARNING, ERROR, CRITICAL
+  // major, minor
+  // high, medium, low
 
   // http://wiki.en.it-processmaps.com/index.php/Checklist_Incident_Priority
 
@@ -40,11 +37,21 @@ object Impact extends Enumeration {
 // urgency is something that humans have to know about
 object Urgency extends Enumeration {
   type Urgency = Value
-  val NONE = Value("NONE")
-  val LOW = Value("LOW")
-  val MEDIUM = Value("MEDIUM")
-  val HIGH = Value("HIGH")
-  val IMMEDIATE = Value("IMMEDIATE")
+
+  val UL_0 = Value("UL-0")
+  val UL_1 = Value("UL-1")
+  val UL_2 = Value("UL-2")
+  val UL_3 = Value("UL-3")
+  val UL_4 = Value("UL-4")
+  val UL_5 = Value("UL-5")
+
+  /*
+    val NONE = Value("NONE")
+    val LOW = Value("LOW")
+    val MEDIUM = Value("MEDIUM")
+    val HIGH = Value("HIGH")
+    val IMMEDIATE = Value("IMMEDIATE")
+  */
 }
 
 trait RuleJson {
@@ -81,7 +88,7 @@ trait RuleJson {
       ((__ \ "active").read[Boolean] orElse Reads.pure(true)) ~
 //      (__ \ "meta").readNullable[JsObject] ~
 //      (__ \ "sop").readNullable[String] ~
-      ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.I_5))
+      ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.IL_5))
   )(Rule.apply _)
 }
 
@@ -95,7 +102,7 @@ case class Rule( id: ObjectId,
 //                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
 //                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
 
-                 impact: Impact.Value = Impact.I_5
+                 impact: Impact.Value = Impact.IL_5
 
 /*
                  urgency: Urgency.Value = Urgency.NONE,
@@ -113,7 +120,7 @@ case class Rule( id: ObjectId,
   def context = List("instance", "host", "observer", "key")
 
   //def impact = Impact.SEV_5
-  def urgency = Urgency.NONE
+  def urgency = Urgency.UL_5
 
   @Ignore var teamId: ObjectId = null
 

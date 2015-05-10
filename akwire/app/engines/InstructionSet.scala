@@ -1,7 +1,7 @@
 package engines
 
 import engines.Handoff.DeliveryDirections
-import engines.VM.Value
+import engines.Primitives.Value
 import org.joda.time.Duration
 
 object InstructionSet {

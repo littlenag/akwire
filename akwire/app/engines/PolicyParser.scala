@@ -1,5 +1,7 @@
 package engines
 
+import models.{Urgency, Impact}
+
 import scala.util.parsing.combinator.RegexParsers
 
 import org.joda.time.{Duration}
@@ -74,7 +76,7 @@ object PolicyParser extends RegexParsers {
 
   def cond_1: Parser[AST] =
     ("if" ~> expr <~ "then") ~ (statements <~ "end")^^{
-      case c ~ p => ConditionalStatement(c,p,UnitVal())
+      case c ~ p => ConditionalStatement(c,p,Empty())
     }
 
   def cond_2: Parser[AST] =
@@ -95,7 +97,7 @@ object PolicyParser extends RegexParsers {
       case c1 ~ b1 ~ blocks ~ (end:String) =>
         // Destructured into pairs of conditions and their statements
         val l = for (block <- blocks) yield (block._1, block._2)
-        ConditionalList(List((c1,b1)) ::: l,UnitVal())
+        ConditionalList(List((c1,b1)) ::: l,Empty())
     }
 
   def expr: Parser[AST] = compare_op | logic_op | terminal | ( "(" ~> expr <~ ")")
@@ -163,10 +165,15 @@ object PolicyParser extends RegexParsers {
 
   // levels in reverse index order 0 = highest, 9 = lowest
   // users can allocate and name their levels however they would like, UI can take care of making pretty
-  def impactLiteral : Parser[ImpactLevel] = ("IL"~>"-"~>"""[0-9]""".r)^^{value => ImpactLevel(value.toInt)}
-  def urgencyLiteral : Parser[UrgencyLevel] = ("UL"~>"-"~>"""[0-9]""".r)^^{value => UrgencyLevel(value.toInt)}
+  def impactLiteral : Parser[ImpactVal] = ("IL-" ~ """[0-9]""".r)^^{
+    case value => ImpactVal(Impact.withName(value._1 + value._2))
+  }
 
-  def priorityLiteral : Parser[PriorityLevel] = ("PL"~>"-"~>"""[0-9]""".r)^^{value => PriorityLevel(value.toInt)}
+  def urgencyLiteral : Parser[UrgencyVal] = ("UL-" ~ """[0-9]""".r)^^{
+    case value => UrgencyVal(Urgency.withName(value._1 + value._2))
+  }
+
+  //def priorityLiteral : Parser[PriorityLevel] = ("PL-"~"""[0-9]""".r)^^{value => PriorityLevel(Priority.withName(value._1 + value._2))}
 
   def tagLiteral : Parser[TagVal] = """tag\([A-Za-z_][a-zA-Z0-9]*\)""".r^^{value => TagVal(value.toString)}
 
