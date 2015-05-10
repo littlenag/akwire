@@ -4,8 +4,8 @@ import engines.InstructionSet.{Invokation, Instruction}
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.{DateTime}
+import org.specs2.matcher.{Matchers, Matcher}
 import org.specs2.mock.Mockito
-
 import org.specs2.mutable._
 
 import play.api.test._
@@ -18,12 +18,12 @@ class PolicyVMTest extends Specification with Mockito {
     val EPOCH = new DateTime(0L)
 
     class TestListener extends Listener {
-      val latched = collection.mutable.MutableList.empty[Instruction]
+      val history = collection.mutable.MutableList.empty[Instruction]
       val invocations = collection.mutable.MutableList.empty[Instruction]
 
-      override def latch(instruction: Instruction): Unit = {
-        println(s"$instruction")
-        latched += instruction
+      override def latchStateChange(instruction: Instruction): Unit = {
+        println(s"*$instruction")
+        history += instruction
 
         // Keep track of how many notifications we've done
         if (instruction.isInstanceOf[Invokation]) {
@@ -51,7 +51,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         val simplePolicy =
           """
-            | email user(mark@corp.com)
+            | email user(1)
             | wait 2h
             |
           """.stripMargin
@@ -87,7 +87,7 @@ class PolicyVMTest extends Specification with Mockito {
         while (proc.tick()) {}
 
         listener.invocations must have size(1)
-        listener.latched must have size(3)
+        listener.history must have size(3)
       }
     }
 
@@ -112,7 +112,7 @@ class PolicyVMTest extends Specification with Mockito {
         val simplePolicy =
           """
             | attempt 2 times
-            | email user(mark@corp.com)
+            | email user(1)
             | wait 1h
             |
           """.stripMargin
@@ -150,7 +150,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         //ticks must be equalTo(3)
         listener.invocations must have size(2)
-        listener.latched must have size(28)
+        listener.history must have size(28)
       }
     }
 
@@ -172,8 +172,8 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times every 1h
         val simplePolicy =
           """
-            | if incident.impact == I(1) then
-            |   call user(sev1@corp.com)
+            | if incident.impact == IL-1 then
+            |   call user(1)
             | end
             |
           """.stripMargin
@@ -211,7 +211,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         //ticks must be equalTo(3)
         listener.invocations must have size(1)
-        listener.latched must have size(26)
+        listener.history must have size(26)
       }
     }
 
@@ -231,10 +231,10 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times
         val simplePolicy =
           """
-            | if incident.impact == I(1) then
-            |   call user(sev1@corp.com)
+            | if incident.impact == IL-1 then
+            |   call user(1)
             | else
-            |   email user(sev2@corp.com)
+            |   email user(1)
             | end
             | wait 1h
           """.stripMargin

@@ -54,11 +54,12 @@ object PolicyAST {
 
   case class Notify(target: Target) extends AST
 
-  case class User(name: String) extends AST with Target
+  // UI will take care of making is pretty
+  case class User(id: Int) extends AST with Target
 
-  case class Team(name: String) extends AST with Target
+  case class Team(id: Int) extends AST with Target
 
-  case class Service(name: String) extends AST with Target
+  case class Service(id: Int) extends AST with Target
 
   // Basic Ops
 
@@ -86,7 +87,11 @@ object PolicyAST {
   //case class TimeRangeVal(value: String) extends AST
   //case class DateRangeVal(value: String) extends AST
 
-  case class ImpactVal(value: Int) extends AST
+  case class ImpactLevel(lvl: Int) extends AST
+  case class UrgencyLevel(lvl: Int) extends AST
+
+  // P = f(I,U)
+  case class PriorityLevel(lvl: Int) extends AST
 
   case class TagVal(value: String) extends AST
 

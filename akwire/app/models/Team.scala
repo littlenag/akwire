@@ -10,11 +10,11 @@ import play.api.libs.json._
 import models.mongoContext._
 
 // impact is something that the alert knows about itself
-object Impact extends Enumeration {
-  type Impact = Value
-  // CLEAR and INFO are not allowed to have an Urgency attached to them
+// FIXME: CLEAR and INFO are not allowed to have an Urgency attached to them
 //  val CLEAR = Value("CLEAR")   // Everything is OK and if anything was wrong in the past its now fixed. Will resolve active situations when received.
 //  val INFO = Value("INFO")     // Purely informational in nature, may or may not indicate that anything has gone wrong.
+object Impact extends Enumeration {
+  type Impact = Value
 
   val I_5 = Value("I-5")     // Something small went wrong, and the system will continue operating.
   val I_4 = Value("I-4")     // Something larger went wrong, and the system will continue operating.
@@ -22,7 +22,9 @@ object Impact extends Enumeration {
   val I_2 = Value("I-2")     // Something went wrong, and the system cannot continue.
   val I_1 = Value("I-1")     // Something went wrong, and the system cannot continue.
 
-  // these feel like types/levels for alerts
+  // FIXME implement CLEARing logic via an optional filter on the stream of events
+
+  // these feel like typical types/levels for alerts
   // DEBUG
   // INFO
   // WARNING

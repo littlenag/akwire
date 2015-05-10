@@ -12,7 +12,7 @@ object Compiler {
   val VAR_CUR_ITER = "cur_iter"
   val VAR_MAX_ITER = "max_iter"
 
-  val parser = NotificationPolicyParser
+  val parser = PolicyParser
 
   class LabelMaker(val start:Int = 0) {
     var cur = start
@@ -117,7 +117,7 @@ object Compiler {
         case Property(context, field) =>
           List(LD_VAR(context + "." + field))
 
-        case ImpactVal(n) => {
+        case ImpactLevel(n) => {
           List(PUSH(MiscValue(Impact(n))))
         }
 

@@ -51,7 +51,11 @@ import org.joda.time.{Duration}
 
 // base the grammar on java: https://github.com/antlr/grammars-v4/blob/master/java/Java.g4
 
-object NotificationPolicyParser extends RegexParsers {
+/**
+ * Notification Policy Parser
+ * eventually will want a JSON parser as well
+ */
+object PolicyParser extends RegexParsers {
 
   import engines.PolicyAST._
 
@@ -130,23 +134,39 @@ object NotificationPolicyParser extends RegexParsers {
     case v ~ "d" => Duration.standardDays(v.value)
   }
 
-  // invoke policy(foo)
-  def action_st: Parser[AST] = ("call" | "email" | "page" | "notify") ~ target ^^ {
+  // note: actions should be the verb form of what the channel is said to carry
+  // need a more general grammar
+  //  - invoke policy(foo)
+  //  - outboard to SNS, send to message queue, direct email
+  //  - want a generic notions, entities have channels they can be contacted on, channels can be one-way or two-way
+  //    - push msg to channel+target directly
+  //    - push msg to entity, for specific channel, if entity doesn't have that channel can specify default (messages translate)
+  //    - invoke policy
+  def action_st: Parser[AST] = ("call" | "email" | "text" | "page" | "notify") ~ target ^^ {
+    // these chain execution to the target's policy
+    case "notify" ~ t => Notify(t)
+    case "page" ~ t => Page(t)
+    // these immediately put a message on the channel for the target (somewhat context dependent)
     case "email" ~ t => Email(t)
-    case "call" ~ t => Call(t)
     case "text" ~ t => Text(t)
+    case "call" ~ t => Call(t)
   }
 
-  def target: Parser[Target] = (("user" | "team" | "service") ~ ("("~>(userEmailLiteral | teamOrServiceName)<~")"))^^{
-    case "user" ~ name => User(name)
-    case "team" ~ name => Team(name)
-    case "service" ~ name => Service(name)
+  def target: Parser[Target] = (("user" | "team" | "service") ~ ("("~>(intLiteral)<~")"))^^{
+    case "user" ~ id => User(id.value)
+    case "team" ~ id => Team(id.value)
+    case "service" ~ id => Service(id.value)
   }
 
-  def teamOrServiceName : Parser[String] = """[A-Za-z_][a-zA-Z0-9]*""".r
-  def userEmailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
+  // probably want off-board to SNS, plain email, SMS
+  def emailLiteral: Parser[String] = """\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b""".r
 
-  def impactLiteral : Parser[ImpactVal] = ("I"~>"("~>"""[1-5]""".r<~")")^^{value => ImpactVal(value.toInt)}
+  // levels in reverse index order 0 = highest, 9 = lowest
+  // users can allocate and name their levels however they would like, UI can take care of making pretty
+  def impactLiteral : Parser[ImpactLevel] = ("IL"~>"-"~>"""[0-9]""".r)^^{value => ImpactLevel(value.toInt)}
+  def urgencyLiteral : Parser[UrgencyLevel] = ("UL"~>"-"~>"""[0-9]""".r)^^{value => UrgencyLevel(value.toInt)}
+
+  def priorityLiteral : Parser[PriorityLevel] = ("PL"~>"-"~>"""[0-9]""".r)^^{value => PriorityLevel(value.toInt)}
 
   def tagLiteral : Parser[TagVal] = """tag\([A-Za-z_][a-zA-Z0-9]*\)""".r^^{value => TagVal(value.toString)}
 

@@ -113,8 +113,11 @@ object VM {
 }
 
 trait Listener {
-  // Executed after every atomic update to the virtual machine state, i.e. change to the machine state registers, has been executed
-  def latch(instruction:Instruction) = {}
+  // Executed after every atomic update to the virtual machine state,
+  // i.e. change to the machine state registers, has been executed.
+  // This is distinct from being called after every instruction has finished,
+  // which is what postTick captures.
+  def latchStateChange(instruction:Instruction) = {}
 
   // Executed before every instruction
   def preTick(instruction:Instruction) = {}
@@ -147,10 +150,10 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
    */
   def tick(proc:Process): Boolean = {
     val instruction = proc.program.instructions(proc.registers.pc)
-    val oldRegisters = proc.registers
+    val registers = proc.registers
     val stack = proc.stack
 
-    val NEXT = Some(oldRegisters.copy(pc = oldRegisters.pc + 1))
+    val NEXT = Some(registers.copy(pc = registers.pc + 1))
 
     listener.preTick(instruction)
 
@@ -162,21 +165,21 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 
       case WAIT(duration) => {
         val now = clock.now()
-        oldRegisters.ws match {
+        registers.ws match {
           case Some(t) =>
             if (t.plus(duration).isBefore(now)) {
               // We've finished waiting, move PC to the next instruction, and clear the WAIT register
               listener.wait_complete(duration, now)
-              Some(oldRegisters.copy(pc = oldRegisters.pc + 1, ws = None))
+              Some(registers.copy(pc = registers.pc + 1, ws = None))
             } else {
               // Keep waiting
               listener.wait_continue(duration, now)
-              Some(oldRegisters)
+              Some(registers)
             }
           case None =>
             // First time called, initialize the register
             listener.wait_start(duration, now)
-            Some(oldRegisters.copy(ws = Some(now)))
+            Some(registers.copy(ws = Some(now)))
         }
 
       }
@@ -251,14 +254,14 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 
       case JT(lbl) =>
         if (stack.pop().asInstanceOf[BooleanValue].value) {
-          Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
+          Some(registers.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
         }
 
       case JF(lbl) =>
         if (!stack.pop().asInstanceOf[BooleanValue].value) {
-          Some(oldRegisters.copy(pc = proc.mapLabel(lbl), ws = None))
+          Some(registers.copy(pc = proc.mapLabel(lbl), ws = None))
         } else {
           NEXT
         }
@@ -278,11 +281,11 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
     listener.postTick(instruction)
 
     regUpdate match {
-      case Some(updatedRegisters) =>
-        if (updatedRegisters != oldRegisters) {
-          listener.latch(instruction)
+      case Some(newRegisters) =>
+        if (newRegisters != registers) {
+          listener.latchStateChange(instruction, newRegisters, registers)
         }
-        proc.registers = updatedRegisters
+        proc.registers = newRegisters
         true
       case None =>
         false
