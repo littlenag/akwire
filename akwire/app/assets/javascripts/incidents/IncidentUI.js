@@ -8,15 +8,15 @@
             .state('incidents', {
               url: "/incidents",
               abstract: true,
-              templateUrl: "/assets/partials/incidents/base.html",
+              templateUrl: "/assets/javascripts/incidents/base.html",
             })
             .state('incidents.list', {
               url: "",
-              templateUrl: "/assets/partials/incidents/list.html",
+              templateUrl: "/assets/javascripts/incidents/list.html",
             })
             .state('incidents.create', {
               url: "/create",
-              templateUrl: "/assets/partials/incidents/create.html",
+              templateUrl: "/assets/javascripts/incidents/create.html",
             });
         }
     ]);

@@ -8,19 +8,19 @@
             .state('admin.team', {
               url: "/team",
               abstract: true,
-              templateUrl: "/assets/partials/teams/base.html",
+              templateUrl: "/assets/javascripts/teams/base.html",
             })
             .state('admin.team.list', {
               url: "",
-              templateUrl: "/assets/partials/teams/list.html",
+              templateUrl: "/assets/javascripts/teams/list.html",
             })
             .state('admin.team.create', {
               url: "/create",
-              templateUrl: "/assets/partials/teams/create.html",
+              templateUrl: "/assets/javascripts/teams/create.html",
             })
             .state('admin.team.edit', {
               url: "/edit/:teamId",
-              templateUrl: "/assets/partials/teams/edit.html",
+              templateUrl: "/assets/javascripts/teams/edit.html",
             });
         }
     ]);

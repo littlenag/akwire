@@ -4,7 +4,6 @@ import engines.InstructionSet.{Invokation, Instruction}
 import models._
 import org.bson.types.ObjectId
 import org.joda.time.{DateTime}
-import org.specs2.matcher.{Matchers, Matcher}
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 

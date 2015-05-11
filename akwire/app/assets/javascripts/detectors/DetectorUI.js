@@ -8,19 +8,19 @@
             .state('admin.detector', {
               url: "/detectors",
               abstract: true,
-              templateUrl: "/assets/partials/detectors/base.html",
+              templateUrl: "/assets/javascripts/detectors/base.html",
             })
             .state('admin.detector.list', {
               url: "",
-              templateUrl: "/assets/partials/detectors/list.html",
+              templateUrl: "/assets/javascripts/detectors/list.html",
             })
             .state('admin.detector.create', {
               url: "/create",
-              templateUrl: "/assets/partials/detectors/create.html",
+              templateUrl: "/assets/javascripts/detectors/create.html",
             })
             .state('admin.detector.edit', {
               url: "/edit/:detectorId",
-              templateUrl: "/assets/partials/detectors/edit.html",
+              templateUrl: "/assets/javascripts/detectors/edit.html",
             });
         }
     ]);
