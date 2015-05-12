@@ -35,6 +35,7 @@ libraryDependencies ++= Seq(
   "org.webjars.bower" % "angular-sanitize" % "1.3.14",
   "org.webjars.bower" % "angular-route" % "1.3.14",
   "org.webjars.bower" % "angular-bootstrap" % "0.12.1",
+  "org.webjars.bower" % "angular-ui-router" % "0.2.14",
   "org.webjars.bower" % "bootstrap" % "3.3.4",
   "org.webjars.bower" % "ng-table" % "0.5.4"
 )
