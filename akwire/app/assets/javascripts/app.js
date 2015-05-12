@@ -60,42 +60,42 @@
             })
             .state('admin', {
               url: "/admin",
-              templateUrl: "/assets/javascripts/admin/base.html",
+              templateUrl: "/assets/javascripts/admin/base.html"
             })
             .state('configure', {
               url: "/configure",
-              templateUrl: "/assets/javascripts/configure/base.html",
+              templateUrl: "/assets/javascripts/configure/base.html"
             })
 
             .state('admin.role', {
               url: "/role",
               abstract: true,
-              templateUrl: "/assets/javascripts/roles/base.html",
+              templateUrl: "/assets/javascripts/roles/base.html"
             })
             .state('admin.role.list', {
               url: "",
-              templateUrl: "/assets/javascripts/roles/list.html",
+              templateUrl: "/assets/javascripts/roles/list.html"
             })
             .state('admin.role.create', {
               url: "/create",
-              templateUrl: "/assets/javascripts/roles/create.html",
+              templateUrl: "/assets/javascripts/roles/create.html"
             })
             .state('admin.role.edit', {
               url: "/edit/:roleId",
-              templateUrl: "/assets/javascripts/roles/edit.html",
+              templateUrl: "/assets/javascripts/roles/edit.html"
             })
 
             .state('admin.user', {
               url: "/user",
-              templateUrl: "/assets/javascripts/users/list.html",
+              templateUrl: "/assets/javascripts/users/list.html"
             })
             .state('admin.user.edit', {
               url: "/:userId",
-              templateUrl: "/assets/javascripts/users/edit.html",
+              templateUrl: "/assets/javascripts/users/edit.html"
             })
             .state('admin.user.create', {
               url: "/create",
-              templateUrl: "/assets/javascripts/users/create.html",
+              templateUrl: "/assets/javascripts/users/create.html"
             });
     }]);
 
