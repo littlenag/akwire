@@ -1,39 +1,27 @@
 <div class="row" >
     &NonBreakingSpace;
 
-    <div ng-controller="ListIncidentsCtrl">
+    <div ng-controller="ListNotificationsCtrl">
         <div class="form-group">
-            <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Incidents...">
+            <input class="form-control" type="text" ng-model="searchText" placeholder="Filter Policies...">
             <hr>
         </div>
 
-        <table id="incident_list" class="table table-striped">
+        <table id="policies_list" class="table table-striped">
             <thead>
             <tr>
-                <th>Host</th>
-                <th>Observer</th>
-                <th>Key</th>
-                <th>Message</th>
+                <th>Name</th>
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="i in incidents | filter:searchText">
+            <tr ng-repeat="p in policies | filter:searchText">
                 <td>
-                    {{ i.host }}
-                </td>
-                <td>
-                    {{ i.observer }}
-                </td>
-                <td>
-                    {{ i.key }}
-                </td>
-                <td>
-                    {{ i.message }}
+                    {{ p.name }}
                 </td>
             </tr>
-            <tr ng-hide="incidents.length">
+            <tr ng-hide="policies.length">
                 <td colspan="4">
-                    <p class="text-center">No Incidents</p>
+                    <p class="text-center">No Policies</p>
                 </td>
             </tr>
             </tbody>
@@ -41,7 +29,7 @@
 
         <hr>
         <h4>Debug:</h4>
-        <pre>{{ incidents | json }}</pre>
+        <pre>{{ policies | json }}</pre>
     </div>
 
 </div>

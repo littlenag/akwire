@@ -1,43 +1,43 @@
 (function() {
 
-  controllersModule.controller('ListNotifacationsCtrl', [
-    "$scope", '$log',  'NotifacationService',
-    function($scope, $log, NotifacationService) {
-      $log.debug("constructing ListNotifacationController");
-      $scope.notifacations = [];
+  controllersModule.controller('ListNotificationsCtrl', [
+    "$scope", '$log',  'NotificationService',
+    function($scope, $log, NotificationService) {
+      $log.debug("constructing ListNotificationController");
+      $scope.policies = [];
 
-      $scope.getAllNotifacations = function() {
-        $log.debug("getAllNotifacations()");
-        return NotifacationService.getNotifacations().then(function(data) {
-          $log.debug("Promise returned " + data.length + " Notifacations");
-          $scope.notifacations = data;
+      $scope.getAllNotifications = function() {
+        $log.debug("getAllNotifications()");
+        return NotificationService.getNotifications().then(function(data) {
+          $log.debug("Promise returned " + data.length + " Policies");
+          $scope.policies = data;
           return data;
         }, function(error) {
-          return $log.error("Unable to get Notifacations: " + error);
+          return $log.error("Unable to get Notifications: " + error);
         });
       };
 
-      $scope.getAllNotifacations();
+      $scope.getAllNotifications();
     }
   ]);
 
-  controllersModule.controller('CreateNotifacationCtrl', [
-    '$scope', '$log', '$state', 'NotifacationService',
-    function($scope, $log, $state, NotifacationService) {
-      $log.debug("constructing CreateNotifacationController");
+  controllersModule.controller('CreateNotificationCtrl', [
+    '$scope', '$log', '$state', 'NotificationService',
+    function($scope, $log, $state, NotificationService) {
+      $log.debug("constructing CreateNotificationController");
 
-      $scope.notifacation = {};
+      $scope.notification = {};
 
-      $scope.createNotifacation = function() {
-        $log.debug("createNotifacation()");
-        this.notifacation.active = true;
-        return NotifacationService.createNotifacation($scope.notifacation).then(function(data) {
-          $log.debug("Promise returned " + data + " Notifacation");
-          $scope.notifacation = data;
-          $state.go("admin.notifacation.list", {});
+      $scope.createNotification = function() {
+        $log.debug("createNotification()");
+        this.notification.active = true;
+        return NotificationService.createNotification($scope.notification).then(function(data) {
+          $log.debug("Promise returned " + data + " Notification");
+          $scope.notification = data;
+          $state.go("configure.notification", {});
           return data;
         }, function(error) {
-          $log.error("Unable to create Notifacation: " + error);
+          $log.error("Unable to create Notification: " + error);
           return null;
         });
       };

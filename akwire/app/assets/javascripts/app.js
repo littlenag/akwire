@@ -10,6 +10,7 @@
         'akwire.ui.rules',
         'akwire.ui.detectors',
         'akwire.ui.incidents',
+        'akwire.ui.notifications',
         'akwire.filters',
         'akwire.services',
         'akwire.controllers',
