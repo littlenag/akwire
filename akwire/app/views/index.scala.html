@@ -37,8 +37,8 @@
 
                     <li class="divider-vertical"></li>
 
-                    <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configure<b class="caret"></b></a>
+                    <li class="dropdown" dropdown>
+                        <a href class="dropdown-toggle" dropdown-toggle>Configure<b class="caret"></b></a>
                         <ul class="dropdown-menu" role="menu">
                             <li role="presentation">
                                 <a ui-sref="configure.rules.list">Alerting Rules</a>
@@ -48,13 +48,13 @@
                             </li>
                             <!-- alert policy, escalation, schedule -->
                             <li role="presentation">
-                                <a ui-sref="configure.notifications">Notifications</a>
+                                <a ui-sref="configure.notifications.list">Notifications</a>
                             </li>
                             <li role="presentation">
-                                <a ui-sref="configure.profiles">Profiles</a>
+                                <a ui-sref="configure.profiles.list">Profiles</a>
                             </li>
                             <li role="presentation">
-                                <a ui-sref="configure.team">Team</a>
+                                <a ui-sref="configure.team.list">Team</a>
                             </li>
                         </ul>
                     </li>

@@ -4,8 +4,8 @@
     console.log("Akwire Client starting. Starting AngularJS.");
 
     var dependencies = [
-        'ui.bootstrap',
         'ui.router',
+        'ui.bootstrap',
         'akwire.ui.teams',
         'akwire.ui.rules',
         'akwire.ui.detectors',

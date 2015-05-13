@@ -40,3 +40,4 @@ libraryDependencies ++= Seq(
   "org.webjars.bower" % "ng-table" % "0.5.4"
 )
 
+dependencyOverrides ++= Set("org.webjars.bower" % "angular" % "1.3.14")
