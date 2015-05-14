@@ -162,7 +162,7 @@
       };
     }]);
 
-    controllersModule.controller('ApplicationController', function ($scope, $rootScope, $log, $state,
+    controllersModule.controller('ApplicationController', function ($scope, $rootScope, $log, $state, $location,
                                                                     USER_ROLES, AUTH_EVENTS,
                                                                     AuthService) {
       $log.debug("constructing ApplicationController");
@@ -190,12 +190,18 @@
         });
       };
 
-//      AuthService.retryAuth().then(function (user) {
-//        if (user !== null) {
-//          $log.info("Re-authed with User: " + angular.toJson(user));
-//          $scope.setCurrentUser(user);
-//        }
-//      });
+      // If already authenticated just move to login page. Should save their requested URL.
+//      if (! AuthService.isAuthenticated()) {
+//        console.log("redirecting to login state");
+ //       $location.path("/");
+  //    }
+
+      AuthService.retryAuth().then(function (user) {
+        if (user !== null) {
+          $log.info("Re-authed with User: " + angular.toJson(user));
+          $scope.setCurrentUser(user);
+        }
+      });
     });
 
     ///////////////////////////////////////////////////////////////////////////
@@ -294,7 +300,8 @@
       authService.initSession = function (user) {
         $log.info("User Info: " + angular.toJson(user));
         Session.create(user.id, user.mail, user.name, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams);
-        $cookieStore.put("akwire.email", user.mail);
+        $cookieStore.put("userId", user.id);
+        $cookieStore.put("userEmail", user.mail);
         return user;
       };
 
@@ -311,14 +318,23 @@
       };
 
       authService.retryAuth = function() {
+        var host = window.location.hostname;
+
+        if (host == "localhost") {
+          console.log("on localhost");
+        }
+
         // You might still have a good token in your browser, try if so
-        var lastEmailUsed = $cookieStore.get("akwire.email");
+        var lastEmailUsed = $cookieStore.get("akwire.userEmail");
+        var lastUserId = $cookieStore.get("akwire.userId");
 
         var deferred = $q.defer();
 
-        if (lastEmailUsed !== null) {
+        console.log("lastEmail ", lastEmailUsed);
+
+        if (lastEmailUsed !== undefined) {
           // try to re-fetch the user object
-          $log.info("Retying auth for: " + lastEmailUsed);
+          $log.info("Retrying auth for: " + lastEmailUsed);
 
           authService.getUserInfo(lastEmailUsed).then(function(res) {
             $log.info("Successfully Authenticated");
@@ -330,6 +346,9 @@
             deferred.reject(err);
           });
         } else {
+          // Force the user back to the login page
+          $log.error("No stashed auth token");
+          $location.path("/");
           deferred.reject(null);
         }
 
