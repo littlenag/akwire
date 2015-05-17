@@ -1,103 +1,108 @@
 (function() {
-    "use strict";
+  "use strict";
 
-    console.log("Akwire Client starting. Starting AngularJS.");
+  console.log("Akwire Client starting. Starting AngularJS.");
 
-    var dependencies = [
-        'ui.router',
-        'ui.bootstrap',
-        'akwire.ui.teams',
-        'akwire.ui.rules',
-        'akwire.ui.detectors',
-        'akwire.ui.incidents',
-        'akwire.ui.notifications',
-        'akwire.filters',
-        'akwire.services',
-        'akwire.controllers',
-        'akwire.directives',
-        'akwire.common',
-    ];
+  var dependencies = [
+    'ui.router',
+    'ui.bootstrap',
+    'ngCookies',
+    'LocalStorageModule',
+    'akwire.ui.teams',
+    'akwire.ui.rules',
+    'akwire.ui.detectors',
+    'akwire.ui.incidents',
+    'akwire.ui.notifications',
+    'akwire.filters',
+    'akwire.services',
+    'akwire.controllers',
+    'akwire.directives',
+    'akwire.common',
+  ];
 
-    var app = angular.module('akwire', dependencies);
+  var app = angular.module('akwire', dependencies);
 
-    this.commonModule = angular.module('akwire.common', []);
-    this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
-    this.controllersModule = angular.module('akwire.controllers', []);
-    this.servicesModule = angular.module('akwire.services', ['ngResource', 'ngCookies']);
-    this.modelsModule = angular.module('akwire.models', []);
-    this.directivesModule = angular.module('akwire.directives', []);
-    this.filtersModule = angular.module('akwire.filters', []);
+  this.commonModule = angular.module('akwire.common', []);
+  this.uiModule = angular.module('akwire.ui', ['ui.router', 'ngAnimate']);
+  this.controllersModule = angular.module('akwire.controllers', []);
+  this.servicesModule = angular.module('akwire.services', ['ngResource', 'ngCookies']);
+  this.modelsModule = angular.module('akwire.models', []);
+  this.directivesModule = angular.module('akwire.directives', []);
+  this.filtersModule = angular.module('akwire.filters', []);
 
-    app.config(
+  app.config(function (localStorageServiceProvider) {
+    localStorageServiceProvider
+        .setPrefix('akwire');
+  });
+
+  app.config(
     [ '$stateProvider', '$urlRouterProvider',
       function($stateProvider, $urlRouterProvider) {
         $urlRouterProvider.otherwise("/");
-
         $stateProvider
+          .state('login', {
+            url: "/",
+            templateUrl: "/assets/javascripts/login/login.html"
+          })
 
-            .state('login', {
-              url: "/",
-              templateUrl: "/assets/javascripts/login/login.html"
-            })
+          .state('logout', {
+            url: "/logout",
+            template: "",
+            controller: ['$scope', '$state', 'ApplicationController',
+              function ( $scope, $state, ApplicationController) {
+                ApplicationController.logout();
+              }
+            ]
+          })
 
-            .state('logout', {
-              url: "/logout",
-              template: "",
-              controller: ['$scope', '$state', 'ApplicationController',
-                function ( $scope, $state, ApplicationController) {
-                  ApplicationController.logout();
-                }
-              ]
-            })
+          .state('home', {
+            url: "/home",
+            templateUrl: "/assets/javascripts/home.html"
+          })
 
-            .state('home', {
-              url: "/home",
-              templateUrl: "/assets/javascripts/home.html"
-            })
+          .state('agents', {
+            url: "/agents",
+            templateUrl: "/assets/javascripts/agents/list.html"
+          })
+          .state('admin', {
+            url: "/admin",
+            templateUrl: "/assets/javascripts/admin/base.html"
+          })
+          .state('configure', {
+            url: "/configure",
+            templateUrl: "/assets/javascripts/configure/base.html"
+          })
 
-            .state('agents', {
-              url: "/agents",
-              templateUrl: "/assets/javascripts/agents/list.html"
-            })
-            .state('admin', {
-              url: "/admin",
-              templateUrl: "/assets/javascripts/admin/base.html"
-            })
-            .state('configure', {
-              url: "/configure",
-              templateUrl: "/assets/javascripts/configure/base.html"
-            })
+          .state('admin.role', {
+            url: "/role",
+            abstract: true,
+            templateUrl: "/assets/javascripts/roles/base.html"
+          })
+          .state('admin.role.list', {
+            url: "",
+            templateUrl: "/assets/javascripts/roles/list.html"
+          })
+          .state('admin.role.create', {
+            url: "/create",
+            templateUrl: "/assets/javascripts/roles/create.html"
+          })
+          .state('admin.role.edit', {
+            url: "/edit/:roleId",
+            templateUrl: "/assets/javascripts/roles/edit.html"
+          })
 
-            .state('admin.role', {
-              url: "/role",
-              abstract: true,
-              templateUrl: "/assets/javascripts/roles/base.html"
-            })
-            .state('admin.role.list', {
-              url: "",
-              templateUrl: "/assets/javascripts/roles/list.html"
-            })
-            .state('admin.role.create', {
-              url: "/create",
-              templateUrl: "/assets/javascripts/roles/create.html"
-            })
-            .state('admin.role.edit', {
-              url: "/edit/:roleId",
-              templateUrl: "/assets/javascripts/roles/edit.html"
-            })
-
-            .state('admin.user', {
-              url: "/user",
-              templateUrl: "/assets/javascripts/users/list.html"
-            })
-            .state('admin.user.edit', {
-              url: "/:userId",
-              templateUrl: "/assets/javascripts/users/edit.html"
-            })
-            .state('admin.user.create', {
-              url: "/create",
-              templateUrl: "/assets/javascripts/users/create.html"
-            });
+          .state('admin.user', {
+            url: "/user",
+            templateUrl: "/assets/javascripts/users/list.html"
+          })
+          .state('admin.user.edit', {
+            url: "/:userId",
+            templateUrl: "/assets/javascripts/users/edit.html"
+          })
+          .state('admin.user.create', {
+            url: "/create",
+            templateUrl: "/assets/javascripts/users/create.html"
+          });
     }]);
 
     app.run(
@@ -167,41 +172,16 @@
                                                                     AuthService) {
       $log.debug("constructing ApplicationController");
 
-      $scope.currentUser = null;
-      $scope.currentTeamId = null;
-      $scope.currentTeamName = null;
-      $scope.userRoles = USER_ROLES;
-      $scope.isAuthorized = AuthService.isAuthorized;
-
-      $scope.setCurrentUser = function (user) {
-        $log.info("Current User: " + angular.toJson(user));
-        $scope.currentUser = user;
-        $scope.currentTeamId = user.memberOfTeams[0].id;
-        $scope.currentTeamName = user.memberOfTeams[0].name;
-      };
+      $scope.session = AuthService.getSession();
 
       $scope.logout = function() {
-        $scope.currentUser = null;
-        $scope.currentTeamId = null;
-        $scope.currentTeamName = null;
-        AuthService.logout().then(function(x) {
+        AuthService.logout().then(function() {
           $rootScope.$broadcast(AUTH_EVENTS.logoutSuccess);
           $state.go("login", {});
         });
       };
 
-      // If already authenticated just move to login page. Should save their requested URL.
-//      if (! AuthService.isAuthenticated()) {
-//        console.log("redirecting to login state");
- //       $location.path("/");
-  //    }
-
-      AuthService.retryAuth().then(function (user) {
-        if (user !== null) {
-          $log.info("Re-authed with User: " + angular.toJson(user));
-          $scope.setCurrentUser(user);
-        }
-      });
+      AuthService.retryAuth();
     });
 
     ///////////////////////////////////////////////////////////////////////////
@@ -231,57 +211,68 @@
     });
 
     servicesModule.service('Session', function () {
-      this.create = function (userId, userEmail, userName, teamId, teamName, teams) {
-        //this.sessionId = sessionId;
-        //this.userRole = userRole;
-        this.userId = userId;
-        this.userEmail = userEmail;
-        this.userName = userName;
-        this.teamId = teamId;            // these are just the current team, the user might change their selection
-        this.teamName = teamName;
-        this.teams = teams;
+      var session = {};
+
+      session.create = function (userId, userEmail, userName, teamId, teamName, teams) {
+        session.userId = userId;
+        session.userEmail = userEmail;
+        session.userName = userName;
+        session.currentTeamId = teamId;            // these are just the current team, the user might change their selection
+        session.currentTeamName = teamName;
+        session.teams = teams;
       };
-      this.destroy = function () {
-        this.userId = null;
-        this.userEmail = null;
-        this.userName = null;
-        this.teamId = null;
-        this.teamName = null;
-        this.teams = null;
+
+      session.destroy = function () {
+        session.userId = null;
+        session.userEmail = null;
+        session.userName = null;
+        session.currentTeamId = null;
+        session.currentTeamName = null;
+        session.teams = null;
       };
-      return this;
+
+      // Make sure to init.
+      session.destroy();
+
+      return session;
     });
 
-    servicesModule.service('AuthService', function ($http, $log, $cookieStore, $location, $q, Session, $window) {
+    servicesModule.service('AuthService', function ($http, $log, $location, $q, Session, $window, localStorageService) {
       var authService = {};
 
       authService.login = function (credentials) {
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-          .post("/auth/api/authenticate/userpass?builder=cookie", credentials) // token now returns a JSON token document
-          .then(function(res) {
+            .post("/auth/api/authenticate/userpass?builder=cookie", credentials) // token now returns a JSON token document
+            .then(function(res) {
 
-            $log.info("Successfully Authenticated User: " + credentials.username);
+              $log.info("Successfully Authenticated User: " + credentials.username);
 
-            $log.info("res: " + angular.toJson(res));
+              $log.info("res: " + angular.toJson(res));
 
-            $window.sessionStorage.setItem('token', res.data.token);
+              $window.sessionStorage.setItem('token', res.data.token);
 
-            // securesocial returns nothing useful here other than our cookie
+              localStorageService.set('authTokenData', res.data.token);
+              localStorageService.set('authTokenExpires', res.data.expiresOn);
 
-            // return a promise that will contain our user's info
-            return authService.getUserInfo(credentials.username);
+              // securesocial returns nothing useful here other than our cookie
 
-          }, function(err) {
-            $log.error("Failed to authenticate: " + err);
-            return $q.reject("Failed to authenticate");
-          })
-          .then(function(res) {
-            // Now we have the user, create the session, stash the info, return the object
-            $log.info("Successfully Authenticated");
-            return authService.initSession(res.data);
-          });
+              // return a promise that will contain our user's info
+              return authService.getUserInfo(credentials.username);
+
+            },
+            function(err) {
+              $log.error("Failed to authenticate: " + err);
+              return $q.reject("Failed to authenticate");
+            }
+        )
+            .then(function(res) {
+              // Now we have the user, create the session, stash the info, return the object
+              $log.info("Successfully Authenticated");
+              return authService.initSession(res.data);
+            }
+        );
       };
 
       authService.logout = function() {
@@ -299,9 +290,9 @@
 
       authService.initSession = function (user) {
         $log.info("User Info: " + angular.toJson(user));
-        Session.create(user.id, user.mail, user.name, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams);
-        $cookieStore.put("userId", user.id);
-        $cookieStore.put("userEmail", user.mail);
+        Session.create(user.id, user.profile.email, user.profile.fullName, user.memberOfTeams[0].id, user.memberOfTeams[0].name, user.memberOfTeams);
+        localStorageService.set("userId", user.id);
+        localStorageService.set("userEmail", user.profile.email);
         return user;
       };
 
@@ -309,39 +300,42 @@
         return !!Session.userId;
       };
 
-      authService.isAuthorized = function (authorizedRoles) {
-        if (!angular.isArray(authorizedRoles)) {
-          authorizedRoles = [authorizedRoles];
-        }
-        return (authService.isAuthenticated() &&
-          authorizedRoles.indexOf(Session.userRole) !== -1);
-      };
-
       authService.retryAuth = function() {
-        var host = window.location.hostname;
 
-        if (host == "localhost") {
-          console.log("on localhost");
-        }
+        //var host = window.location.hostname;
+        //if (host == "localhost") {
+        //  console.log("on localhost");
+        //}
 
         // You might still have a good token in your browser, try if so
-        var lastEmailUsed = $cookieStore.get("akwire.userEmail");
-        var lastUserId = $cookieStore.get("akwire.userId");
+        var lastUserId = localStorageService.get("userId");
+        var lastEmailUsed = localStorageService.get("userEmail");
+
+        var lastToken = localStorageService.get("authTokenData");
+        var tokenIsValid = Date.now() < Date.parse(localStorageService.get("authTokenExpires"));
 
         var deferred = $q.defer();
 
         console.log("lastEmail ", lastEmailUsed);
+        console.log("lastToken ", lastToken);
+        console.log("isValid ", tokenIsValid);
 
-        if (lastEmailUsed !== undefined) {
+        if (lastEmailUsed !== null && lastToken !== null && tokenIsValid) {
           // try to re-fetch the user object
           $log.info("Retrying auth for: " + lastEmailUsed);
 
+          $window.sessionStorage.setItem('token', lastToken);
+
+          // If we are able to get user info, then we already have an auth token.
           authService.getUserInfo(lastEmailUsed).then(function(res) {
             $log.info("Successfully Authenticated");
             deferred.resolve(authService.initSession(res.data));
           }, function(err) {
             $log.error("Failed to authenticate: " + angular.toJson(err));
-            // Force the user back to the login page
+            // Nuke stashed data, force the user back to the login page
+            $window.sessionStorage.removeItem('token');
+            localStorageService.remove('authTokenData');
+            localStorageService.remove('authTokenExpires');
             $location.path("/");
             deferred.reject(err);
           });
