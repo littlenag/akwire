@@ -159,7 +159,6 @@
       $scope.login = function (credentials) {
         AuthService.login(credentials).then(function (user) {
           $rootScope.$broadcast(AUTH_EVENTS.loginSuccess);
-          $scope.setCurrentUser(user);
           $state.go("home", {});
         }, function () {
           $rootScope.$broadcast(AUTH_EVENTS.loginFailed);
@@ -244,34 +243,33 @@
         $log.info("Validating credentials: " + angular.toJson(credentials));
 
         return $http
-            .post("/auth/api/authenticate/userpass?builder=cookie", credentials) // token now returns a JSON token document
-            .then(function(res) {
+          .post("/auth/api/authenticate/userpass?builder=cookie", credentials) // token now returns a JSON token document
+          .then(function(res) {
 
-              $log.info("Successfully Authenticated User: " + credentials.username);
+            $log.info("Successfully Authenticated User: " + credentials.username);
 
-              $log.info("res: " + angular.toJson(res));
+            $log.info("res: " + angular.toJson(res));
 
-              $window.sessionStorage.setItem('token', res.data.token);
+            $window.sessionStorage.setItem('token', res.data.token);
 
-              localStorageService.set('authTokenData', res.data.token);
-              localStorageService.set('authTokenExpires', res.data.expiresOn);
+            localStorageService.set('authTokenData', res.data.token);
+            localStorageService.set('authTokenExpires', res.data.expiresOn);
 
-              // securesocial returns nothing useful here other than our cookie
+            // securesocial returns nothing useful here other than our cookie
 
-              // return a promise that will contain our user's info
-              return authService.getUserInfo(credentials.username);
+            // return a promise that will contain our user's info
+            return authService.getUserInfo(credentials.username);
 
-            },
-            function(err) {
-              $log.error("Failed to authenticate: " + err);
-              return $q.reject("Failed to authenticate");
-            }
-        )
-            .then(function(res) {
-              // Now we have the user, create the session, stash the info, return the object
-              $log.info("Successfully Authenticated");
-              return authService.initSession(res.data);
-            }
+          },
+          function(err) {
+            $log.error("Failed to authenticate: " + err);
+            return $q.reject("Failed to authenticate");
+          }
+        ).then(function(res) {
+            // Now we have the user, create the session, stash the info, return the object
+            $log.info("Successfully Authenticated");
+            return authService.initSession(res.data);
+          }
         );
       };
 
@@ -300,12 +298,11 @@
         return !!Session.userId;
       };
 
-      authService.retryAuth = function() {
+      authService.getSession = function () {
+        return Session;
+      };
 
-        //var host = window.location.hostname;
-        //if (host == "localhost") {
-        //  console.log("on localhost");
-        //}
+      authService.retryAuth = function() {
 
         // You might still have a good token in your browser, try if so
         var lastUserId = localStorageService.get("userId");

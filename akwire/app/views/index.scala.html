@@ -11,7 +11,7 @@
 <body ng-controller="ApplicationController">
 <div class="container-fluid col-md-12">
     <!-- Fixed navbar -->
-    <header ng-show="currentUser">
+    <header ng-show="session.userId">
         <div class="navbar navbar-default navbar-fixed-top" role="navigation">
             <div class="container-fluid">
                 <div class="navbar-header">
@@ -62,7 +62,7 @@
 
                 <ul class="nav navbar-nav pull-right">
                     <li class="dropdown pull-right" dropdown>
-                        <a href class="dropdown-toggle" dropdown-toggle>{{currentUser.profile.email}}<b class="caret"></b></a>
+                        <a href class="dropdown-toggle" dropdown-toggle>{{session.userEmail}}<b class="caret"></b></a>
                         <ul class="dropdown-menu" role="menu">
                             <li>
                                 <a ui-sref="admin">Admin</a>
@@ -76,8 +76,8 @@
                             </li>
                             <li class="divider"></li>
                             <li class="nav-header">Team Selector</li>
-                            <li ng-repeat="team in currentUser.memberOfTeams">
-                                <a ui-sref="home.changeTeam(team.name)">{{team.name}}</a>
+                            <li ng-repeat="team in session.teams">
+                                <a ui-sref="home.changeTeam(team)">{{team.name}}</a>
                             </li>
                         </ul>
                     </li>
@@ -92,7 +92,7 @@
 
     <pre>
       <!-- Here's some values to keep an eye on in the sample in order to understand $state and $stateParams -->
-      $currentUser = {{ currentUser }}
+      $session = {{ session }}
       $state = {{ $state.current.name }}
       $stateParams = {{ $stateParams }}
       $state full url = {{ $state.$current.url.source }}
