@@ -13,7 +13,7 @@
         'Content-Type': 'application/json'
       };
 
-      service.createNotification = function(notification) {
+      service.saveNotification = function(notification) {
         $log.debug("createNotification " + (angular.toJson(notification, true)));
 
         var deferred = $q.defer();
@@ -25,24 +25,6 @@
           }).
           error(function(data, status, headers) {
             $log.error("Failed to create notification - status " + status);
-            return deferred.reject(data);
-          });
-
-        return deferred.promise;
-      };
-
-      service.getNotifications = function() {
-        $log.debug("getNotifications()");
-
-        var deferred = $q.defer();
-
-        $http.get("/notification/list").
-          success(function(data, status, headers) {
-            $log.info("Successfully listed Notifications - status " + status);
-            return deferred.resolve(data);
-          }).
-          error(function(data, status, headers) {
-            $log.error("Failed to list Notifications - status " + status);
             return deferred.reject(data);
           });
 

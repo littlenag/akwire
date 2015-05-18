@@ -4,21 +4,20 @@
 
         $stateProvider
             .state('configure.notifications', {
-              url: "/notifications",
-              abstract: true,
+              url: "/notification-policy",
               templateUrl: "/assets/javascripts/notifications/base.html"
             })
-            .state('configure.notifications.detail', {
-              url: "",
-              templateUrl: "/assets/javascripts/notifications/detail.html"
+            .state('configure.notifications.user', {
+              url: "/personal",
+              templateUrl: "/assets/javascripts/notifications/user.html"
             })
-            .state('configure.notifications.edit', {
+            .state('configure.notifications.team', {
                 url: "/edit",
-                templateUrl: "/assets/javascripts/notifications/edit.html"
+                templateUrl: "/assets/javascripts/notifications/team.html"
             })
-            .state('configure.notifications.create', {
+            .state('configure.notifications.service', {
               url: "/create",
-              templateUrl: "/assets/javascripts/notifications/create.html"
+              templateUrl: "/assets/javascripts/notifications/service.html"
             });
         }
     ]);

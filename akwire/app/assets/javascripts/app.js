@@ -6,6 +6,7 @@
   var dependencies = [
     'ui.router',
     'ui.bootstrap',
+    'ui.ace',
     'ngCookies',
     'LocalStorageModule',
     'akwire.ui.teams',
@@ -19,6 +20,8 @@
     'akwire.directives',
     'akwire.common',
   ];
+
+  // ack, suppress (single, any from host, any from rule, from service, from detector), resolve, archive
 
   var app = angular.module('akwire', dependencies);
 

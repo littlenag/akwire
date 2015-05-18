@@ -38,7 +38,8 @@ libraryDependencies ++= Seq(
   "org.webjars.bower" % "angular-ui-router" % "0.2.14",
   "org.webjars.bower" % "angular-local-storage" % "0.1.5",
   "org.webjars.bower" % "bootstrap" % "3.3.4",
-  "org.webjars.bower" % "ng-table" % "0.5.4"
+  "org.webjars.bower" % "ng-table" % "0.5.4",
+  "org.webjars"       % "angular-ui-ace" % "0.2.3"
 )
 
 dependencyOverrides ++= Set("org.webjars.bower" % "angular" % "1.3.14")

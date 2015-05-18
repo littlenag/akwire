@@ -23,3 +23,5 @@ border-left-color: #000000;
     display: none;
   }
 }
+
+.ace_editor { height: 500px; }
