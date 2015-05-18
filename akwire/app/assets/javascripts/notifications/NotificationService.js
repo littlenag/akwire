@@ -1,10 +1,10 @@
 (function() {
   "use strict";
 
-  servicesModule.service('NotificationService', ['$log', '$http', '$q',
+  servicesModule.service('PolicyService', ['$log', '$http', '$q',
     function($log, $http, $q) {
 
-      $log.debug("constructing NotificationService");
+      $log.debug("constructing PolicyService");
 
       var service = {};
 
@@ -13,12 +13,12 @@
         'Content-Type': 'application/json'
       };
 
-      service.saveNotification = function(notification) {
-        $log.debug("createNotification " + (angular.toJson(notification, true)));
+      service.saveUserPolicy = function(user, policy) {
+        $log.debug("saveUserPolicy " + (angular.toJson(policy, true)));
 
         var deferred = $q.defer();
 
-        $http.post('/notification/create', notification).
+        $http.post('/policy/create', policy).
           success(function(data, status, headers) {
             $log.info("Successfully created Notification - status " + status);
             return deferred.resolve(data);
@@ -31,37 +31,18 @@
         return deferred.promise;
       };
 
-      service.getNotification = function(notificationId) {
-        $log.debug("getNotification('" + notificationId + "')");
+      service.getUserPolicy = function(policyId) {
+        $log.debug("getUserPolicy('" + policyId + "')");
 
         var deferred = $q.defer();
 
-        $http.get("/notification", {params : {notificationId: notificationId}}).
+        $http.get("/notification", {params : {notificationId: policyId}}).
           success(function(data, status, headers) {
             $log.info("Successfully retrieved Notification - status " + status);
             return deferred.resolve(data);
           }).
           error(function(data, status, headers) {
             $log.error("Failed to retrieve Notification - status " + status);
-            return deferred.reject(data);
-          });
-
-        return deferred.promise;
-      };
-
-      // ack, suppress (single, any from host, any from rule), resolve, archive
-
-      service.ackNotification = function(notification) {
-        $log.debug("ACK Notification " + (angular.toJson(notification, true)));
-
-        var deferred = $q.defer();
-
-        $http.post("/notification", notification).
-          success(function(data, status, headers) {
-            $log.info("Successfully updated Notification - status " + status);
-            return deferred.resolve(data);
-          }).error(function(data, status, headers) {
-            $log.error("Failed to update Notification - status " + status);
             return deferred.reject(data);
           });
 

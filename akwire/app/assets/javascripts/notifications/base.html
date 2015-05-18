@@ -1,6 +1,16 @@
-<ul class="nav nav-pills">
-  <li><a ui-sref="configure.notifications.user">Personal</a></li>
-  <li><a ui-sref="configure.notifications.team">Team</a></li>
-  <li><a ui-sref="configure.notifications.service">Service</a></li>
-</ul>
-<div ui-view></div>
+<div ng-controller="PolicyCtrl">
+    <ul class="nav nav-pills">
+        <li><a ui-sref="configure.notifications.user">User</a></li>
+        <li><a ui-sref="configure.notifications.team">Team</a></li>
+        <li><a ui-sref="configure.notifications.service">Service</a></li>
+    </ul>
+    <div ui-ace="{
+      useWrapMode : true,
+      showGutter: true,
+      theme:'twilight',
+      mode: 'javascript',
+      firstLineNumber: 1,
+      onLoad: editorLoaded,
+      onChange: editorChanged
+    }"></div>
+</div>
