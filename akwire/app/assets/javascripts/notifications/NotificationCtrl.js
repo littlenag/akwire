@@ -1,14 +1,14 @@
 (function() {
 
   controllersModule.controller('ListNotificationsCtrl', [
-    "$scope", '$log',  'NotificationService',
-    function($scope, $log, NotificationService) {
+    "$scope", '$log',  'NotificationPolicyService',
+    function($scope, $log, NotificationPolicyService) {
       $log.debug("constructing ListNotificationController");
       $scope.policies = [];
 
       $scope.getAllNotifications = function() {
         $log.debug("getAllNotifications()");
-        return NotificationService.getNotifications().then(function(data) {
+        return NotificationPolicyService.getNotifications().then(function(data) {
           $log.debug("Promise returned " + data.length + " Policies");
           $scope.policies = data;
           return data;
@@ -22,8 +22,8 @@
   ]);
 
   controllersModule.controller('CreateNotificationCtrl', [
-    '$scope', '$log', '$state', 'NotificationService',
-    function($scope, $log, $state, NotificationService) {
+    '$scope', '$log', '$state', 'NotificationPolicyService',
+    function($scope, $log, $state, NotificationPolicyService) {
       $log.debug("constructing CreateNotificationController");
 
       $scope.notification = {};
@@ -31,7 +31,7 @@
       $scope.createNotification = function() {
         $log.debug("createNotification()");
         this.notification.active = true;
-        return NotificationService.createNotification($scope.notification).then(function(data) {
+        return NotificationPolicyService.createNotification($scope.notification).then(function(data) {
           $log.debug("Promise returned " + data + " Policy");
           $scope.notification = data;
           $state.go("configure.notification", {});
@@ -44,10 +44,10 @@
     }
   ]);
 
-  controllersModule.controller('UserPolicyCtrl', [
-    "$scope", '$log',  'NotificationService',
-    function($scope, $log, NotificationService) {
-      $log.debug("constructing UserPolicyCtrl");
+  controllersModule.controller('NotificationPolicyCtrl', [
+    "$scope", '$log',  'NotificationPolicyService',
+    function($scope, $log, NotificationPolicyService) {
+      $log.debug("constructing NotificationPolicyCtrl");
 
       $scope.editorLoaded = function(_editor) {
         $log.debug("editor loaded");

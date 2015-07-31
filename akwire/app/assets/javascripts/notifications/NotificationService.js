@@ -1,10 +1,10 @@
 (function() {
   "use strict";
 
-  servicesModule.service('PolicyService', ['$log', '$http', '$q',
+  servicesModule.service('NotificationPolicyService', ['$log', '$http', '$q',
     function($log, $http, $q) {
 
-      $log.debug("constructing PolicyService");
+      $log.debug("constructing NotificationPolicyService");
 
       var service = {};
 
