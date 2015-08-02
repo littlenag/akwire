@@ -61,8 +61,8 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
-    for (ar <- alertingRules) {
-      ar._2.inspect(obs)
+    for ((id, rule) <- alertingRules) {
+      rule.inspect(obs)
     }
   }
 

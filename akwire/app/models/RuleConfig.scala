@@ -92,9 +92,6 @@ trait RuleJson {
 
   import EnumUtils._
 
-  implicit val impactFormat = EnumUtils.enumFormat(Impact)
-  implicit val urgencyFormat = EnumUtils.enumFormat(Urgency)
-
   implicit val builderClassFormatter = new Format[Class[RuleBuilder]] {
     override def writes(o: Class[RuleBuilder]): JsValue = {
       JsString(o.getCanonicalName)

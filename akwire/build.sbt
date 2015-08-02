@@ -29,7 +29,9 @@ libraryDependencies ++= Seq(
 /** AKKA DEPS **/
 libraryDependencies ++= Seq(
   // Streams for Akka
-  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0"
+  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0",
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.12",
+  "org.scalatest"     %% "scalatest" % "2.2.0"
 )
 
 /** WEBJARS (client-side dependencies) **/

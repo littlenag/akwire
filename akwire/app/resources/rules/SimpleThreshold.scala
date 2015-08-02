@@ -4,6 +4,8 @@ import models._
 import models.core.{Observation, ObservedMeasurement}
 import services.AlertContext
 
+import play.api.Logger
+
 //
 class SimpleThreshold(context: AlertContext) extends RuleBuilder(context) {
   override def buildRule(config: RuleConfig): TriggeringRule = new TriggeringRule {
@@ -18,9 +20,11 @@ class SimpleThreshold(context: AlertContext) extends RuleBuilder(context) {
     }
 
     override def inspect(obs:Observation) = {
+      Logger.debug("SimpleThreshold inspecting " + obs)
       val m = obs.asInstanceOf[ObservedMeasurement]
 
       if (compare(m.value)) {
+        Logger.debug("SimpleThreshold triggering on " + obs)
         context.triggerAlert(this, List(obs))
       }
     }

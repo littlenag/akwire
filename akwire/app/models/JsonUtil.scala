@@ -46,6 +46,9 @@ object JsonUtil extends DefaultReads with DefaultWrites {
 //  implicit def mapReader[T] : Reads[Map[ObjectId, T]] = JsPath.read[Map[String, T]].map(m => m.keys.map{k => (new ObjectId(k), m.get(k))}.toMap)
 //  implicit val mapWriter : Writes[Map[ObjectId, T]] = JsPath.write[Impact.Value]
 
+  implicit val impactFormat = EnumUtils.enumFormat(Impact)
+  implicit val urgencyFormat = EnumUtils.enumFormat(Urgency)
+
 }
 
 object EnumUtils {
