@@ -60,8 +60,8 @@ case class Incident( id: ObjectId,
 
                      // State variables
                      active: Boolean,
-                     resolved: Boolean,
-                     interred: Boolean,
+                     resolved: Boolean,       // auto-resolve
+                     interred: Boolean,       // still relevant?
 
                      // Lifetime
                      firstSeen: DateTime,
@@ -69,7 +69,7 @@ case class Incident( id: ObjectId,
                      count : Int,
 
                      // Ownership and Context
-                     rule: Rule,
+                     rule: RuleConfig,
                      teamId : ObjectId,
 
                      @Key("incident_key") incidentKey: ContextualizedStream,

@@ -13,7 +13,6 @@ import play.api.libs.json._
 import securesocial.core.{RuntimeEnvironment, SecureSocial}
 
 import org.bson.types.ObjectId
-import org.joda.time.DateTime
 
 import com.mongodb.casbah.commons.Imports._
 
@@ -24,21 +23,17 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
   val core = inject[CoreServices]
 
   import models.Team
-  import models.Rule
+  import models.RuleConfig
 
   def createTeam = SecuredAction.async(parse.json) {
     implicit request =>
 
-      // minLength(3) tupled
-      //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
       val customReads: Reads[String] = (__ \ "name").read(minLength[String](3))
 
       customReads.reads(request.body).fold(
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
-        valid = { res =>
-          val name: String = res
-          val team = new Team(ObjectId.get(), name, Nil, new DateTime(), true)
-          Team.insert(team)
+        valid = { name =>
+          Team.insert(Team(name))
           Future.successful(Created(s"Team Created"))
         }
       )
@@ -95,7 +90,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
   // API Methods for dealing with Rules         //
   // ------------------------------------------ //
 
-  def createRule(teamId:String) = SecuredAction.async(parse.json[Rule]) { request =>
+  def createRule(teamId:String) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Saving rule for team: ${teamId}")
 
@@ -112,7 +107,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def updateRule(teamId:String) = SecuredAction.async(parse.json[Rule]) { request =>
+  def updateRule(teamId:String) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Updating rule for team: ${teamId}")
 

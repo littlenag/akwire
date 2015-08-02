@@ -9,12 +9,12 @@ import play.api.libs.json._
 
 import models.mongoContext._
 
-case class Team( id: ObjectId,
-                 name: String,
-                 //members: Map[ObjectId, User],
-                 rules: List[Rule],
-                 created: DateTime,
-                 active: Boolean)
+// teams should have some notion of membership
+case class Team( name: String,
+                 id: ObjectId = ObjectId.get(),
+                 rules: List[RuleConfig] = Nil,                  // FIXME remove this
+                 created: DateTime = new DateTime(),
+                 active: Boolean = true)
 
 object Team extends TeamDAO with TeamJson {
   def AKWIRE_ADMIN_TEAM_NAME = "Akwire Administrators"

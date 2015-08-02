@@ -47,7 +47,7 @@ object Global extends GlobalSettings with ScaldiSupport {
 
     Team.findOneByName(Team.AKWIRE_ADMIN_TEAM_NAME) match {
       case None =>
-        adminTeam = new Team(ObjectId.get(), Team.AKWIRE_ADMIN_TEAM_NAME, Nil, new DateTime(), true)
+        adminTeam = Team(Team.AKWIRE_ADMIN_TEAM_NAME)
         Team.save(adminTeam)
       case Some(t) =>
         adminTeam = t

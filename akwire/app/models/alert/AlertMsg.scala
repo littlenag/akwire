@@ -1,8 +1,6 @@
 package models.alert
 
-import com.mongodb.DBObject
-import com.mongodb.casbah.commons.MongoDBObject
-import models.{ContextualizedStream, Contextualized, Rule}
+import models.{ContextualizedStream, Contextualized, RuleConfig}
 import models.core.Observation
 import org.joda.time.DateTime
 
@@ -11,7 +9,7 @@ import org.joda.time.DateTime
  * Incident life-cycle. Incidents are created following a DoTrigger
  * and closed once
  */
-sealed abstract class AlertMsg(val rule:Rule,
+sealed abstract class AlertMsg(val rule:RuleConfig,
                                val observations:List[Observation],
                                val created:DateTime) extends Contextualized {
 
@@ -39,7 +37,7 @@ sealed abstract class AlertMsg(val rule:Rule,
  * @param observations
  * @param created
  */
-case class DoTrigger(override val rule:Rule,
+case class DoTrigger(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -50,7 +48,7 @@ case class DoTrigger(override val rule:Rule,
  * @param observations
  * @param created
  */
-case class DoProlong(override val rule:Rule,
+case class DoProlong(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -61,7 +59,7 @@ case class DoProlong(override val rule:Rule,
  * @param observations
  * @param created
  */
-case class DoResolve(override val rule:Rule,
+case class DoResolve(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -77,6 +75,6 @@ case class DoResolve(override val rule:Rule,
  * @param observations
  * @param created
  */
-case class DoInter(override val rule:Rule,
+case class DoInter(override val rule:RuleConfig,
                    override val observations:List[Observation],
                    override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)

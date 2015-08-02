@@ -1,35 +1,50 @@
 package services
 
-import java.nio.charset.{Charset}
+import java.nio.charset.Charset
 import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
+import akka.stream.actor.ActorPublisher
 import engines.RoutingEngine
-import models.alert.{DoTrigger}
+import models.alert.{DoResolve, DoTrigger}
 import models.core.Observation
-import models.{Contextualized, Team, Rule}
+import models._
 import org.bson.types.ObjectId
 import scaldi.akka.AkkaInjectable
-import scaldi.{Injector}
+import scaldi.Injector
 import scala.collection.concurrent.TrieMap
 
 import play.api.Logger
 
-class AlertingService(implicit inj: Injector) extends AkkaInjectable {
+import scala.collection.mutable
+
+trait AlertContext {
+  def triggerAlert(rule:TriggeringRule, obs:List[Observation])
+  def resolveAlert(rule:ResolvingRule, obs:List[Observation])
+}
+
+class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertContext {
 
   implicit val actorSystem = inject[ActorSystem]
 
   val dataRouter = injectActorRef[RoutingEngine]
 
-  // rules and their compiled processors mapped via the rule id
-  var alertingRules = TrieMap[ObjectId, Rule]()
+  // TODO alerting rules and resolution rules need to know their StreamContext
 
-  // TODO rules and their rules, the rules need to know their StreamContext!!!
-  var resolvingRules = TrieMap[ObjectId, List[Rule]]()
+  // rules and their compiled processors mapped via the rule id
+  val builders = mutable.HashSet[RuleBuilder]()
+
+  // rules and their compiled processors mapped via the rule id
+  var alertingRules = TrieMap[ObjectId, TriggeringRule]()
+
+  // AlertingRule Id -> child Alerting Rules
+  var resolutionRules = TrieMap[ObjectId, List[ResolvingRule]]()
+
+  var obsStream : Stream[Observation] = Stream.Empty
 
   def readFile(path: String, encoding: Charset) : String = {
-    val encoded = Files.readAllBytes(Paths.get(path));
-    new String(encoded, encoding);
+    val encoded = Files.readAllBytes(Paths.get(path))
+    new String(encoded, encoding)
   }
 
   def init = {
@@ -40,29 +55,40 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
   def shutdown = {
     Logger.info("Alerting Services stopping")
-    alertingRules.keys.map(unloadAlertingRule(_))
+    alertingRules.keys.map(unloadAlertingRule)
   }
 
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
     for (ar <- alertingRules) {
-      //ar._2.invoke(obs)
+      ar._2.inspect(obs)
     }
   }
 
-  def loadAlertingRule(team:Team, rule:Rule) = {
+  def getBuilder(rule:RuleConfig) : RuleBuilder = {
+    builders.find(builder => builder.getClass == rule.builder) match {
+      case Some(builder) => builder
+      case None =>
+        val newBuilder = rule.builder.newInstance()
+        builders += newBuilder
+        newBuilder
+    }
+  }
 
-    alertingRules.get(rule.id) match {
+  def loadAlertingRule(team:Team, ruleConfig:RuleConfig) = {
+
+    val builder = getBuilder(ruleConfig)
+
+    alertingRules.get(ruleConfig.id) match {
       case Some(loadedRule) =>
         Logger.info("Updating rule, rule body: ")
-
+        loadedRule.unload()
       case None =>
-
         Logger.info("New rule, compiling complete rule body: ")
-
-        alertingRules.put(rule.id, rule)
     }
+
+    alertingRules.put(ruleConfig.id, builder.buildRule(ruleConfig))
   }
 
   private def destroyRule(ruleId:ObjectId) = {
@@ -78,41 +104,31 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
    * @param ruleId Id of the rule to unload
    * @return The rule that was running
    */
-  def unloadAlertingRule(ruleId:ObjectId) : Option[Rule] = {
+  def unloadAlertingRule(ruleId:ObjectId) : Option[RuleConfig] = {
     val rule = alertingRules.get(ruleId)
 
     Logger.info(s"Unloading rule: ${rule}")
 
-    for (resolvingRule <- resolvingRules.get(ruleId).getOrElse(List.empty[Rule])) {
-      destroyRule(resolvingRule.id)
+    for (resolvingRule <- resolutionRules.getOrElse(ruleId, Nil)) {
+      destroyRule(resolvingRule.ruleConfig.id)
       // TODO send an InterAlert message for any loaded Rules
       //persistenceEngine ! DoInter(rule, entry)
     }
 
-    rule.map(r => destroyRule(r.id))
+    //rule.map(r => destroyRule(r.id))
 
     alertingRules = alertingRules - ruleId
-    rule
+    rule.map(_.ruleConfig)
   }
 
   /** Go through a java ArrayList since Java is our glue here */
-  def triggerAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
-    println(s"$ruleId Triggering alert with observations: $obs")
-    Logger.info("Triggering alert with observations: " + obs)
-
-    import scala.collection.JavaConverters._
-
-    alertingRules.get(ruleId) match {
-      case Some(rule) =>
-        dataRouter ! DoTrigger(rule, obs.asScala.toList)
-      case None =>
-        // Should never happen
-        throw new Exception("Should never happen!")
-    }
+  def triggerAlert(rule:TriggeringRule, obs:List[Observation]) = {
+    Logger.debug("Triggering alert with observations: " + obs)
+    dataRouter ! DoTrigger(rule.ruleConfig, obs)
   }
 
-  def resolveAlert(ruleId:ObjectId, obs:java.util.ArrayList[Observation]) = {
-    println(s"$ruleId Resolving alert with observations: $obs")
+  def resolveAlert(rule:ResolvingRule, obs:List[Observation]) = {
     Logger.info("Resolving alert with observations: " + obs)
+    dataRouter ! DoResolve(rule.ruleConfig, obs)
   }
 }

@@ -1,8 +1,7 @@
 package services
 
 import com.mongodb.casbah.commons.MongoDBObject
-import models.{Incident, Team, Rule}
-import org.bson.types.ObjectId
+import models.{RuleConfig, Incident, Team}
 import org.slf4j.{Logger, LoggerFactory}
 import scaldi.{Injectable, Injector}
 
@@ -36,9 +35,9 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
   def loadAlertingRules = {
     logger.info("Loading Alerting Rules");
-    for (team <- Team.findAll().map(Team.hydrate _)) {
+    for (team <- Team.findAll().map(Team.hydrate)) {
       logger.info(s"Loading Alerting Rules for Team: ${team.name}")
-      for (rule:Rule <- team.rules) {
+      for (rule:RuleConfig <- team.rules) {
         if (rule.active) {
           logger.trace("Loading Alerting Rule: {}", rule)
           alertingEngine.loadAlertingRule(team, rule)
@@ -60,7 +59,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     }
   }
 
-  def upsertRule(team:Team, rule:Rule): (Team,Rule) = {
+  def upsertRule(team:Team, rule:RuleConfig): (Team,RuleConfig) = {
     team.rules.find( v => v.id == rule.id ) match {
       case Some(rule) =>
         // Update to an existing rule
@@ -74,7 +73,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     }
   }
 
-  def createRule(rule: Rule): Try[Team] = {
+  def createRule(rule: RuleConfig): Try[Team] = {
     val teamId = rule.teamId
     val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
 
@@ -99,7 +98,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     return Success(team)
   }
 
-  def updateRule(rule: Rule): Try[Team] = {
+  def updateRule(rule: RuleConfig): Try[Team] = {
     val teamId = rule.teamId
     val teamOpt = Team.findOne(MongoDBObject("_id" -> teamId))
 

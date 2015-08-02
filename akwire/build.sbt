@@ -26,6 +26,12 @@ libraryDependencies ++= Seq(
   "ws.securesocial" %% "securesocial" % "3.0-M1"
 )
 
+/** AKKA DEPS **/
+libraryDependencies ++= Seq(
+  // Streams for Akka
+  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0"
+)
+
 /** WEBJARS (client-side dependencies) **/
 libraryDependencies ++= Seq(
   "org.webjars" %% "webjars-play" % "2.3.0-2",

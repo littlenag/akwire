@@ -19,7 +19,7 @@ class JsonParsers extends Specification {
   "JsonParsers" should {
 
     "parse a rule" in {
-      import models.Rule
+      import models.RuleConfig
 
       val ruleText =
         """{"name":"test 1",
@@ -30,7 +30,7 @@ class JsonParsers extends Specification {
           | "urgency":"NONE",
           | "context": ["instance", "host", "observer", "key"]}""".stripMargin
 
-      Json.parse(ruleText).validate[Rule].fold(
+      Json.parse(ruleText).validate[RuleConfig].fold(
         invalid = (e => e mustNotEqual null),
         valid = ( rule => {
           rule.name must_== "test 1"
