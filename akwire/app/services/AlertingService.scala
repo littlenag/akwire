@@ -17,8 +17,6 @@ import play.api.Logger
 
 class AlertingService(implicit inj: Injector) extends AkkaInjectable {
 
-  val classloader = inject[ClassLoader]
-
   implicit val actorSystem = inject[ActorSystem]
 
   val dataRouter = injectActorRef[RoutingEngine]
@@ -48,9 +46,9 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
   // TODO this should be a blocking call to provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
-    //for (ar <- alertingRules) {
-    //  ar._2.invoke(obs)
-    //}
+    for (ar <- alertingRules) {
+      //ar._2.invoke(obs)
+    }
   }
 
   def loadAlertingRule(team:Team, rule:Rule) = {
