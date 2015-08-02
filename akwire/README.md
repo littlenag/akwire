@@ -178,7 +178,7 @@ we'll have policies at the, levels of:
 
 need notions of the 'this' team; 'this' user; self target
  - 'me' for user
- - 'team' for team?
+ - 'crew' for team?
  - 'enterprise'	for service?
 
 write rules about incidents, to remind user if open too long

@@ -13,18 +13,16 @@
         'Content-Type': 'application/json'
       };
 
-      service.saveUserPolicy = function(user, policy) {
-        $log.debug("saveUserPolicy " + (angular.toJson(policy, true)));
+      service.saveUserPolicy = function(policy) {
+        $log.debug("saveUserPolicy ", policy);
 
         var deferred = $q.defer();
 
-        $http.post('/policy/create', policy).
+        $http.put('/policies/user', policy).
           success(function(data, status, headers) {
-            $log.info("Successfully created Notification - status " + status);
             return deferred.resolve(data);
           }).
           error(function(data, status, headers) {
-            $log.error("Failed to create notification - status " + status);
             return deferred.reject(data);
           });
 

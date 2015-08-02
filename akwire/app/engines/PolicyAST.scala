@@ -56,13 +56,15 @@ object PolicyAST {
   case class Notify(target: Target) extends AST
 
   // UI will take care of making is pretty
+  case class ThisUser() extends AST with Target            // Self-target for User
   case class User(id: Int) extends AST with Target
 
+  case class ThisTeam() extends AST with Target            // Self-target for Team
   case class Team(id: Int) extends AST with Target
 
   case class Service(id: Int) extends AST with Target
 
-  // Basic Ops
+  // Basic Comparison Ops
 
   case class EqOp(left: AST, right: AST) extends AST
 

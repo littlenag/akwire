@@ -49,6 +49,23 @@
     function($scope, $log, NotificationPolicyService) {
       $log.debug("constructing NotificationPolicyCtrl");
 
+      // Policy object we've loaded from the server
+      $scope.activePolicy = null;
+
+      $scope._session = null;
+      $scope._renderer = null;
+
+      $scope.savePolicy = function() {
+        $log.debug("saving policy to server");
+
+        // Save the user policy
+        NotificationPolicyService.saveUserPolicy($scope.activePolicy).then(function(data) {
+          $log.debug("Promise returned Policy data", data);
+        }, function(error) {
+          $log.error("Unable to save Policy: ", error);
+        });
+      };
+
       $scope.editorLoaded = function(_editor) {
         $log.debug("editor loaded");
 
@@ -58,6 +75,9 @@
         var _session = _editor.getSession();
         var _renderer = _editor.renderer;
 
+        $scope._session = _session;
+        $scope._renderer = _renderer;
+
         // Set read-only until the policy is loaded
         _editor.setReadOnly(true);
         _session.setUndoManager(new ace.UndoManager());
@@ -65,11 +85,16 @@
 
         // Fetch the policy from the server
         NotificationPolicyService.getDefaultUserPolicy().then(function(data) {
-          $log.debug("Promise returned " + data + " Policy");
+          $log.debug("Promise returned Policy data", data);
           _editor.setReadOnly(false);
+          _editor.setValue(data.policySource, -1);
+          $scope.activePolicy = data;
         }, function(error) {
-          $log.error("Unable to get Policy: " + error);
+          $log.error("Unable to get Policy: ", error);
           // Probably want to open a modal here, or may be retry
+          $scope.activePolicy = null;
+          $scope._session = null;
+          $scope._renderer = null;
         });
 
         // Events
@@ -80,6 +105,9 @@
 
         _session.on("change", function() {
           // Called whenever the content of the editor changes.
+          if ($scope.activePolicy !== null) {
+            $scope.activePolicy.policySource = _editor.getValue();
+          }
         });
       };
     }

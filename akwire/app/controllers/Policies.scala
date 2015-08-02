@@ -20,7 +20,7 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
 
   import play.api.libs.json._
 
-  def createUserPolicy = SecuredAction.async(parse.json) {
+  def createUserPolicy() = SecuredAction.async(parse.json) {
     implicit request =>
       Future {
         request.body.validate[Policy].map { policy =>
@@ -33,19 +33,20 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
       }
   }
 
-  def updateUserPolicy = SecuredAction.async(parse.json[Policy]) { implicit request =>
+  def updateUserPolicy() = SecuredAction.async(parse.json[Policy]) { implicit request =>
     logger.info(s"Updating policy for user")
 
     // TODO check user access to policy
 
     Future {
       val policy = request.body
+      Policy.save(policy)
       logger.info(s"Saving policy: ${policy}")
       Ok(Json.toJson(policy))
     }
   }
 
-  def retrieveUserPolicies = SecuredAction.async {
+  def retrieveUserPolicies() = SecuredAction.async {
     implicit request =>
       Future {
         val list = User.findAll().toList

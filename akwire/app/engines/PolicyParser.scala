@@ -154,7 +154,14 @@ object PolicyParser extends RegexParsers {
     case "call" ~ t => Call(t)
   }
 
-  def target: Parser[Target] = (("user" | "team" | "service") ~ ("("~>(intLiteral)<~")"))^^{
+  def target: Parser[Target] = thisTarget | directTarget
+
+  def thisTarget: Parser[Target] = ("me" | "crew")^^{
+    case "me" => ThisUser()
+    case "crew" => ThisTeam()
+  }
+
+  def directTarget: Parser[Target] = (("user" | "team" | "service") ~ ("("~>(intLiteral)<~")"))^^{
     case "user" ~ id => User(id.value)
     case "team" ~ id => Team(id.value)
     case "service" ~ id => Service(id.value)

@@ -80,7 +80,7 @@ object Global extends GlobalSettings with ScaldiSupport {
 
         User.save(admin)
 
-        val defaultPolicy = Policy(ObjectId.get(), admin.id, "", default = true)
+        val defaultPolicy = Policy(ObjectId.get(), admin.id, "email me", default = true)
 
         Policy.save(defaultPolicy)
 

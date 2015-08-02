@@ -73,6 +73,7 @@ PUT     /agents                     @controllers.Agents.updateAgent
 
 # Policies
 POST    /policies/user             @controllers.Policies.createUserPolicy
+PUT     /policies/user             @controllers.Policies.updateUserPolicy
 GET     /policies/user             @controllers.Policies.retrieveUserPolicies
 GET     /policies/user/default     @controllers.Policies.retrieveDefaultUserPolicy
 GET     /policies/user/:policyId   @controllers.Policies.retrievePolicyById(policyId)
