@@ -11,6 +11,7 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
   def receive = {
     case trigger : DoTrigger =>
+
       val t = Team.findOneById(trigger.rule.teamId)
 
       // want to compile the script against the incident

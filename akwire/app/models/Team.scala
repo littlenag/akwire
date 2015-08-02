@@ -30,12 +30,12 @@ trait TeamDAO extends ModelCompanion[Team, ObjectId] {
 
   // Queries
   def findOneByName(name: String): Option[Team] = {
-    dao.findOne(MongoDBObject("name" -> name)).map(hydrate(_))
+    dao.findOne(MongoDBObject("name" -> name)).map(hydrate)
   }
 
   def hydrate(team:Team) = {
-    team.rules.foreach(_.teamId = team.id)
-    team
+    val rulesWithTeamId = team.rules.map(r => r.copy(teamId = team.id))
+    team.copy(rules = rulesWithTeamId)
   }
 }
 

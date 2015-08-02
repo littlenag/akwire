@@ -1,5 +1,6 @@
 package models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import com.novus.salat.annotations._
@@ -19,22 +20,9 @@ trait RuleJson {
   implicit val impactFormat = EnumUtils.enumFormat(Impact)
   implicit val urgencyFormat = EnumUtils.enumFormat(Urgency)
 
+  implicit val ruleWriter = Json.format[Rule]
+
   /*
-  implicit val impactReader : Reads[Impact.Value] = JsPath.read[Impact.Value]
-//  implicit val impactWriter : Writes[Impact.Value] = JsPath.write[Impact.Value]
-
-//  implicit val impactReads: Reads[Impact.Value] = StringReads.map(new ObjectId(_))
-
-  implicit val impactWrites = new Writes[Impact.Value] {
-    override def writes(en: Impact.Value) = Json.toJson(en.toString)
-  }
-
-  implicit val urgencyReader : Reads[Urgency.Value] = JsPath.read[Urgency.Value]
-  implicit val urgencyWriter : Writes[Urgency.Value] = JsPath.write[Urgency.Value]
-  */
-
-  implicit val ruleWriter = Json.writes[Rule]
-
   // FIXME names should match the regex found in PolicyVM
   implicit val ruleReader : Reads[Rule] = (
     ((__ \ "id").read[ObjectId] orElse Reads.pure(ObjectId.get())) ~
@@ -45,6 +33,7 @@ trait RuleJson {
       //      (__ \ "sop").readNullable[String] ~
       ((__ \ "impact").read[Impact.Value] orElse Reads.pure(Impact.IL_5))
     )(Rule.apply _)
+   */
 }
 
 case class Rule( id: ObjectId,
@@ -52,34 +41,34 @@ case class Rule( id: ObjectId,
 
                  ruleData : Map[String, String],               // kv-pairs that the rule uses to store params
 
-                 // some way of keeping track of state, like testing a rule, active, deactive
+                 // FIXME find a better way to keep track of state, e.g. testing vs active
                  active: Boolean = true,
 
-                 //                 meta: Option[JsObject] = None,              // JSON meta object used by the browser
-                 //                 sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
+                 // meta: Option[JsObject] = None,              // JSON meta object used by the browser
+                 // sop: Option[String] = None,                 // wiki link? could take context as an argument, more functional?
 
-                 impact: Impact.Value = Impact.IL_5
+                 impact: Impact.Value = Impact.IL_5,
 
                  /*
-                                  urgency: Urgency.Value = Urgency.NONE,
+                 urgency: Urgency.Value = Urgency.NONE,
 
-                                  // the list of fields that matter
-                                  context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-ihok-contexted rules
+                 // the list of fields that matter
+                 context:List[String] = List("instance", "host", "observer", "key"),          // for multi-stream and non-ihok-contexted rules
 
-                                  createdOn: Option[DateTime] = Some(new DateTime()),
-                                  createdBy: Option[ObjectId] = None,                        // id of the user
-                                  lastModifiedOn: Option[DateTime] = Some(new DateTime()),
-                                  lastModifiedBy: Option[ObjectId] = None,                   // id of the user
+                 createdOn: Option[DateTime] = Some(new DateTime()),
+                 createdBy: Option[ObjectId] = None,                        // id of the user
+                 lastModifiedOn: Option[DateTime] = Some(new DateTime()),
+                 lastModifiedBy: Option[ObjectId] = None,                   // id of the user
                  */
-                 ) {
+
+                 // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
+                 @Ignore @JsonIgnore teamId: ObjectId
+) {
 
   def context = List("instance", "host", "observer", "key")
 
   //def impact = Impact.SEV_5
   def urgency = Urgency.UL_5
-
-  // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
-  @Ignore var teamId: ObjectId = null
 
   //  def setTeamId(t:ObjectId) = _team = t
   //  def teamId = _team
