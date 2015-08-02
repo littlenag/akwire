@@ -9,6 +9,7 @@ import org.specs2.mutable._
 
 import play.api.test._
 import play.api.test.Helpers._
+import resources.rules.SimpleThreshold
 
 class PolicyVMTest extends Specification with Mockito {
 
@@ -42,7 +43,7 @@ class PolicyVMTest extends Specification with Mockito {
 
     "simple policy" in {
       running(FakeApplication()) {
-        val rule = new RuleConfig(ObjectId.get(), "r1", "...", true, Impact.IL_1)
+        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", classOf[SimpleThreshold].asInstanceOf[Class[RuleBuilder]], Map.empty[String, String], true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
@@ -100,7 +101,7 @@ class PolicyVMTest extends Specification with Mockito {
     "repeating policy" in {
       running(FakeApplication()) {
 
-        val rule = new RuleConfig(ObjectId.get(), "r1", "...", true, Impact.IL_1)
+        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", classOf[SimpleThreshold].asInstanceOf[Class[RuleBuilder]], Map.empty[String, String], true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),
@@ -156,7 +157,7 @@ class PolicyVMTest extends Specification with Mockito {
     "filtering policy" in {
       running(FakeApplication()) {
 
-        val rule = new RuleConfig(ObjectId.get(), "r1", "...", true, Impact.IL_1)
+        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", classOf[SimpleThreshold].asInstanceOf[Class[RuleBuilder]], Map.empty[String, String], true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false,
           new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
@@ -216,7 +217,7 @@ class PolicyVMTest extends Specification with Mockito {
     "matching policy" in {
       running(FakeApplication()) {
 
-        val rule = new RuleConfig(ObjectId.get(), "r1", "...", true, Impact.IL_1)
+        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", classOf[SimpleThreshold].asInstanceOf[Class[RuleBuilder]], Map.empty[String, String], true, Impact.IL_1)
 
         val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
           ContextualizedStream(List(("host", "h1"))),

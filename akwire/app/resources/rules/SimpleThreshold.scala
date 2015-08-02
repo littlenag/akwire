@@ -5,7 +5,7 @@ import models.core.{Observation, ObservedMeasurement}
 import services.AlertContext
 
 //
-class SimpleThreshold(context: AlertContext) extends RuleBuilder {
+class SimpleThreshold(context: AlertContext) extends RuleBuilder(context) {
   override def buildRule(config: RuleConfig): TriggeringRule = new TriggeringRule {
 
     val threshold : Double = config.params("threshold").toDouble

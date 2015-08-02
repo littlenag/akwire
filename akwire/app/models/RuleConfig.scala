@@ -1,8 +1,8 @@
 package models
 
-import models.alert.AlertMsg
-import models.core.{Observation, ObservedMeasurement}
+import models.core.Observation
 import org.bson.types.ObjectId
+import services.AlertContext
 
 /**
  *  An individual rule would inherit from this trait and be constructed by
@@ -22,7 +22,7 @@ trait ResolvingRule {
   def ruleConfig : RuleConfig
 }
 
-trait RuleBuilder {
+abstract class RuleBuilder(context: AlertContext) {
   def buildRule(config:RuleConfig) : TriggeringRule
 }
 
