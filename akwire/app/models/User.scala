@@ -9,7 +9,6 @@ import securesocial.core._
 import models.mongoContext._
 import securesocial.core.providers.UsernamePasswordProvider
 
-//
 case class TeamRef(id: ObjectId,name: String)
 
 case class User(id: ObjectId,                     // object id, unique for this object for this database
@@ -48,7 +47,7 @@ trait UserJson {
   implicit val oauth2Writes = Json.writes[securesocial.core.OAuth2Info]
   implicit val pwWrites = Json.writes[securesocial.core.PasswordInfo]
 
-    implicit val profileWrites = Json.writes[BasicProfile]
+  implicit val profileWrites = Json.writes[BasicProfile]
 
   implicit val teamRef = Json.format[TeamRef]
 

@@ -235,3 +235,7 @@ Change from embedding clojure/reimann to a more gattling like system
  - use akka streams instead of reimann
  - scala should use a dsl to expose parameters that might need configuration
  - might even want to create a simple dsl for expressing the stream logic
+
+
+================
+

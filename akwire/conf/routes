@@ -71,6 +71,13 @@ GET     /agents/:agentId            @controllers.Agents.findOneAgent(agentId:Str
 GET     /agents/:agentId/query      @controllers.Agents.queryAgent(agentId:String,command:String)
 PUT     /agents                     @controllers.Agents.updateAgent
 
+# Policies
+POST    /policies/user             @controllers.Policies.createUserPolicy
+GET     /policies/user             @controllers.Policies.retrieveUserPolicies
+GET     /policies/user/default     @controllers.Policies.retrieveDefaultUserPolicy
+GET     /policies/user/:policyId   @controllers.Policies.retrievePolicyById(policyId)
+DELETE  /policies/user/:policyId   @controllers.Policies.deletePolicy(policyId)
+
 # Plugin management API
 ##GET     /plugins                    @controllers.Plugins.findPlugins
 

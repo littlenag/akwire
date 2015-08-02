@@ -1,6 +1,7 @@
 package modules
 
 import akka.actor.ActorSystem
+import controllers.Policies
 import engines.{NotificationEngine, RoutingEngine}
 import models.User
 import play.api.Logger
@@ -48,6 +49,7 @@ class CoreModule extends Module {
   binding to new controllers.Roles
   binding to new controllers.Teams
   binding to new controllers.Users
+  binding to new controllers.Policies
   binding to new controllers.Auth
 
   binding to getSSController(classOf[securesocial.controllers.ProviderController])

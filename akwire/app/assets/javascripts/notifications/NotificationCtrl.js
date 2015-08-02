@@ -64,7 +64,13 @@
         _renderer.setShowGutter(true);
 
         // Fetch the policy from the server
-
+        NotificationPolicyService.getDefaultUserPolicy().then(function(data) {
+          $log.debug("Promise returned " + data + " Policy");
+          _editor.setReadOnly(false);
+        }, function(error) {
+          $log.error("Unable to get Policy: " + error);
+          // Probably want to open a modal here, or may be retry
+        });
 
         // Events
         _editor.on("changeSession", function() {

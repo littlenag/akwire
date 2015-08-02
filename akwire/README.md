@@ -199,7 +199,39 @@ repeat 5 times
 repeat until ...
  - acked
 
-rollup
+rollup/batch
+ - could be a property of a channel, with the script just handling routing
+
+---
+
+in-scope vars:
+ - incident
+ - me
+ - user(id)
+ - team
+ - schedule(id)
+ - different policy/script
+
+
+functions:
+ - wait(duration)
+ - wait_until(time_pattern)
+ - notify(entity)
+ - page(entity)
+ - send(channel:C,target:C#T)   // channel of type C, target of type C#T
+
+receivers:
+ - entities
+ - channels+targets
+
+
+if (incident.severity == IL_5) {
+  wait(1h);
+  notify(me);
+  notify([me, user(2), schedule(14)]);  // done in parallel
+} else {
+
+}
 
 ---
 

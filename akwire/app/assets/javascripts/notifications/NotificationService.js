@@ -49,6 +49,24 @@
         return deferred.promise;
       };
 
+      service.getDefaultUserPolicy = function() {
+        $log.debug("getDefaultUserPolicy()");
+
+        var deferred = $q.defer();
+
+        $http.get("/policies/user/default").
+          success(function(data, status, headers) {
+            $log.info("Successfully retrieved (default) Policy - status " + status);
+            return deferred.resolve(data);
+          }).
+          error(function(data, status, headers) {
+            $log.error("Failed to retrieve (default) Policy - status " + status);
+            return deferred.reject(data);
+          });
+
+        return deferred.promise;
+      };
+
       return service;
     }
   ]);

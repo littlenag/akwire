@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 
 import com.mongodb.casbah.commons.Imports._
 
-import scala.util.{Failure, Success}
+import scala.util.{Try, Failure, Success}
 
 class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with Injectable {
 
@@ -58,10 +58,16 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
   def retrieveTeam(teamId:String) = SecuredAction.async {
     Future {
-      Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
-        case Some(team : Team) => Ok(Json.toJson(team))
-        case None => BadRequest(s"Invalid id $teamId")
-      }
+      Try {
+        new ObjectId(teamId)
+      }.map { id =>
+        Team.findOne(MongoDBObject("_id" -> id)) match {
+          case Some(team : Team) => Ok(Json.toJson(team))
+          case None => BadRequest(s"Invalid id $teamId")
+        }
+      }.recover {
+        case e => BadRequest(s"Invalid id $teamId")
+      }.get
     }
   }
 

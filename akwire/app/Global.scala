@@ -1,5 +1,5 @@
 import com.mongodb.casbah.commons.conversions.scala._
-import models.{TeamRef, User, Team}
+import models.{Policy, TeamRef, User, Team}
 import modules.CoreModule
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -79,6 +79,11 @@ object Global extends GlobalSettings with ScaldiSupport {
         val admin = new User(id, profile, List(tr))
 
         User.save(admin)
+
+        val defaultPolicy = Policy(ObjectId.get(), admin.id, "", default = true)
+
+        Policy.save(defaultPolicy)
+
       case _ => Logger.info("User accounts init complete")
     }
   }

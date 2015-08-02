@@ -122,6 +122,7 @@ case class Rule( id: ObjectId,
   //def impact = Impact.SEV_5
   def urgency = Urgency.UL_5
 
+  // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
   @Ignore var teamId: ObjectId = null
 
 //  def setTeamId(t:ObjectId) = _team = t
