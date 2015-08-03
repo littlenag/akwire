@@ -3,36 +3,31 @@
         <h2>Create Rule</h2>
 
         <form class="form-horizontal" role="form" ng-submit="createRule()">
-            <legend class="col-sm-2">Basic Information</legend>
+            Simple Threshold:<br>
 
-            <div class="form-group">
-                <label id="lbl_name" for="name" class="col-sm-2 control-label">Name</label>
-
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" name="name" id="name" required placeholder="High load, Too many connections, ..."
-                           ng-model="rule.name">
+                <div>
+                    Name: <input type="text" class="form-control" required placeholder="High load, Too many connections, ..." ng-model="rule.name">
                     <span class="validation-message" ng-show="rule.name.$error.required">
                       Required
                     </span>
+
+                    Threshold: <input type="text" class="form-control" required placeholder="Pick a number" ng-model="rule.text">
+                    Op: <input type="radio" ng-model="rule.op" value="gt" />greater than
+                        <input type="radio" ng-model="rule.op" value="lt" />less than
+                        <input type="radio" ng-model="rule.op" value="eq" />equal to<br />
+                    Instance: <input type="text" class="form-control" required placeholder="Regex" ng-model="rule.stream.instance">
+                    Host: <input type="text" class="form-control" required placeholder="Regex" ng-model="rule.stream.host">
+                    Observer: <input type="text" class="form-control" required placeholder="Regex" ng-model="rule.stream.observer">
+                    Key: <input type="text" class="form-control" required placeholder="Regex" ng-model="rule.stream.key">
                 </div>
 
-                <label id="lbl_text" for="text" class="col-sm-2 control-label">Text</label>
-
-                <div class="col-sm-10">
-                    <input type="text" class="form-control" name="text" id="text" required placeholder="(where ...)"
-                           ng-model="rule.text">
-                </div>
-            </div>
-
-            <pre>{{ rule | json }}</pre>
-
-            <div class="form-group">
                 <div class="col-sm-offset-4 col-sm-8 text-right">
                     <a ui-sref="configure.rules.list" id="btn_cancel" class="btn btn-warning">Cancel</a>
 
                     <button type="submit" class="btn btn-success" id="btn_rule_create">Create Rule</button>
                 </div>
-            </div>
+
+            <pre>rule = {{ rule | json }}</pre>
         </form>
     </div>
 </div>

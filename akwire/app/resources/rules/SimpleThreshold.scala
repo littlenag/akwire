@@ -23,7 +23,7 @@ class SimpleThreshold(context: AlertContext) extends RuleBuilder(context) {
       Logger.debug("SimpleThreshold inspecting " + obs)
       val m = obs.asInstanceOf[ObservedMeasurement]
 
-      if (compare(m.value)) {
+      if (config.streamExpr.matches(obs) && compare(m.value)) {
         Logger.debug("SimpleThreshold triggering on " + obs)
         context.triggerAlert(this, List(obs))
       }

@@ -4,26 +4,44 @@ import models.core.Observation
 import org.bson.types.ObjectId
 import services.AlertContext
 
+import scala.util.matching.Regex
+
 /**
  *  An individual rule would inherit from this trait and be constructed by
  *  a RuleBuilder.
  *  
  *  Rules are actually factory objects
  */
-trait TriggeringRule {
+sealed trait RuleLike {
   def inspect(obs:Observation) //: Stream[ObservedMeasurement] => (Stream[AlertMsg], Option[Stream[ResolvingRule]])
   def unload() : Unit
   def ruleConfig : RuleConfig
 }
 
-trait ResolvingRule {
-  def inspect(obs:Observation) //: Stream[ObservedMeasurement] => Stream[AlertMsg]
-  def unload() : Unit
-  def ruleConfig : RuleConfig
-}
+trait TriggeringRule extends RuleLike
+trait ResolvingRule extends RuleLike
 
 abstract class RuleBuilder(context: AlertContext) {
   def buildRule(config:RuleConfig) : TriggeringRule
+}
+
+case class StreamExpr(instance:Regex, host:Regex, observer:Regex, key:Regex) {
+
+  //def compileToFlow
+
+  def matches(obs:Observation) : Boolean = {
+    instance.findFirstIn(obs.instance).isDefined &&
+    host.findFirstIn(obs.host).isDefined &&
+    observer.findFirstIn(obs.observer).isDefined &&
+    key.findFirstIn(obs.key).isDefined
+  }
+}
+
+object StreamExpr {
+  private val ANY = ".*".r
+  val All = new StreamExpr(ANY, ANY, ANY, ANY) {
+    def matches = true
+  }
 }
 
 // Every RuleConfig generates at most ONE AlertingRule
@@ -35,6 +53,8 @@ case class RuleConfig(
 
   builder : Class[RuleBuilder],              // class object representing a builder of rules
   params  : Map[String, String],             // kv-pairs that the rule uses to store params
+
+  streamExpr: StreamExpr = StreamExpr.All,   // selects the streams to execute against
 
   // FIXME find a better way to keep track of state, e.g. testing vs active
   active: Boolean = true,
@@ -88,9 +108,6 @@ object RuleConfig extends RuleJson
 trait RuleJson {
   import JsonUtil._
   import play.api.libs.json._
-  import play.api.libs.functional.syntax._
-
-  import EnumUtils._
 
   implicit val builderClassFormatter = new Format[Class[RuleBuilder]] {
     override def writes(o: Class[RuleBuilder]): JsValue = {
@@ -110,6 +127,8 @@ trait RuleJson {
       }
     }
   }
+
+  implicit val streamExprFormat = Json.format[StreamExpr]
 
   implicit val ruleConfigFormat = Json.format[RuleConfig]
 }
