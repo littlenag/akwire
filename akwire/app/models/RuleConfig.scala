@@ -1,9 +1,13 @@
 package models
 
+import com.mongodb.DBObject
+import com.mongodb.casbah.commons.MongoDBObject
+import com.novus.salat.transformers.CustomTransformer
 import models.core.Observation
 import org.bson.types.ObjectId
 import services.AlertContext
 
+import scala.util.Try
 import scala.util.matching.Regex
 
 /**
@@ -44,6 +48,22 @@ object StreamExpr {
   }
 }
 
+case class RuleBuilderClass(className:String) {
+  assert(Class.forName(className).isInstanceOf[Class[RuleBuilder]])
+
+  val klass = Class.forName(className).asInstanceOf[Class[RuleBuilder]]
+
+  def instantiates(builder:RuleBuilder) : Boolean = {
+    // If the two class objects are the same then this klass would instantiate
+    // a builder of the same type.
+    builder.getClass == klass
+  }
+
+  def newInstance(context:AlertContext) : RuleBuilder = {
+    klass.getConstructor(classOf[AlertContext]).newInstance(context)
+  }
+}
+
 // Every RuleConfig generates at most ONE AlertingRule
 case class RuleConfig(
   // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
@@ -51,8 +71,8 @@ case class RuleConfig(
   id: ObjectId,
   name: String,
 
-  builder : Class[RuleBuilder],              // class object representing a builder of rules
-  params  : Map[String, String],             // kv-pairs that the rule uses to store params
+  builderClass : RuleBuilderClass,           // class object representing a builder of rules, would be a Class but Salat doesn't support that
+  params : Map[String, String],              // kv-pairs that the rule uses to store params
 
   streamExpr: StreamExpr = StreamExpr.All,   // selects the streams to execute against
 
@@ -109,26 +129,37 @@ trait RuleJson {
   import JsonUtil._
   import play.api.libs.json._
 
-  implicit val builderClassFormatter = new Format[Class[RuleBuilder]] {
-    override def writes(o: Class[RuleBuilder]): JsValue = {
-      JsString(o.getCanonicalName)
-    }
-
-    override def reads(json: JsValue): JsResult[Class[RuleBuilder]] = {
-      json match {
-        case jsString : JsString =>
-          this.getClass.getClassLoader.loadClass(jsString.value) match {
-            case value: Class[_] if value.isAssignableFrom(classOf[Class[RuleBuilder]])=>
-              JsSuccess(value.asInstanceOf[Class[RuleBuilder]])
-            case _ =>
-              JsError(s"Class ${jsString.value} did not implement RuleBuilder trait")
-          }
-        case _ => JsError("Expected a string")
-      }
-    }
+  implicit val builderClassFormatter = new Format[RuleBuilderClass] {
+    override def writes(o: RuleBuilderClass): JsValue = JsString(o.className)
+    override def reads(json: JsValue) = Try(JsSuccess(RuleBuilderClass(json.as[String]))).getOrElse(JsError("Expected a string"))
   }
 
   implicit val streamExprFormat = Json.format[StreamExpr]
 
   implicit val ruleConfigFormat = Json.format[RuleConfig]
+}
+
+object RuleBuilderClassTransformer extends CustomTransformer[RuleBuilderClass, String] {
+  def deserialize(klass: String) = RuleBuilderClass(klass)
+  def serialize(rbc: RuleBuilderClass) = rbc.className
+}
+
+object StreamExprTransformer extends CustomTransformer[StreamExpr, DBObject] {
+  def deserialize(dbo: DBObject) = {
+    val m = new MongoDBObject(dbo)
+    StreamExpr(
+        m.as[String]("instance").r,
+        m.as[String]("host").r,
+        m.as[String]("observer").r,
+        m.as[String]("key").r
+    )
+  }
+  def serialize(rbc: StreamExpr) = {
+    MongoDBObject(
+      "instance" -> rbc.instance.regex,
+      "host" -> rbc.host.regex,
+      "observer" -> rbc.observer.regex,
+      "key" -> rbc.key.regex
+    )
+  }
 }

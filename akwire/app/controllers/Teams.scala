@@ -1,5 +1,7 @@
 package controllers
 
+import models.mongoContext._
+
 import models.User
 import scaldi.{Injector, Injectable}
 import services.CoreServices
@@ -96,7 +98,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
       // TODO check user access to team
 
-      val rule = request.body.copy(teamId = new ObjectId(teamId))
+      val rule = request.body.copy(teamId = new ObjectId(teamId), id = ObjectId.get())
 
       Logger.info(s"Saving rule: ${rule}")
 

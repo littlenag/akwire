@@ -14,11 +14,11 @@
       service.getRules = function() {
         $log.debug("getRules()");
         var deferred = $q.defer();
-        $http.get("/teams/" + Session.teamId).success(function(data, status, headers) {
-          $log.info("Successfully listed Rules - status " + status);
+        $http.get("/teams/" + Session.currentTeamId).success(function(data, status, headers) {
+          $log.info("Successfully listed Rules", data);
           return deferred.resolve(data.rules);
         }).error(function(data, status, headers) {
-          $log.error("Failed to list Rules - status " + status);
+          $log.error("Failed to list Rules - status ", status, Session.currentTeamId);
           return deferred.reject(data);
         });
         return deferred.promise;
@@ -37,17 +37,41 @@
         return deferred.promise;
       };
 
-      service.createRule = function(rule) {
-        $log.debug("createRule " + (angular.toJson(rule, true)));
+      service.createSimpleThresholdRule = function(rule) {
+
+        function pad(n, width, z) {
+          z = z || '0';
+          n = n + '';
+          return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+        }
+
+        var st = {
+          teamId: Session.currentTeamId,
+          id: pad(0, 24),
+          name : rule.name,
+          builderClass : "resources.rules.SimpleThreshold",
+
+          params : {
+            threshold : rule.threshold,
+            op : rule.op
+          },
+          streamExpr : {
+            instance : rule.stream.instance,
+            host : rule.stream.host,
+            observer : rule.stream.observer,
+            key : rule.stream.key
+          },
+          active : true,
+          impact : "IL_5"
+        };
+
+        $log.debug("ruleservice::createSimpleThresholdRule", st);
+
         var deferred = $q.defer();
 
-        rule.team = Session.teamId;
-
-        $http.post("/teams/" + Session.teamId + '/rules', rule).success(function(data, status, headers) {
-          $log.info("Successfully created Rule - status " + status);
+        $http.post("/teams/" + Session.currentTeamId + '/rules', st).success(function(data, status, headers) {
           return deferred.resolve(data);
         }).error(function(data, status, headers) {
-          $log.error("Failed to create rule - status " + status);
           return deferred.reject(data);
         });
         return deferred.promise;

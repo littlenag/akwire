@@ -67,10 +67,10 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
   }
 
   def getBuilder(rule:RuleConfig) : RuleBuilder = {
-    builders.find(builder => builder.getClass == rule.builder) match {
+    builders.find(builder => rule.builderClass.instantiates(builder)) match {
       case Some(builder) => builder
       case None =>
-        val newBuilder = rule.builder.getConstructor(classOf[AlertContext]).newInstance(this)
+        val newBuilder = rule.builderClass.newInstance(this)
         builders += newBuilder
         newBuilder
     }

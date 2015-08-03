@@ -12,9 +12,9 @@
         <thead>
         <tr>
             <th>Name</th>
-            <th>Expr</th>      <!-- plaintext rule expression, as interpreted by clojure -->
-            <th>Streams</th>   <!-- pattern, should be able to get a pop-over showing selected streams -->
-            <th>Rule</th>      <!-- expression -->
+            <th>Triggers When</th>      <!-- params for the rule builder -->
+            <th>Streams</th>            <!-- selected streams (i.e. pattern); should be able to get a pop-over showing selected streams -->
+            <th>Rule Type</th>          <!-- Rule Build class -->
         </tr>
         </thead>
         <tbody>
@@ -23,13 +23,13 @@
                 {{ rule.name }}
             </td>
             <td>
-                {{ rule.text }}
+                {{ rule.params }}
             </td>
             <td>
-                {{ rule.meta.pattern }}
+                {{ rule.streamExpr }}
             </td>
             <td>
-                {{ rule.meta.expression }}
+                {{ rule.builderClass }}
             </td>
         </tr>
         <tr ng-hide="rules.length">

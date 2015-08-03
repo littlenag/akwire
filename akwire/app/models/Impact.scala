@@ -7,12 +7,12 @@ package models
 object Impact extends Enumeration {
   type Impact = Value
 
-  val IL_0 = Value("IL-0")
-  val IL_1 = Value("IL-1")
-  val IL_2 = Value("IL-2")
-  val IL_3 = Value("IL-3")
-  val IL_4 = Value("IL-4")
-  val IL_5 = Value("IL-5")
+  val IL_0 = Value("IL_0")
+  val IL_1 = Value("IL_1")
+  val IL_2 = Value("IL_2")
+  val IL_3 = Value("IL_3")
+  val IL_4 = Value("IL_4")
+  val IL_5 = Value("IL_5")
 
   // FIXME implement CLEARing logic via an optional filter on the stream of events
 

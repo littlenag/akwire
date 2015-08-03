@@ -59,10 +59,10 @@
         $log.debug("createRule()");
         $scope.rule.active = true;
 
-        return RuleService.createRule($scope.rule).then(function(data) {
-          $log.debug("Promise returned " + data + " Rule");
+        return RuleService.createSimpleThresholdRule($scope.rule).then(function(data) {
+          $log.debug("Promise returned Rule", data);
           $scope.rule = data;
-          return $state.go("admin.rules.list", {});
+          return $state.go("configure.rules.list", {});
         }, function(error) {
           return $log.error("Unable to create Rule: " + error);
         });

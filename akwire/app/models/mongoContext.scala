@@ -19,7 +19,10 @@ package object mongoContext {
     context.registerGlobalKeyOverride(remapThis = "id", toThisInstead = "_id")
     context.registerClassLoader(Play.classloader)
 
+    // Only works because the registered data types are case classes
     context.registerCustomTransformer(ContextualizedStreamTransformer)
+    context.registerCustomTransformer(RuleBuilderClassTransformer)
+    context.registerCustomTransformer(StreamExprTransformer)
 
     context
   }
