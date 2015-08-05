@@ -12,7 +12,6 @@ import models.mongoContext._
 // teams should have some notion of membership
 case class Team( name: String,
                  id: ObjectId = ObjectId.get(),
-                 rules: List[RuleConfig] = Nil,                  // FIXME remove this
                  created: DateTime = new DateTime(),
                  active: Boolean = true)
 
@@ -30,13 +29,9 @@ trait TeamDAO extends ModelCompanion[Team, ObjectId] {
 
   // Queries
   def findOneByName(name: String): Option[Team] = {
-    dao.findOne(MongoDBObject("name" -> name)).map(hydrate)
+    dao.findOne(MongoDBObject("name" -> name))
   }
 
-  def hydrate(team:Team) = {
-    val rulesWithTeamId = team.rules.map(r => r.copy(teamId = team.id))
-    team.copy(rules = rulesWithTeamId)
-  }
 }
 
 trait TeamJson extends RuleJson {
@@ -51,7 +46,6 @@ trait TeamJson extends RuleJson {
       Json.obj(
         "id" -> t.id,
         "name" -> t.name,
-        "rules" -> t.rules,
         "created" -> t.created,
         "active" -> t.active
       )

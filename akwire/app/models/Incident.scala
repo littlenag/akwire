@@ -70,7 +70,6 @@ case class Incident( id: ObjectId,
 
                      // Ownership and Context
                      rule: RuleConfig,
-                     teamId : ObjectId,
 
                      @Key("incident_key") incidentKey: ContextualizedStream,
 
@@ -102,6 +101,8 @@ case class Incident( id: ObjectId,
     this.copy(count = this.count + 1, lastSeen = new DateTime())
   }
 
+  // Incidents are in the same scope as the Rule that created them
+  def owner = rule.owner
 }
 
 object Incident extends IncidentDAO with IncidentJson {
@@ -112,7 +113,7 @@ object Incident extends IncidentDAO with IncidentJson {
    * @return
    */
   def fromAlert(alert:AlertMsg) = {
-    new Incident(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, alert.rule.teamId, alert.contextualizedStream, alert.rule.impact, alert.rule.urgency)
+    new Incident(null, true, false, false, new DateTime(), new DateTime(), 1, alert.rule, alert.contextualizedStream, alert.rule.impact, alert.rule.urgency)
   }
 }
 

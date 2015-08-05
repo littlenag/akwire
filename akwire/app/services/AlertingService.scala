@@ -76,7 +76,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
     }
   }
 
-  def loadAlertingRule(team:Team, ruleConfig:RuleConfig) = {
+  def loadAlertingRule(ruleConfig:RuleConfig) = {
 
     val builder = getBuilder(ruleConfig)
 

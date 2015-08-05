@@ -36,11 +36,12 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
       //trigger.rule.
 
-      Team.findOneById(trigger.rule.teamId) match {
+      Team.findOneById(trigger.rule.owner.id) match {
         case Some(team) =>
           Logger.debug("Notification of Trigger : " + trigger)
 
-          val policyActor = context.system.actorOf(Props[PolicyActor], )
+          // Assume for now that
+          //val policyActor = context.system.actorOf(Props[PolicyActor], )
         case None =>
       }
 

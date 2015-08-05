@@ -1,7 +1,11 @@
 package models
 
+import models.mongoContext._
+
 import com.mongodb.DBObject
+import com.mongodb.casbah.MongoClient
 import com.mongodb.casbah.commons.MongoDBObject
+import com.novus.salat.dao.{SalatDAO, ModelCompanion}
 import com.novus.salat.transformers.CustomTransformer
 import models.core.Observation
 import org.bson.types.ObjectId
@@ -64,19 +68,11 @@ case class RuleBuilderClass(className:String) {
   }
 }
 
-// Will need to find a way to add scope to rule, incidents, policies, etc
-object Scope extends Enumeration {
-  type Scope = Value
-  val USER, TEAM, SERVICE = Value
-}
-
-case class RuleOwner(id: ObjectId, scope: Scope.Value)
-
 // Every RuleConfig generates at most ONE AlertingRule
 // Assume for now that this RuleConfig is scoped to a Team
 case class RuleConfig(
   // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
-  teamId: ObjectId,
+  owner: OwningEntity,
   id: ObjectId,
   name: String,
 
@@ -132,7 +128,13 @@ case class RuleConfig(
   def destroy = {}
 }
 
-object RuleConfig extends RuleJson
+object RuleConfig extends RuleDAO with RuleJson
+
+trait RuleDAO extends ModelCompanion[RuleConfig, ObjectId] {
+  def collection = MongoClient()("akwire")("rules")
+
+  val dao = new SalatDAO[RuleConfig, ObjectId](collection) {}
+}
 
 trait RuleJson {
   import JsonUtil._
