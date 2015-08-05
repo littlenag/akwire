@@ -11,12 +11,35 @@
         'Content-Type': 'application/json'
       };
 
-      service.getRules = function() {
+      function makeRuleUrl(entityType) {
+        if (entityType === "user") {
+          return "/rules/user-" + Session.userId;
+        } else if (entityType === "team") {
+          return "/rules/team-" + Session.currentTeamId;
+        } else {
+          throw "Bad entity type" + entityType;
+        }
+      }
+
+      service.getUserRules = function() {
         $log.debug("getRules()");
         var deferred = $q.defer();
-        $http.get("/teams/" + Session.currentTeamId).success(function(data, status, headers) {
+        $http.get(makeRuleUrl("user")).success(function(data, status, headers) {
           $log.info("Successfully listed Rules", data);
-          return deferred.resolve(data.rules);
+          return deferred.resolve(data);
+        }).error(function(data, status, headers) {
+          $log.error("Failed to list Rules - status ", status, Session.userId);
+          return deferred.reject(data);
+        });
+        return deferred.promise;
+      };
+
+      service.getTeamRules = function() {
+        $log.debug("getRules()");
+        var deferred = $q.defer();
+        $http.get(makeRuleUrl("team")).success(function(data, status, headers) {
+          $log.info("Successfully listed Rules", data);
+          return deferred.resolve(data);
         }).error(function(data, status, headers) {
           $log.error("Failed to list Rules - status ", status, Session.currentTeamId);
           return deferred.reject(data);
@@ -24,10 +47,10 @@
         return deferred.promise;
       };
 
-      service.getRule = function(ruleId) {
+      service.getUserRule = function(ruleId) {
         $log.debug("getRule('" + ruleId + "')");
         var deferred = $q.defer();
-        $http.get("/rules/" + ruleId).success(function(data, status, headers) {
+        $http.get(makeRuleUrl("user")).success(function(data, status, headers) {
           $log.info("Successfully retrieved Rule - status " + status);
           return deferred.resolve(data);
         }).error(function(data, status, headers) {
@@ -37,7 +60,20 @@
         return deferred.promise;
       };
 
-      service.createSimpleThresholdRule = function(rule) {
+      service.getTeamRule = function(ruleId) {
+        $log.debug("getRule('" + ruleId + "')");
+        var deferred = $q.defer();
+        $http.get(makeRuleUrl("team")).success(function(data, status, headers) {
+          $log.info("Successfully retrieved Rule - status " + status);
+          return deferred.resolve(data);
+        }).error(function(data, status, headers) {
+          $log.error("Failed to retrieve Rule - status " + status);
+          return deferred.reject(data);
+        });
+        return deferred.promise;
+      };
+
+      service.createSimpleThresholdRule = function(rule, entityType) {
 
         function pad(n, width, z) {
           z = z || '0';
@@ -46,8 +82,11 @@
         }
 
         var st = {
-          teamId: Session.currentTeamId,
           id: pad(0, 24),
+          owner: {
+            id: Session.userId,
+            scope: entityType.toUpperCase()
+          },
           name : rule.name,
           builderClass : "resources.rules.SimpleThreshold",
 
@@ -69,7 +108,7 @@
 
         var deferred = $q.defer();
 
-        $http.post("/teams/" + Session.currentTeamId + '/rules', st).success(function(data, status, headers) {
+        $http.post(makeRuleUrl(entityType), st).success(function(data, status, headers) {
           return deferred.resolve(data);
         }).error(function(data, status, headers) {
           return deferred.reject(data);
@@ -80,7 +119,7 @@
       service.updateRule = function(rule) {
         $log.debug("updateRule " + (angular.toJson(rule, true)));
         var deferred = $q.defer();
-        $http.post("/rules/" + rule._id, rule).success(function(data, status, headers) {
+        $http.post(makeRuleUrl("user") + "/" + rule._id, rule).success(function(data, status, headers) {
           $log.info("Successfully updated Rule - status " + status);
           return deferred.resolve(data);
         }).error(function(data, status, headers) {

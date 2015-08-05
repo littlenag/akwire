@@ -52,6 +52,7 @@ DELETE        /teams/:teamId                    @controllers.Teams.deleteTeam(te
 POST          /teams/:teamId/rename             @controllers.Teams.renameTeam(teamId:String, oldName:String, newName:String)
 
 # Rules (Users, Teams, etc)
+GET           /rules/:owner                    @controllers.Rules.getRules(owner:models.OwningEntity)
 POST          /rules/:owner                    @controllers.Rules.createRule(owner:models.OwningEntity)
 PUT           /rules/:owner                    @controllers.Rules.updateRule(owner:models.OwningEntity)
 DELETE        /rules/:owner                    @controllers.Rules.deleteRule(owner:models.OwningEntity,ruleId)

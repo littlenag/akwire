@@ -47,6 +47,7 @@ class CoreModule extends Module {
   binding to new controllers.Detectors
   binding to new controllers.Ingest
   binding to new controllers.Roles
+  binding to new controllers.Rules
   binding to new controllers.Teams
   binding to new controllers.Users
   binding to new controllers.Policies

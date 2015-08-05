@@ -1,5 +1,6 @@
 package controllers
 
+import com.mongodb.casbah.commons.MongoDBObject
 import models.mongoContext._
 import models._
 import org.bson.types.ObjectId
@@ -19,6 +20,20 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
   // PathBindable is used to handle map complex URL segments more gracefully
 
+  def getRules(entity:OwningEntity) = SecuredAction.async { request =>
+    Future {
+      Logger.info(s"Getting rules for entity: $entity")
+
+      // TODO check user access to entity (team,user,service)
+
+      val filter = MongoDBObject("owner._id" -> entity.id, "owner.scope" -> entity.scope.toString)
+      val sort = MongoDBObject("name" -> 1)
+      val list = RuleConfig.find(filter).sort(sort).toList
+
+      Ok(Json.toJson(list))
+    }
+  }
+
   def createRule(entity:OwningEntity) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Saving rule for entity: $entity")
@@ -26,8 +41,6 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
       // TODO check user access to entity (team,user,service)
 
       val rule = request.body.copy(id = ObjectId.get())
-
-      implicit val scope = entity
 
       Logger.info(s"Saving rule: $rule")
 

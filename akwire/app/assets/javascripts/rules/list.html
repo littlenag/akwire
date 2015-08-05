@@ -1,5 +1,6 @@
-<div class="col-md-1">
-    <a ui-sref="configure.rules.create" class="btn btn-primary" id="btn_rule_create">Create Rule</a>
+<div class="row">
+    <h1>User Rules</h1>
+    <a ui-sref="configure.rules.create" class="btn btn-primary pull-right" id="btn_rule_create">Create User Rule</a>
 </div>
 
 <div class="row" ng-controller="ListRuleCtrl">
@@ -18,7 +19,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="rule in rules | filter:searchText">
+        <tr ng-repeat="rule in userRules | filter:searchText">
             <td>
                 {{ rule.name }}
             </td>
