@@ -1,6 +1,6 @@
 package engines
 
-import akka.actor.Actor
+import akka.actor.{Props, Actor}
 import models.alert.{DoResolve, DoTrigger}
 import play.api.Logger
 import scaldi.Injector
@@ -11,8 +11,6 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
   def receive = {
     case trigger : DoTrigger =>
-
-      val t = Team.findOneById(trigger.rule.teamId)
 
       // want to compile the script against the incident
       // re-writing terms as necessary
@@ -36,7 +34,15 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
       // probably want to implement this first in the same spirit as pagerduty, as a simple list of actions
 
-      Logger.debug("Trigger : " + trigger)
+      //trigger.rule.
+
+      Team.findOneById(trigger.rule.teamId) match {
+        case Some(team) =>
+          Logger.debug("Notification of Trigger : " + trigger)
+
+          val policyActor = context.system.actorOf(Props[PolicyActor], )
+        case None =>
+      }
 
     case resolve : DoResolve =>
       Logger.debug("Resolve: " + resolve)

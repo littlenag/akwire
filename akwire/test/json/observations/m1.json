@@ -1,9 +1,10 @@
 { 
  "measurements": [
-    {
+   {
+     "host" : "h1",
     "observer":"m1",
     "key":"test",
-    "value":5
+    "value":15
     }
   ],
  "events": [

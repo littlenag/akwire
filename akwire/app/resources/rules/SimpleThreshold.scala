@@ -34,3 +34,11 @@ class SimpleThreshold(context: AlertContext) extends RuleBuilder(context) {
     override def ruleConfig: RuleConfig = config
   }
 }
+
+object SimpleThreshold {
+
+  // For now
+  def builderClass = {
+    RuleBuilderClass(classOf[SimpleThreshold].getCanonicalName)
+  }
+}

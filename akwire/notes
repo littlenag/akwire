@@ -1,0 +1,113 @@
+objects: 
+
+alert
+alertingrule
+autoresolve
+
+===
+
+host info
+
+first seen, last
+rules who's pattern consume
+count of streams
+data rate
+profiles that match (has temp? has raid?)
+host type (router, switch, server)
+
+stream info
+
+first seen, last
+rules consuming
+hit rate
+last time charted
+
+
+
+==
+api
+ - measurements/search
+ /search
+ /user group role
+ /role/taggin
+      /rule
+ /filters
+ /peers
+ /situations
+ /ping
+ /m r e
+ /activity-log
+
+===
+
+tags
+
+ tax:/key
+
+===
+
+alerting rule
+ - pattern : network = FOO
+ - expression : value > 10
+ - context : NHOK
+
+create context mbystream partition by n,h,o,k from m
+create context ebystream partition by n,h,o,k from e
+create context rbystream partition by n,h,o,k from r
+
+threshold and promotion
+ - count
+ - by time
+
+have to sugar the pattern to make tag searching easier
+
+select * from m where pattern() and expr()
+select * from m where n= h= o= k= and not (expr())
+
+select * from e where severity!=CLEARED and pattern()
+select * from e where n h o k and sev = cleared
+
+context mbys select * from pattern [
+ every (
+  firstObs = m ( (pattern) and (expr) ) ->
+    (
+      [count()] lastObs = m(expr()) and not m(not expr())
+    )
+ )
+]
+simple when count is 1
+
+just reverse some nots for the resolve rule
+
+context mbys select * from pattern [
+ every (
+  firstObs = m((pattern()) and (expr())) ->
+    (
+      lastObs=m(expr()) until (timer:interval(count() seconds))
+      and not m(not expr())
+    )
+ )
+]
+
+====
+
+problem
+incident
+alert
+event
+
+=====
+
+self-health
+
+windowrategauge
+counter
+sampler
+recency
+
+=====
+
+no filters
+
+just thrift and json
+

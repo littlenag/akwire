@@ -64,7 +64,16 @@ case class RuleBuilderClass(className:String) {
   }
 }
 
+// Will need to find a way to add scope to rule, incidents, policies, etc
+object Scope extends Enumeration {
+  type Scope = Value
+  val USER, TEAM, SERVICE = Value
+}
+
+case class RuleOwner(id: ObjectId, scope: Scope.Value)
+
 // Every RuleConfig generates at most ONE AlertingRule
+// Assume for now that this RuleConfig is scoped to a Team
 case class RuleConfig(
   // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
   teamId: ObjectId,

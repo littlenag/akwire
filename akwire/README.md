@@ -16,7 +16,62 @@ fronted with Twitter bootstrap CSS framework, because well, im not a web designe
 Dev Commands
 ============
 
-curl -HContent-type:application/json -XPOST -d @test/json/observations/m1.json http://localhost:6565/ingest/observations
+curl -HContent-type:application/json -XPOST -d @test/json/observations/m1.json http://localhost:9000/ingest/observations
+
+Design
+======
+
+Every monitoring system needs to consider the following data flow:
+
+ICAP
+ - instrument - make data available to be collected (e.g. jmx/jolokia, coda hale's metrics)
+ - collect    - collect the data (optional, ala collectd)
+ - analyze    - analyze the data (optional, ala graphite)
+ - persist    - persist the data (optional, ala riemann)
+
+metric engine : {
+  db/persistence : {
+    charts, dashboards (i.e. visualizations)
+    reports, trending
+    broad analytics
+  }
+
+  alert engine : {
+    incidents (persistant status dashboard)
+    notifications (for waking folks up)
+  }
+}
+
+Akwire is split into two separate logical pieces:
+ - the alerting engine
+ - the notification engine
+
+The job of the alerting engine (AE) is to determine when something is
+wrong and needs attention. The job of the notification engine (NE) is
+to get the attention of the most appropriate person.
+
+Alerting Engines are overly represented in monitoring software and is
+what most pieces of monitoring software are. An AE does its job by
+producing a stream of Alerts, scoped to th particular object in need
+of attention.
+
+Rules that belong to Teams are either submitted to:
+ - to the Enterprise Alert Bus, to be filtered by Services (push)
+ - left to the team, to be displayed on their Team Incident Dashboard,
+   and handled by their default notification policy
+
+Services have a set of filtering rules that subscribe/pull relevant Incidents
+ => for each Incident pull, it is submitted to that Services
+    notification Policy and displayed on the Enterprise Incident
+    Dashboard, which is then acted on by Tier 1 and 2
+ => assumes that Rules doesn't always know the exent of their impact
+
+Rules belonging to Users are not submittable to the Enterprise.
+ => Team stuff should usually be open to the enterprise
+ => User stuff is mostly noise
+ 
+Notification Policies
+=====================
 
 ----
 

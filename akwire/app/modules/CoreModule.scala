@@ -35,7 +35,7 @@ class CoreModule extends Module {
   }
 
   bind[ActorSystem] toNonLazy ActorSystem("Akwire") destroyWith (_.shutdown())
-  bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load("conf/application.conf"))
+  bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load)
 
   // Used by the Global object during first boot
   binding to env

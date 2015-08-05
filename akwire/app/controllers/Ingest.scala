@@ -25,7 +25,7 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable {
   implicit val measReader : Reads[ObservedMeasurement] =
     ( ((__ \ "timestamp").read[DateTime] orElse Reads.pure(DateTime.now())) ~
       ((__ \ "instance").read[String] orElse Reads.pure(configuration.getString("akwire.instance").get)) ~
-      (__ \ "host").read[String] ~
+      (__ \ "host").read[String] ~      // should be inferred from the sending host
       (__ \ "observer").read[String] ~
       (__ \ "key").read[String] ~
       (__ \ "value").read[Double]

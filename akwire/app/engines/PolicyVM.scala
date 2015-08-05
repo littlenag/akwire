@@ -26,7 +26,7 @@ class StandardClock extends Clock {
  * @param pc The Program Counter, points to current instruction to execute
  * @param ws Wait Start, used by the WAIT instruction to stash the start time of the interval
  */
-case class Registers(val pc : Int = 0, val ws : Option[DateTime] = None)
+case class Registers(pc : Int = 0, ws : Option[DateTime] = None)
 
 class Process(val program: Program, val incident : Incident) {
 
@@ -45,6 +45,7 @@ class Process(val program: Program, val incident : Incident) {
 
   val stack = new mutable.Stack[Value]
 
+  // FIXME all state needs to be moved into here
   var registers = Registers(0, None)
 
   // These are really named memory locations
@@ -54,9 +55,7 @@ class Process(val program: Program, val incident : Incident) {
     if (key.startsWith("incident.")) {
       property(key)
     } else {
-      variables.get(key).getOrElse {
-        throw new Exception("var '%s' not found".format(key))
-      }
+      variables.getOrElse(key, throw new Exception("var '%s' not found".format(key)))
     }
   }
 
@@ -80,11 +79,10 @@ class Process(val program: Program, val incident : Incident) {
 }
 
 class Program(val instructions : List[Instruction]) {
-  def instance(incident : Incident) : Process = {
-    return new Process(this, incident)
-  }
 
-  override def toString() = instructions.toString()
+  def instance(incident : Incident) : Process = new Process(this, incident)
+
+  override def toString = instructions.toString()
 }
 
 object Primitives {
@@ -92,19 +90,19 @@ object Primitives {
   sealed abstract class Value
 
   case class StringValue(value: String) extends Value {
-    override def toString() = value
+    override def toString = value
   }
 
   case class IntValue(value: Int) extends Value {
-    override def toString() = value.toString
+    override def toString = value.toString
   }
 
   case class ImpactValue(value: Impact.Value) extends Value {
-    override def toString() = value.toString
+    override def toString = value.toString
   }
 
   case class UrgencyValue(value: Urgency.Value) extends Value {
-    override def toString() = value.toString
+    override def toString = value.toString
   }
 
 //  case class PriorityValue(value: Priority.Value) extends Value {
@@ -112,15 +110,15 @@ object Primitives {
 //  }
 
   case class BooleanValue(value: Boolean) extends Value {
-    override def toString() = value.toString
+    override def toString = value.toString
   }
 
   case class MiscValue(value: Any) extends Value {
-    override def toString() = value.toString
+    override def toString = value.toString
   }
 
   case object UnitValue extends Value {
-    override def toString() = "unit"
+    override def toString = "unit"
   }
 }
 
@@ -154,6 +152,8 @@ trait Listener {
   def wait_continue(duration: Duration, curTime: DateTime) = {}
   def wait_complete(duration: Duration, endTime: DateTime) = {}
 }
+
+//case object HALTED extends ((Registers) => Registers)
 
 class VM(listener: Listener, clock : Clock = new StandardClock()) {
   import InstructionSet._
