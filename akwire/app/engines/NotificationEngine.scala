@@ -1,6 +1,7 @@
 package engines
 
 import akka.actor.{Props, Actor}
+import controllers.Policies
 import models.alert.{DoResolve, DoTrigger}
 import play.api.Logger
 import scaldi.Injector
@@ -8,6 +9,8 @@ import scaldi.akka.AkkaInjectable
 
 class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
   import models.Team
+
+  val policiesController = inject[Policies]
 
   def receive = {
     case trigger : DoTrigger =>
@@ -35,6 +38,8 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
       // probably want to implement this first in the same spirit as pagerduty, as a simple list of actions
 
       //trigger.rule.
+
+      val policy = policiesController.retrieveDefaultPolicy(trigger.rule.owner)
 
       Team.findOneById(trigger.rule.owner.id) match {
         case Some(team) =>

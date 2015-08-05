@@ -1,7 +1,7 @@
 package controllers
 
 import com.mongodb.casbah.commons.MongoDBObject
-import models.{Policy, User}
+import models.{OwningEntity, Scope, Policy, User}
 import org.bson.types.ObjectId
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,7 +20,7 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
 
   import play.api.libs.json._
 
-  def createUserPolicy() = SecuredAction.async(parse.json) {
+  def createPolicy() = SecuredAction.async(parse.json) {
     implicit request =>
       Future {
         request.body.validate[Policy].map { policy =>
@@ -33,8 +33,8 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
       }
   }
 
-  def updateUserPolicy() = SecuredAction.async(parse.json[Policy]) { implicit request =>
-    logger.info(s"Updating policy for user")
+  def updatePolicy() = SecuredAction.async(parse.json[Policy]) { implicit request =>
+    logger.info(s"Updating policy for ${request.body.owner}")
 
     // TODO check user access to policy
 
@@ -46,10 +46,10 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
     }
   }
 
-  def retrieveUserPolicies() = SecuredAction.async {
+  def retrievePolicies() = SecuredAction.async {
     implicit request =>
       Future {
-        val list = User.findAll().toList
+        val list = Policy.findAll().toList
         Ok(Json.arr(list)(0))
       }
   }
@@ -74,14 +74,13 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
 
   // Non-CRUD methods
 
-  def retrieveDefaultUserPolicy = SecuredAction.async {
-    implicit request =>
-      Future {
-        Policy.findOne(MongoDBObject("userId" -> request.user.id, "default" -> true)) match {
-          case Some(policy : Policy) => Ok(Json.toJson(policy))
-          case None => BadRequest(s"No default user policy for user ${request.user}")
-        }
+  def retrieveDefaultPolicy(owner:OwningEntity) = SecuredAction.async { implicit request =>
+    Future {
+      Policy.findOne(MongoDBObject("owner._id" -> owner.id, "owner.scope" -> owner.scope.toString, "default" -> true)) match {
+        case Some(policy : Policy) => Ok(Json.toJson(policy))
+        case None => BadRequest(s"No default user policy for user ${request.user}")
       }
+    }
   }
 
 }

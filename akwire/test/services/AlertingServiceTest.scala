@@ -5,7 +5,7 @@ import akka.testkit.{TestKit, ImplicitSender}
 import engines.{NotificationEngine, RoutingEngine}
 import models.alert.DoTrigger
 import models.core.ObservedMeasurement
-import models.{StreamExpr, RuleBuilder, RuleConfig, Team}
+import models._
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import play.api.test.FakeApplication
@@ -43,11 +43,9 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
       running(FakeApplication()) {
         val t1 = Team("t1")
         val s = StreamExpr("i".r, "h".r, "o".r, "k".r)
-        val r1 = RuleConfig(t1.id, ObjectId.get(), "test1", classOf[SimpleThreshold].asInstanceOf[Class[RuleBuilder]], Map("threshold" -> "2", "op" -> "gt"), s)
+        val r1 = RuleConfig(OwningEntity(t1.id, Scope.TEAM), ObjectId.get(), "test1", SimpleThreshold.builderClass, Map("threshold" -> "2", "op" -> "gt"), s)
 
-        // first rule
-
-        engine.loadAlertingRule(t1, r1)
+        engine.loadAlertingRule(r1)
 
         val obs = ObservedMeasurement(new DateTime(), "i", "h", "o", "k", 5)
 

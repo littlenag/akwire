@@ -6,7 +6,7 @@ import models.mongoContext._
 import org.bson.types.ObjectId
 
 // Single simple notification policy, owned by a user (for now)
-case class Policy(id:ObjectId, userId: ObjectId, policySource:String, default:Boolean)
+case class Policy(id:ObjectId, owner: OwningEntity, policySource:String, default:Boolean)
 
 object Policy extends PolicyDAO with PolicyJson
 
