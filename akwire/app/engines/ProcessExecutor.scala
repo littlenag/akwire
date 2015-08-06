@@ -22,12 +22,13 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
     }
   }
 
-
   val clock = new StandardClock
 
   implicit val vm = new VM(listener, clock)
 
-  override def receive: Receive = {
+  override def receive : Receive = waiting
+
+  def waiting: Receive = {
     case ExecuteProcess(process) =>
       context.become(executing(process, context.system.scheduler.schedule(3 seconds, 3 seconds, self, Tick)))
     case  _ => Logger.info("whoa! already executing something")
@@ -38,6 +39,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
       if (!process.tick()) {
         // Time to cleanup
         Logger.info(s"Process has terminated: ${process}")
+        context.become(waiting)
       }
   }
 }
