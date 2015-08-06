@@ -10,7 +10,7 @@
 ########################################################################
 
 # SecureSocial entry point
-->            /auth                             securesocial.Routes
+->            /auth                            securesocial.Routes
 
 ########################################################################
 
@@ -18,38 +18,43 @@
 # /ingest is the base resource for where other systems are supposed to send data
 # ./observations is for raw numeric or textual observations of deployed systems
 # ./alert is for integrating an alert from other external monitoring engines/scripts/etc
-POST          /ingest/observations              @controllers.Ingest.submitObservations
-#PUT     /ingest/observations      @controllers.Ingest.submitObservations
+POST          /ingest/observations             @controllers.Ingest.submitObservations
 
-POST          /ingest/alert                     @controllers.Ingest.submitAlert
-#PUT     /ingest/alert             @controllers.Ingest.submitAlert
+POST          /ingest/alert                    @controllers.Ingest.submitAlert
 
 # Single endpoint for serving AngularJS
-GET           /                                 @controllers.Application.index
-GET           /randomUUID                       @controllers.Application.randomUUID
-GET           /login                            @controllers.Auth.login
+GET           /                                @controllers.Application.index
+GET           /randomUUID                      @controllers.Application.randomUUID
+GET           /login                           @controllers.Auth.login
 
-# Detectors
-POST          /detector/create                  @controllers.Detectors.createDetector
-GET           /detector/list                    @controllers.Detectors.retrieveDetectors
-GET           /detector                         @controllers.Detectors.retrieveDetector(detectorId:String)
-POST          /detector                         @controllers.Detectors.updateDetector
-DELETE        /detector                         @controllers.Detectors.deleteDetector
-POST          /detector/create_token            @controllers.Detectors.genIntegrationToken(detectorId:String)
+# Security Roles
+POST          /roles                           @controllers.Roles.createRole
+GET           /roles                           @controllers.Roles.retrieveRoles
+GET           /roles/:roleId                   @controllers.Roles.retrieveRole(roleId:String)
+POST          /roles/:roleId                   @controllers.Roles.updateRole(roleId:String)
+DELETE        /roles/:roleId                   @controllers.Roles.deleteRole(roleId:String)
 
 # Users
-POST          /users                            @controllers.Users.createUser
-GET           /users                            @controllers.Users.retrieveUsers
-GET           /users/by-id/:userId              @controllers.Users.retrieveUserById(userId)
-GET           /users/by-email/:email            @controllers.Users.retrieveUserByEmail(email)
-DELETE        /users/:userId                    @controllers.Users.deleteUser(userId)
+POST          /users                           @controllers.Users.createUser
+GET           /users                           @controllers.Users.retrieveUsers
+GET           /users/by-id/:userId             @controllers.Users.retrieveUserById(userId)
+GET           /users/by-email/:email           @controllers.Users.retrieveUserByEmail(email)
+DELETE        /users/:userId                   @controllers.Users.deleteUser(userId)
 
 # Teams
-POST          /teams                            @controllers.Teams.createTeam
-GET           /teams                            @controllers.Teams.retrieveTeams
-GET           /teams/:teamId                    @controllers.Teams.retrieveTeam(teamId:String)
-DELETE        /teams/:teamId                    @controllers.Teams.deleteTeam(teamId:String)
-POST          /teams/:teamId/rename             @controllers.Teams.renameTeam(teamId:String, oldName:String, newName:String)
+POST          /teams                           @controllers.Teams.createTeam
+GET           /teams                           @controllers.Teams.retrieveTeams
+GET           /teams/:teamId                   @controllers.Teams.retrieveTeam(teamId:String)
+DELETE        /teams/:teamId                   @controllers.Teams.deleteTeam(teamId:String)
+POST          /teams/:teamId/rename            @controllers.Teams.renameTeam(teamId:String, oldName:String, newName:String)
+
+# Detectors
+POST          /detector/create                 @controllers.Detectors.createDetector
+GET           /detector/list                   @controllers.Detectors.retrieveDetectors
+GET           /detector                        @controllers.Detectors.retrieveDetector(detectorId:String)
+POST          /detector                        @controllers.Detectors.updateDetector
+DELETE        /detector                        @controllers.Detectors.deleteDetector
+POST          /detector/create_token           @controllers.Detectors.genIntegrationToken(detectorId:String)
 
 # Rules (Users, Teams, etc)
 GET           /rules/:owner                    @controllers.Rules.getRules(owner:models.OwningEntity)
@@ -59,26 +64,24 @@ DELETE        /rules/:owner                    @controllers.Rules.deleteRule(own
 PUT           /rules/:owner/start              @controllers.Rules.startRule(owner:models.OwningEntity,ruleId)
 PUT           /rules/:owner/pause              @controllers.Rules.pauseRule(owner:models.OwningEntity,ruleId)
 
-# Roles
-POST          /roles                            @controllers.Roles.createRole
-GET           /roles                            @controllers.Roles.retrieveRoles
-GET           /roles/:roleId                    @controllers.Roles.retrieveRole(roleId:String)
-POST          /roles/:roleId                    @controllers.Roles.updateRole(roleId:String)
-DELETE        /roles/:roleId                    @controllers.Roles.deleteRole(roleId:String)
+# Incidents (Users, Teams, etc)
+GET           /incidents                       @controllers.Incidents.queryIncidents(owner:Option[models.OwningEntity])
+GET           /incidents/:id                   @controllers.Incidents.getIncident(id:org.bson.types.ObjectId)
+POST          /incidents/:id                   @controllers.Incidents.updateIncident(id:org.bson.types.ObjectId)
 
 # Agent management API
-GET           /agents                           @controllers.Agents.findAllAgents
-GET           /agents/:agentId                  @controllers.Agents.findOneAgent(agentId:String)
-GET           /agents/:agentId/query            @controllers.Agents.queryAgent(agentId:String,command:String)
-PUT           /agents                           @controllers.Agents.updateAgent
+GET           /agents                          @controllers.Agents.findAllAgents
+GET           /agents/:agentId                 @controllers.Agents.findOneAgent(agentId:String)
+GET           /agents/:agentId/query           @controllers.Agents.queryAgent(agentId:String,command:String)
+PUT           /agents                          @controllers.Agents.updateAgent
 
 # Policies
-POST          /policies                         @controllers.Policies.createPolicy
-PUT           /policies                         @controllers.Policies.updatePolicy
-GET           /policies                         @controllers.Policies.retrievePolicies
-GET           /policies/:owner/default          @controllers.Policies.retrieveDefaultPolicy(owner:models.OwningEntity)
-GET           /policies/by-id/:policyId         @controllers.Policies.retrievePolicyById(policyId)
-DELETE        /policies/by-id/:policyId         @controllers.Policies.deletePolicy(policyId)
+POST          /policies                        @controllers.Policies.createPolicy
+PUT           /policies                        @controllers.Policies.updatePolicy
+GET           /policies                        @controllers.Policies.retrievePolicies
+GET           /policies/:owner/default         @controllers.Policies.retrieveDefaultPolicy(owner:models.OwningEntity)
+GET           /policies/by-id/:policyId        @controllers.Policies.retrievePolicyById(policyId)
+DELETE        /policies/by-id/:policyId        @controllers.Policies.deletePolicy(policyId)
 
 # Plugin management API
 ##GET     /plugins                    @controllers.Plugins.findPlugins
@@ -114,4 +117,4 @@ DELETE        /policies/by-id/:policyId         @controllers.Policies.deletePoli
 ##PUT     /profile                    @controllers.Profiles.updateProfile
 
 # Map static resources from the /public folder to the /assets URL path
-GET           /assets/*file                     controllers.Assets.at(path="/public", file)
+GET           /assets/*file                    controllers.Assets.at(path="/public", file)

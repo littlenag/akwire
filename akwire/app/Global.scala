@@ -1,5 +1,5 @@
 import com.mongodb.casbah.commons.conversions.scala._
-import models.{Policy, TeamRef, User, Team}
+import models._
 import modules.CoreModule
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -80,7 +80,7 @@ object Global extends GlobalSettings with ScaldiSupport {
 
         User.save(admin)
 
-        val defaultPolicy = Policy(ObjectId.get(), admin.id, "email me", default = true)
+        val defaultPolicy = Policy(ObjectId.get(), OwningEntity(admin.id, Scope.TEAM), "email me", default = true)
 
         Policy.save(defaultPolicy)
 

@@ -1,10 +1,13 @@
+import play.PlayImport.PlayKeys._
+
 name := """akwire"""
 
 version := "0.2-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(routesImport += "controllers.Binders._")
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.7"
+
 
 /** JAVA DEPS **/
 libraryDependencies ++= Seq(

@@ -36,7 +36,7 @@
 
         var deferred = $q.defer();
 
-        $http.get("/incident/list").
+        $http.get("/incidents").
           success(function(data, status, headers) {
             $log.info("Successfully listed Incidents - status " + status);
             return deferred.resolve(data);
@@ -54,7 +54,7 @@
 
         var deferred = $q.defer();
 
-        $http.get("/incident", {params : {incidentId: incidentId}}).
+        $http.get("/incident/" + incidentId).
           success(function(data, status, headers) {
             $log.info("Successfully retrieved Incident - status " + status);
             return deferred.resolve(data);
