@@ -18,7 +18,7 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
 
   val core = inject[CoreServices]
 
-  def queryIncidents(entity:Option[OwningEntity]) = SecuredAction.async { request =>
+  def queryIncidents(entity:Option[OwningEntityRef]) = SecuredAction.async { request =>
     Future {
       Logger.info(s"Querying incidents: entity=$entity")
 

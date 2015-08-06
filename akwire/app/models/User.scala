@@ -13,7 +13,9 @@ case class TeamRef(id: ObjectId,name: String)
 
 case class User(id: ObjectId,                     // object id, unique for this object for this database
                 profile : BasicProfile,
-                memberOfTeams: List[TeamRef])
+                memberOfTeams: List[TeamRef]) extends EntityScoped {
+  val scope = Scope.USER
+}
 
 object User extends UserDAO with UserJson {
   def AKWIRE_ADMIN_USERNAME = "admin@akwire.com"

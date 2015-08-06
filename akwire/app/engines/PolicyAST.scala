@@ -26,8 +26,8 @@ object PolicyAST {
 
   }
 
-  // By default policies don't repeat
-  case class Policy(block: Block, attempt: Option[Attempts] = None) extends AST
+  // Root node for all ASTs; by construction our programs don't repeat
+  case class ProgramRoot(block: Block, attempt: Option[Attempts] = None) extends AST
 
   case class Block(statements: List[AST]) extends AST
 

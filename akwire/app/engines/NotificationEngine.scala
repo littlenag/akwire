@@ -2,6 +2,7 @@ package engines
 
 import akka.actor.{Props, Actor}
 import controllers.Policies
+import models.{Incident, Policy}
 import models.alert.{DoResolve, DoTrigger}
 import play.api.Logger
 import scaldi.Injector
@@ -10,10 +11,8 @@ import scaldi.akka.AkkaInjectable
 class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
   import models.Team
 
-  val policiesController = inject[Policies]
-
   def receive = {
-    case trigger : DoTrigger =>
+    case (trigger:DoTrigger, incident:Incident) =>
 
       // want to compile the script against the incident
       // re-writing terms as necessary
@@ -39,21 +38,20 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
       //trigger.rule.
 
-      val policy = policiesController.retrieveDefaultPolicy(trigger.rule.owner)
+      val policy = Policy.findDefaultForOwner(trigger.rule.owner).getOrElse(throw new RuntimeException(s"No default policy for owner ${trigger.rule.owner}"))
 
-      Team.findOneById(trigger.rule.owner.id) match {
-        case Some(team) =>
-          Logger.debug("Notification of Trigger : " + trigger)
+      val policyActor = injectActorRef[ProcessExecutor]
 
-          // Assume for now that
-          //val policyActor = context.system.actorOf(Props[PolicyActor], )
-        case None =>
-      }
+      val compiledProgram = PolicyCompiler.compile(policy).right.getOrElse(throw new RuntimeException(s"Expected a compiling policy for ${trigger.rule.owner}"))
+
+      val process = compiledProgram.instance(incident)
+
+      policyActor ! ExecuteProcess(process)
 
     case resolve : DoResolve =>
       Logger.debug("Resolve: " + resolve)
 
-      // cancel the execution of the team's notification scriptx
+    // cancel the execution of the team's notification scriptx
 
     case msg =>
       Logger.error("Unable to process: " + msg)

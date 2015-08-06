@@ -16,21 +16,10 @@ object Scope extends Enumeration {
   val USER, TEAM, SERVICE = Value
 }
 
-case class OwningEntity(id: ObjectId, scope: Scope.Value)
-
-sealed trait EntityScoped {
+trait EntityScoped {
   def id : ObjectId
   def scope : Scope.Value
+  final def asRef = OwningEntityRef(id,scope)
 }
 
-case class UserScoped(id: ObjectId) extends EntityScoped {
-  val scope = Scope.USER
-}
-
-case class TeamScoped(id: ObjectId) extends EntityScoped {
-  val scope = Scope.TEAM
-}
-
-case class ServiceScoped(id: ObjectId) extends EntityScoped {
-  val scope = Scope.SERVICE
-}
+case class OwningEntityRef(id: ObjectId, scope: Scope.Value) extends EntityScoped

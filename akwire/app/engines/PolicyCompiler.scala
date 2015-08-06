@@ -2,7 +2,7 @@ package engines
 
 import engines.Handoff.{TextTarget, EmailTarget, CallTarget}
 import engines.Primitives._
-import models.{Urgency, Impact}
+import models.{Policy, Urgency, Impact}
 import play.api.Logger
 
 object PolicyCompiler {
@@ -22,6 +22,8 @@ object PolicyCompiler {
       LBL(cur)
     }
   }
+
+  def compile(policy: Policy): Either[parser.NoSuccess, Program] = compile(policy.policySource)
 
   def compile(policy: String): Either[parser.NoSuccess, Program] = {
     Logger.info("Compiling policy: " + policy)
@@ -45,7 +47,7 @@ object PolicyCompiler {
   private def compileAST(ast:AST)(implicit labeler: LabelMaker): List[Instruction] = {
     def visit(ast:AST): List[Instruction] = {
       ast match {
-        case Policy(statements, repeat_expr) => {
+        case ProgramRoot(statements, repeat_expr) => {
 
           // Extract the number of times to loop
           val max = repeat_expr match {

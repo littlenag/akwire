@@ -2,7 +2,6 @@ package models
 
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
-import com.novus.salat.annotations._
 import com.novus.salat.dao._
 import com.mongodb.casbah.Imports._
 import play.api.libs.json._
@@ -13,7 +12,9 @@ import models.mongoContext._
 case class Team( name: String,
                  id: ObjectId = ObjectId.get(),
                  created: DateTime = new DateTime(),
-                 active: Boolean = true)
+                 active: Boolean = true) extends EntityScoped {
+  val scope = Scope.TEAM
+}
 
 object Team extends TeamDAO with TeamJson {
   def AKWIRE_ADMIN_TEAM_NAME = "Akwire Administrators"

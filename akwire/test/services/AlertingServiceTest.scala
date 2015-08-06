@@ -1,8 +1,8 @@
 package services
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{ActorRef, Props, ActorSystem}
 import akka.testkit.{TestKit, ImplicitSender}
-import engines.{NotificationEngine, RoutingEngine}
+import engines.{IncidentEngine, NotificationEngine}
 import models.alert.DoTrigger
 import models.core.ObservedMeasurement
 import models._
@@ -15,6 +15,7 @@ import scaldi.DynamicModule
 import org.scalatest.WordSpecLike
 import org.scalatest.Matchers
 import org.scalatest.BeforeAndAfterAll
+import scaldi.akka.AkkaInjectable
 
 class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with ImplicitSender with WordSpecLike with Matchers with BeforeAndAfterAll {
 
@@ -28,12 +29,20 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
 
       implicit val module = DynamicModule { implicit dm =>
         dm.bind[ActorSystem] to system
-        dm.binding toProvider new NotificationEngine()
 
-        dm.bind[PersistenceService] to new PersistenceService()
-        dm.binding toProvider new PersistenceEngine()
+        dm.binding toProvider new IncidentEngine
+        dm.binding toProvider new NotificationEngine
 
-        dm.binding toProvider new RoutingEngine()
+        dm.bind[ActorRef] identifiedBy 'incidentEngine to {
+          implicit val system = dm.inject[ActorSystem]
+          AkkaInjectable.injectActorRef [IncidentEngine]
+        }
+
+        dm.bind[ActorRef] identifiedBy 'notificationEngine to {
+          implicit val system = dm.inject[ActorSystem]
+          AkkaInjectable.injectActorRef [NotificationEngine]
+        }
+
       }
 
       val engine = new AlertingService()
@@ -43,7 +52,7 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
       running(FakeApplication()) {
         val t1 = Team("t1")
         val s = StreamExpr("i".r, "h".r, "o".r, "k".r)
-        val r1 = RuleConfig(OwningEntity(t1.id, Scope.TEAM), ObjectId.get(), "test1", SimpleThreshold.builderClass, Map("threshold" -> "2", "op" -> "gt"), s)
+        val r1 = RuleConfig(OwningEntityRef(t1.id, Scope.TEAM), ObjectId.get(), "test1", SimpleThreshold.builderClass, Map("threshold" -> "2", "op" -> "gt"), s)
 
         engine.loadAlertingRule(r1)
 

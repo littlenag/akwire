@@ -57,15 +57,15 @@ DELETE        /detector                        @controllers.Detectors.deleteDete
 POST          /detector/create_token           @controllers.Detectors.genIntegrationToken(detectorId:String)
 
 # Rules (Users, Teams, etc)
-GET           /rules/:owner                    @controllers.Rules.getRules(owner:models.OwningEntity)
-POST          /rules/:owner                    @controllers.Rules.createRule(owner:models.OwningEntity)
-PUT           /rules/:owner                    @controllers.Rules.updateRule(owner:models.OwningEntity)
-DELETE        /rules/:owner                    @controllers.Rules.deleteRule(owner:models.OwningEntity,ruleId)
-PUT           /rules/:owner/start              @controllers.Rules.startRule(owner:models.OwningEntity,ruleId)
-PUT           /rules/:owner/pause              @controllers.Rules.pauseRule(owner:models.OwningEntity,ruleId)
+GET           /rules/:owner                    @controllers.Rules.getRules(owner:models.OwningEntityRef)
+POST          /rules/:owner                    @controllers.Rules.createRule(owner:models.OwningEntityRef)
+PUT           /rules/:owner                    @controllers.Rules.updateRule(owner:models.OwningEntityRef)
+DELETE        /rules/:owner                    @controllers.Rules.deleteRule(owner:models.OwningEntityRef,ruleId)
+PUT           /rules/:owner/start              @controllers.Rules.startRule(owner:models.OwningEntityRef,ruleId)
+PUT           /rules/:owner/pause              @controllers.Rules.pauseRule(owner:models.OwningEntityRef,ruleId)
 
 # Incidents (Users, Teams, etc)
-GET           /incidents                       @controllers.Incidents.queryIncidents(owner:Option[models.OwningEntity])
+GET           /incidents                       @controllers.Incidents.queryIncidents(owner:Option[models.OwningEntityRef])
 GET           /incidents/:id                   @controllers.Incidents.getIncident(id:org.bson.types.ObjectId)
 POST          /incidents/:id                   @controllers.Incidents.updateIncident(id:org.bson.types.ObjectId)
 
@@ -79,7 +79,7 @@ PUT           /agents                          @controllers.Agents.updateAgent
 POST          /policies                        @controllers.Policies.createPolicy
 PUT           /policies                        @controllers.Policies.updatePolicy
 GET           /policies                        @controllers.Policies.retrievePolicies
-GET           /policies/:owner/default         @controllers.Policies.retrieveDefaultPolicy(owner:models.OwningEntity)
+GET           /policies/:owner/default         @controllers.Policies.retrieveDefaultPolicy(owner:models.OwningEntityRef)
 GET           /policies/by-id/:policyId        @controllers.Policies.retrievePolicyById(policyId)
 DELETE        /policies/by-id/:policyId        @controllers.Policies.deletePolicy(policyId)
 

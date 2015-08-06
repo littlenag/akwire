@@ -25,19 +25,22 @@ class JsonParsers extends Specification {
         """{"name":"test 1",
           | "text":"(where (and (host \"h1\") (> value 2)) trigger)",
           | "active":true,
-          | "team":"5415d1fbec2e527a31f97fe1",
+          | "owner": {
+          |   "id":"5415d1fbec2e527a31f97fe1",
+          |   "scope":"TEAM"
+          | },
           | "impact":"SEV_5",
           | "urgency":"NONE",
           | "context": ["instance", "host", "observer", "key"]}""".stripMargin
 
       Json.parse(ruleText).validate[RuleConfig].fold(
-        invalid = (e => e mustNotEqual null),
-        valid = ( rule => {
-          rule.name must_== "test 1"
-          rule.active must_== true;
-          rule.teamId must_==(new ObjectId("5415d1fbec2e527a31f97fe1"))
-        }) )
-
+        invalid = e => e mustNotEqual null,
+        valid = rule => {
+          rule.name mustEqual "test 1"
+          rule.active mustEqual true
+          rule.owner.id mustEqual new ObjectId("5415d1fbec2e527a31f97fe1")
+        }
+      )
     }
   }
 }

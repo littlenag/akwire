@@ -3,7 +3,7 @@ package engines
 import engines.InstructionSet.{Invokation, Instruction}
 import models._
 import org.bson.types.ObjectId
-import org.joda.time.{DateTime}
+import org.joda.time.DateTime
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 
@@ -17,14 +17,14 @@ class PolicyVMTest extends Specification with Mockito {
 
     val EPOCH = new DateTime(0L)
 
-    class TestListener extends Listener {
+    class TestListener extends VMStateListener {
       type Step = (Instruction, Registers, Registers)
 
       val completeHistory = collection.mutable.MutableList.empty[Step]
 
       val invocations = collection.mutable.MutableList.empty[Instruction]
 
-      override def latchStateChange(instruction: Instruction, newState:Registers, oldState:Registers): Unit = {
+      override def instructionStepped(instruction: Instruction, newState:Registers, oldState:Registers): Unit = {
         println(s"*$instruction")
 
         completeHistory += Tuple3(instruction, newState, oldState)
@@ -43,9 +43,10 @@ class PolicyVMTest extends Specification with Mockito {
 
     "simple policy" in {
       running(FakeApplication()) {
-        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
+        val team = Team.apply("t1")
+        val rule = RuleConfig(team.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
 
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        val incident = Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule,
           ContextualizedStream(List(("host", "h1"))),
           Impact.IL_1,
           Urgency.UL_0,
@@ -101,9 +102,10 @@ class PolicyVMTest extends Specification with Mockito {
     "repeating policy" in {
       running(FakeApplication()) {
 
-        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
+        val team = Team.apply("t1")
+        val rule = RuleConfig(team.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
 
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        val incident = Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule,
           ContextualizedStream(List(("host", "h1"))),
           Impact.IL_1,
           Urgency.UL_0,
@@ -157,10 +159,10 @@ class PolicyVMTest extends Specification with Mockito {
     "filtering policy" in {
       running(FakeApplication()) {
 
-        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
+        val team = Team.apply("t1")
+        val rule = RuleConfig(team.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
 
-        val incident = new Incident(ObjectId.get(), true, false, false,
-          new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        val incident = Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule,
           ContextualizedStream(List(("host", "h1"))),
           Impact.IL_1,
           Urgency.UL_0,
@@ -173,7 +175,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times every 1h
         val simplePolicy =
           """
-            | if incident.impact == IL-1 then
+            | if incident.impact == IL_1 then
             |   call user(1)
             | end
             |
@@ -217,9 +219,10 @@ class PolicyVMTest extends Specification with Mockito {
     "matching policy" in {
       running(FakeApplication()) {
 
-        val rule = RuleConfig(ObjectId.get(), ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
+        val team = Team.apply("t1")
+        val rule = RuleConfig(team.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
 
-        val incident = new Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule, ObjectId.get(),
+        val incident = Incident(ObjectId.get(), true, false, false, new DateTime(), new DateTime(), 1, rule,
           ContextualizedStream(List(("host", "h1"))),
           Impact.IL_1,
           Urgency.UL_0,
@@ -230,7 +233,7 @@ class PolicyVMTest extends Specification with Mockito {
         // | attempt 2 times
         val simplePolicy =
           """
-            | if incident.impact == IL-1 then
+            | if incident.impact == IL_1 then
             |   call user(1)
             | else
             |   email user(1)

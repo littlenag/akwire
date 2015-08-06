@@ -1,13 +1,14 @@
 package modules
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import controllers.Policies
-import engines.{NotificationEngine, RoutingEngine}
+import engines.{IncidentEngine, ProcessExecutor, NotificationEngine}
 import models.User
 import play.api.Logger
 import play.api.Configuration
 import plugins.auth.AuthServicePlugin
 import scaldi.Module
+import scaldi.akka.AkkaInjectable
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.{RuntimeEnvironment}
 import services._
@@ -60,15 +61,27 @@ class CoreModule extends Module {
   // The app classloader is our default classloader
   binding to current.classloader
 
-  // Engines (active)
-  binding toProvider new PersistenceEngine
+  // Careful, injectActorRef[T] creates a new instance of T !!
+  binding toProvider new IncidentEngine
   binding toProvider new NotificationEngine
-  binding toProvider new RoutingEngine
+
+  // Engines (active); FIXME replace these with cluster singleton proxies
+  bind[ActorRef] identifiedBy 'incidentEngine to {
+    implicit val system = inject[ActorSystem]
+    AkkaInjectable.injectActorRef[IncidentEngine]
+  }
+
+  bind[ActorRef] identifiedBy 'notificationEngine to {
+    implicit val system = inject[ActorSystem]
+    AkkaInjectable.injectActorRef[NotificationEngine]
+  }
+
+  // Executors
+  binding toProvider new ProcessExecutor
 
   // Services (passive)
   binding toNonLazy new IngestService initWith(_.init)
   binding toNonLazy new AlertingService initWith(_.init) destroyWith(_.shutdown)
-  binding toNonLazy new PersistenceService initWith(_.init)
   binding toNonLazy new CoreServices initWith(_.init)
 
   bind[UUIDGenerator] toNonLazy new SimpleUUIDGenerator

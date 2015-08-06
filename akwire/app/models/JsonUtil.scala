@@ -63,6 +63,6 @@ object JsonUtil extends DefaultReads with DefaultWrites {
   implicit val urgencyFormat = EnumUtils.enumFormat(Urgency)
 
   implicit val scopeFormat = EnumUtils.enumFormat(Scope)
-  implicit val owningEntityFormat = Json.format[OwningEntity]
+  implicit val owningEntityFormat = Json.format[OwningEntityRef]
 }
 

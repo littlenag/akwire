@@ -9,7 +9,7 @@ import engines.Primitives._
 import models.{Urgency, Impact, Incident}
 import org.joda.time.{DateTime, Duration}
 
-import scala.collection.mutable
+import scala.collection.immutable.Stack
 
 import play.api.Logger
 
@@ -28,7 +28,11 @@ class StandardClock extends Clock {
  */
 case class Registers(pc : Int = 0, ws : Option[DateTime] = None)
 
-class Process(val program: Program, val incident : Incident) {
+class Process(val program: Program,
+              val incident : Incident,
+              val initRegisters : Registers = Registers(0, None),
+              val initStack : Stack[Value] = Stack.empty[Value],
+              val initVariables : Map[String, Value] = Map.empty[String, Value]) {
 
   // map of labels to PC offset for that label
   val labels = collection.mutable.Map[LBL, Int]().empty
@@ -43,24 +47,40 @@ class Process(val program: Program, val incident : Incident) {
     case _ =>
   }
 
-  val stack = new mutable.Stack[Value]
+  private var _stack = initStack
+  private var _registers = initRegisters
+  private var _variables = initVariables     // Just named memory locations
 
-  // FIXME all state needs to be moved into here
-  var registers = Registers(0, None)
+  def popInt() : Int = {
+    val (elem, newStack) = _stack.pop2
+    _stack = newStack
+    elem.asInstanceOf[IntValue].value
+  }
 
-  // These are really named memory locations
-  private val variables = collection.mutable.Map[String, Value]().empty
+  def popStack() : Value = {
+    val (elem, newStack) = _stack.pop2
+    _stack = newStack
+    elem
+  }
+
+  def pushStack(value:Value) = {
+    _stack = _stack.push(value)
+  }
+
+  def updateRegisters(updated:Registers) = _registers = updated
+
+  def registers = _registers
 
   def getVar(key: String): Value = {
     if (key.startsWith("incident.")) {
       property(key)
     } else {
-      variables.getOrElse(key, throw new Exception("var '%s' not found".format(key)))
+      _variables.getOrElse(key, throw new Exception("var '%s' not found".format(key)))
     }
   }
 
   def setVar(key: String, value: Value): Value = {
-    variables(key) = value
+    _variables += key -> value
     value
   }
 
@@ -73,6 +93,10 @@ class Process(val program: Program, val incident : Incident) {
     }
   }
 
+  /**
+   * Move the clock one tick forward for the Process
+   * @return true if still executing, false if halted
+   */
   def tick()(implicit vm: VM) = {
     vm.tick(this)
   }
@@ -122,20 +146,25 @@ object Primitives {
   }
 }
 
-trait Listener {
-  // Executed after every atomic update to the virtual machine state,
+trait VMStateListener {
+  // Executed after every partial (not atomic!) update to the virtual machine state,
   // i.e. change to the machine state registers, has been executed.
   // This is distinct from being called after every instruction has finished,
   // which is what `completed` captures.
-  def latchStateChange(instruction:Instruction, newState:Registers, oldState:Registers) = {}
+  // !!!!
+  //   THIS IS NECESSARY TO SUPPORT INSTRUCTIONS THAT EXECUTE MULTIPLE ACTIONS IN PARALLEL
+  //   and allows the listener to make updates or save state when each action completes
+  //   so we avoid repeating actions needlessly.
+  // !!!!
+  def instructionStepped(instruction:Instruction, newState:Registers, oldState:Registers) = {}
 
   // Executed after every instruction that completes its execution
-  def completed(instruction:Instruction, newState:Registers, oldState:Registers) = {}
+  def instructionCompleted(instruction:Instruction, newState:Registers, oldState:Registers) = {}
 
-  // Executed before every instruction regardless of completion
+  // Executed before every instruction regardless of completion status
   def preTick(instruction:Instruction, state:Registers) = {}
 
-  // Executed after every instruction regardless of completion
+  // Executed after every instruction regardless of completion status
   def postTick(instruction:Instruction, state:Registers) = {}
 
   // Target to email
@@ -151,11 +180,14 @@ trait Listener {
   def wait_start(duration: Duration, startTime: DateTime) = {}
   def wait_continue(duration: Duration, curTime: DateTime) = {}
   def wait_complete(duration: Duration, endTime: DateTime) = {}
+
+  // Program has halted, VM needs to be reset and fresh Program inserted
+  def halted(state:Registers) = {}
 }
 
 //case object HALTED extends ((Registers) => Registers)
 
-class VM(listener: Listener, clock : Clock = new StandardClock()) {
+class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
   import InstructionSet._
 
   /**
@@ -166,7 +198,6 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
   def tick(proc:Process): Boolean = {
     val instruction = proc.program.instructions(proc.registers.pc)
     val registers = proc.registers
-    val stack = proc.stack
 
     val NEXT = Some(registers.copy(pc = registers.pc + 1))
 
@@ -200,83 +231,83 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
       }
 
       case PUSH(value) =>
-        stack.push(value)
+        proc.pushStack(value)
         NEXT
 
       case ST_VAR(variable) =>
-        val value = stack.pop()
+        val value = proc.popStack()
         proc.setVar(variable, value)
         NEXT
 
       case LD_VAR(variable) =>
         val value = proc.getVar(variable)
-        stack.push(value)
+        proc.pushStack(value)
         NEXT
 
       case ADD() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(IntValue(a + b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(IntValue(a + b))
         NEXT
 
       case SUB() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(IntValue(a - b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(IntValue(a - b))
         NEXT
 
       case MUL() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(IntValue(a * b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(IntValue(a * b))
         NEXT
 
       case DIV() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(IntValue(a / b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(IntValue(a / b))
         NEXT
 
       case GT() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(BooleanValue(a > b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(BooleanValue(a > b))
         NEXT
 
       case GTE() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(BooleanValue(a >= b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(BooleanValue(a >= b))
         NEXT
 
       case LT() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(BooleanValue(a < b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(BooleanValue(a < b))
         NEXT
 
       case LTE() =>
-        val b = stack.pop().asInstanceOf[IntValue].value
-        val a = stack.pop().asInstanceOf[IntValue].value
-        stack.push(BooleanValue(a <= b))
+        val b = proc.popInt()
+        val a = proc.popInt()
+        proc.pushStack(BooleanValue(a <= b))
         NEXT
 
       case EQ() =>
-        val a = stack.pop()
-        val b = stack.pop()
+        val a = proc.popStack()
+        val b = proc.popStack()
         Logger.trace(s"$a == $b")
-        stack.push(BooleanValue(a == b))
+        proc.pushStack(BooleanValue(a == b))
         NEXT
 
       case JT(lbl) =>
-        if (stack.pop().asInstanceOf[BooleanValue].value) {
+        if (proc.popStack().asInstanceOf[BooleanValue].value) {
           Some(registers.copy(pc = proc.mapLabel(lbl)))
         } else {
           NEXT
         }
 
       case JF(lbl) =>
-        if (!stack.pop().asInstanceOf[BooleanValue].value) {
+        if (!proc.popStack().asInstanceOf[BooleanValue].value) {
           Some(registers.copy(pc = proc.mapLabel(lbl)))
         } else {
           NEXT
@@ -300,19 +331,27 @@ class VM(listener: Listener, clock : Clock = new StandardClock()) {
 
     nextState match {
       case Some(newRegisters) =>
+
+        // Stepping is implemented by watching for changes to the registers (not memory!) and
+        // makes sense because ONLY registers can have multiple or indeterminent values during their execution,
+        // whereas things in memory move "atomically" from one state to the next and never changes within
+        // an instruction.
+        // Keep in mind that complete Program state is more than just its registers since to fully
+        // reconstruct a Program one would also need memory.
         if (newRegisters != registers) {
-          listener.latchStateChange(instruction, newRegisters, registers)
+          listener.instructionStepped(instruction, newRegisters, registers)
         }
 
         if (newRegisters.pc != registers.pc) {
-          listener.completed(instruction, newRegisters, registers)
+          listener.instructionCompleted(instruction, newRegisters, registers)
         }
 
-        proc.registers = newRegisters
+        proc.updateRegisters(newRegisters)
         listener.postTick(instruction, proc.registers)
         // This should return an object, not a bool. Oh well.
         true
       case None =>
+        listener.halted(proc.registers)
         false
     }
   }

@@ -53,7 +53,7 @@ object ContextualizedStreamTransformer extends CustomTransformer[ContextualizedS
 }
 
 trait Contextualized {
-  def contextualizedStream: ContextualizedStream;
+  def contextualizedStream: ContextualizedStream
 }
 
 case class Incident( id: ObjectId,

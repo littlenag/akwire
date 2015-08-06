@@ -20,7 +20,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
   // PathBindable is used to handle map complex URL segments more gracefully
 
-  def getRules(entity:OwningEntity) = SecuredAction.async { request =>
+  def getRules(entity:OwningEntityRef) = SecuredAction.async { request =>
     Future {
       Logger.info(s"Getting rules for entity: $entity")
 
@@ -34,7 +34,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def createRule(entity:OwningEntity) = SecuredAction.async(parse.json[RuleConfig]) { request =>
+  def createRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Saving rule for entity: $entity")
 
@@ -51,7 +51,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def updateRule(entity:OwningEntity) = SecuredAction.async(parse.json[RuleConfig]) { request =>
+  def updateRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Updating rule for team: $entity")
 
@@ -68,19 +68,19 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def deleteRule(entity:OwningEntity, ruleId:String) = SecuredAction.async {
+  def deleteRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def startRule(entity:OwningEntity, ruleId:String) = SecuredAction.async {
+  def startRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }
   }
 
-  def pauseRule(entity:OwningEntity, ruleId:String) = SecuredAction.async {
+  def pauseRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
     Future {
       Ok("placeholder")
     }

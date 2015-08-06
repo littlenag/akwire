@@ -1,7 +1,7 @@
 package controllers
 
 import com.mongodb.casbah.commons.MongoDBObject
-import models.{OwningEntity, Scope, Policy, User}
+import models.{OwningEntityRef, Scope, Policy, User}
 import org.bson.types.ObjectId
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -57,7 +57,7 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
   def retrievePolicyById(policyId:String) = SecuredAction.async {
     implicit request =>
       Future {
-        Policy.findOne(MongoDBObject("_id" -> new ObjectId(policyId))) match {
+        Policy.findOneById(new ObjectId(policyId)) match {
           case Some(policy : Policy) => Ok(Json.toJson(policy))
           case None => BadRequest(s"Invalid id $policyId")
         }
@@ -74,9 +74,9 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
 
   // Non-CRUD methods
 
-  def retrieveDefaultPolicy(owner:OwningEntity) = SecuredAction.async { implicit request =>
+  def retrieveDefaultPolicy(owner:OwningEntityRef) = SecuredAction.async { implicit request =>
     Future {
-      Policy.findOne(MongoDBObject("owner._id" -> owner.id, "owner.scope" -> owner.scope.toString, "default" -> true)) match {
+      Policy.findDefaultForOwner(owner) match {
         case Some(policy : Policy) => Ok(Json.toJson(policy))
         case None => BadRequest(s"No default user policy for user ${request.user}")
       }

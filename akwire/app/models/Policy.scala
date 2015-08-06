@@ -1,14 +1,20 @@
 package models
 
 import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.commons.MongoDBObject
 import com.novus.salat.dao.{ModelCompanion, SalatDAO}
 import models.mongoContext._
 import org.bson.types.ObjectId
 
 // Single simple notification policy, owned by a user (for now)
-case class Policy(id:ObjectId, owner: OwningEntity, policySource:String, default:Boolean)
+case class Policy(id:ObjectId, owner: OwningEntityRef, policySource:String, default:Boolean)
 
-object Policy extends PolicyDAO with PolicyJson
+object Policy extends PolicyDAO with PolicyJson {
+
+  def findDefaultForOwner(owner:OwningEntityRef) = {
+    findOne(MongoDBObject("owner._id" -> owner.id, "owner.scope" -> owner.scope.toString, "default" -> true))
+  }
+}
 
 trait PolicyDAO extends ModelCompanion[Policy, ObjectId] {
   def collection = MongoConnection()("akwire")("policies")

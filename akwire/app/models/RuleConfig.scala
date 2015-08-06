@@ -72,7 +72,7 @@ case class RuleBuilderClass(className:String) {
 // Assume for now that this RuleConfig is scoped to a Team
 case class RuleConfig(
   // Maybe create a HydratedRule trait so that I need to pass around Rule with HydratedRule?
-  owner: OwningEntity,
+  owner: OwningEntityRef,
   id: ObjectId,
   name: String,
 

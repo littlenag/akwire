@@ -63,7 +63,7 @@ object PolicyParser extends RegexParsers {
 
   // statements ::= expr +
   def policy: Parser[AST] = opt(attempt_st) ~ statements ^^ {
-    case at ~ body => Policy(body, at)
+    case at ~ body => ProgramRoot(body, at)
   }
 
   def statements: Parser[Block] = rep(statement)^^Block

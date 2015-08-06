@@ -3,9 +3,7 @@ package services
 import java.nio.charset.Charset
 import java.nio.file.{Files, Paths}
 
-import akka.actor.ActorSystem
-import akka.stream.actor.ActorPublisher
-import engines.RoutingEngine
+import akka.actor.{ActorRef, ActorSystem}
 import models.alert.{DoResolve, DoTrigger}
 import models.core.Observation
 import models._
@@ -27,7 +25,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
 
   implicit val actorSystem = inject[ActorSystem]
 
-  val dataRouter = injectActorRef[RoutingEngine]
+  val incidentEngine = inject[ActorRef] ('incidentEngine)
 
   // TODO alerting rules and resolution rules need to know their StreamContext
 
@@ -112,7 +110,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
     for (resolvingRule <- resolutionRules.getOrElse(ruleId, Nil)) {
       destroyRule(resolvingRule.ruleConfig.id)
       // TODO send an InterAlert message for any loaded Rules
-      //persistenceEngine ! DoInter(rule, entry)
+      //incidentEngine ! DoInter(rule, entry)
     }
 
     //rule.map(r => destroyRule(r.id))
@@ -124,11 +122,11 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
   /** Go through a java ArrayList since Java is our glue here */
   def triggerAlert(rule:TriggeringRule, obs:List[Observation]) = {
     Logger.debug("Triggering alert with observations: " + obs)
-    dataRouter ! DoTrigger(rule.ruleConfig, obs)
+    incidentEngine ! DoTrigger(rule.ruleConfig, obs)
   }
 
   def resolveAlert(rule:ResolvingRule, obs:List[Observation]) = {
     Logger.info("Resolving alert with observations: " + obs)
-    dataRouter ! DoResolve(rule.ruleConfig, obs)
+    incidentEngine ! DoResolve(rule.ruleConfig, obs)
   }
 }
