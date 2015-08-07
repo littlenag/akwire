@@ -39,6 +39,18 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           Process.save(process.snapshot)
           origSender ! ProcessCompleted(process)
         }
+
+        override def email(process: Process, target: Target) = {
+          Logger.info(s"[EMAIL] Notification sent to $target")
+        }
+
+        override def call(process: Process, target: Target) = {
+          Logger.info(s"[CALL] Notification sent to $target")
+        }
+
+        override def notify(process: Process, target: Target) = {
+          Logger.info(s"[NOTIFY] Notification sent to $target")
+        }
       }
 
       context.become(

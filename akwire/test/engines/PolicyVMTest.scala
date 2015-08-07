@@ -1,7 +1,7 @@
 package engines
 
 import models.notificationvm.{InstructionSet, Program}
-import InstructionSet.{Invokation, Instruction}
+import models.notificationvm.InstructionSet.{DELIVER, Delivery, Instruction}
 import models._
 import models.notificationvm.Program
 import org.bson.types.ObjectId
@@ -24,7 +24,7 @@ class PolicyVMTest extends Specification with Mockito {
 
       val completeHistory = collection.mutable.MutableList.empty[Step]
 
-      val invocations = collection.mutable.MutableList.empty[Instruction]
+      val deliveries = collection.mutable.MutableList.empty[Instruction]
 
       override def instructionStepped(instruction: Instruction, newState:Registers, oldState:Registers): Unit = {
         println(s"*$instruction")
@@ -32,8 +32,8 @@ class PolicyVMTest extends Specification with Mockito {
         completeHistory += Tuple3(instruction, newState, oldState)
 
         // Keep track of how many notifications we've done
-        if (instruction.isInstanceOf[Invokation]) {
-          invocations += instruction
+        if (instruction.isInstanceOf[DELIVER]) {
+          deliveries += instruction
         }
       }
     }
@@ -91,7 +91,7 @@ class PolicyVMTest extends Specification with Mockito {
         // load the process, run to completion
         while (proc.tick()) {}
 
-        listener.invocations must have size(1)
+        listener.deliveries must have size(1)
         listener.completeHistory must have size(3)
       }
     }
@@ -153,7 +153,7 @@ class PolicyVMTest extends Specification with Mockito {
         }
 
         //ticks must be equalTo(3)
-        listener.invocations must have size(2)
+        listener.deliveries must have size(2)
         listener.completeHistory must have size(28)
       }
     }
@@ -213,7 +213,7 @@ class PolicyVMTest extends Specification with Mockito {
         }
 
         //ticks must be equalTo(3)
-        listener.invocations must have size(1)
+        listener.deliveries must have size(1)
         listener.completeHistory must have size(7)
       }
     }

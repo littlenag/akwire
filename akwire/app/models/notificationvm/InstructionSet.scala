@@ -5,8 +5,6 @@ import org.joda.time.Duration
 
 object InstructionSet {
 
-  trait Invokation
-
   sealed abstract class Instruction
 
   // Push a literal value
@@ -15,13 +13,14 @@ object InstructionSet {
   // Pop the top of the stack, discarding the value
   case class POP() extends Instruction
 
-  // Load a variable, push its value onto the top of the stack
-  case class LD_VAR(variable: String) extends Instruction
+  // Load a named variable from "memory", push its value onto the top of the stack
+  case class LOAD(variable: String) extends Instruction
 
-  // Pop the top of the stack, save it in the named variable
-  case class ST_VAR(variable: String) extends Instruction
+  // Pop the top of the stack, save it in the named memory location
+  case class STORE(variable: String) extends Instruction
 
-  case class INVOKE(target: Target, directions: Handoff.DeliveryDirections) extends Instruction with Invokation
+  // Assumes the top of the stack is a Target. Pops it and sends a message to the target on the selected channel
+  case class DELIVER(directions: Handoff.DeliveryDirections) extends Instruction
 
   case class WAIT(duration: Duration) extends Instruction
 
@@ -75,23 +74,23 @@ object UnaryOpType extends Enumeration {
 }
 
 object Handoff {
-  abstract class DeliveryDirections
+  sealed abstract class DeliveryDirections
 
   // No handoff to another policy
-  abstract class ConcreteChannel extends DeliveryDirections
+  sealed abstract class ConcreteChannel extends DeliveryDirections
 
-  case class CallTarget() extends ConcreteChannel
-  case class TextTarget() extends ConcreteChannel
-  case class EmailTarget() extends ConcreteChannel
-  case class AssignTarget() extends ConcreteChannel              // no means, just assign the incident to the target
+  case object CallTarget extends ConcreteChannel
+  case object TextTarget extends ConcreteChannel
+  case object EmailTarget extends ConcreteChannel
+  //case object AssignTarget extends ConcreteChannel                  // avoid notification, just assign the incident to the target
   case class CustomChannel(method:String) extends ConcreteChannel
 
   // Hand the incident over to the target's default policy
-  abstract class LevelOfEffort extends DeliveryDirections
+  sealed abstract class LevelOfEffort extends DeliveryDirections
 
-  case class PageTarget() extends LevelOfEffort       // most intrusive, force most bothersome method for target
-  case class NotifyTarget() extends LevelOfEffort     // normal alert, no overrides
-  case class TellTarget() extends LevelOfEffort       // least intrusive, choose least disturbing method for target
+  case object PageTarget extends LevelOfEffort       // most intrusive, force most bothersome method for target
+  case object NotifyTarget extends LevelOfEffort     // normal alert, no overrides
+  case object TellTarget extends LevelOfEffort       // least intrusive, choose least disturbing method for target
 
   // there's also things like:
   //  - running a script

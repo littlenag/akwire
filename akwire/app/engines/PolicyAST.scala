@@ -1,6 +1,7 @@
 package engines
 
 import models.{Urgency, Impact}
+import org.bson.types.ObjectId
 import org.joda.time.Duration
 
 trait Target
@@ -38,15 +39,6 @@ object PolicyAST {
 
   case class ActionLiteral(name: String) extends AST
 
-  // Specific actions, probably want to abstract the method out, more like a function call
-  case class Call(target: Target) extends AST
-
-  case class Text(target: Target) extends AST
-
-  case class Email(target: Target) extends AST
-
-  case class Wait(duration: Duration) extends AST
-
   // count must be > 1, period must be >= longest path through the policy
   case class Attempts(count: Int, period: Option[Duration]) extends AST
 
@@ -55,14 +47,23 @@ object PolicyAST {
 
   case class Notify(target: Target) extends AST
 
+  // Specific actions, probably want to abstract the method out, more like a function call
+  case class Call(target: Target) extends AST
+
+  case class Text(target: Target) extends AST
+
+  case class Email(target: Target) extends AST
+
   // UI will take care of making is pretty
   case class ThisUser() extends AST with Target            // Self-target for User
-  case class User(id: Int) extends AST with Target
+  case class User(id: String) extends AST with Target
 
   case class ThisTeam() extends AST with Target            // Self-target for Team
-  case class Team(id: Int) extends AST with Target
+  case class Team(id: String) extends AST with Target
 
-  case class Service(id: Int) extends AST with Target
+  case class Wait(duration: Duration) extends AST
+
+  case class Service(id: String) extends AST with Target      // Is this right?
 
   // Basic Comparison Ops
 

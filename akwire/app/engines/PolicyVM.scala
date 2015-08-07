@@ -4,6 +4,7 @@ package engines
 // http://www.staff.science.uu.nl/~dijks106/SSM/instructions.html
 // https://golang.org/ref/spec#Expression
 
+import models.notificationvm.Handoff.{CallTarget, TextTarget, EmailTarget}
 import models.notificationvm.InstructionSet
 import InstructionSet._
 import models._
@@ -50,6 +51,9 @@ trait VMStateListener {
   // Target to email
   def email(process: notificationvm.Process, target: Target) = {}
 
+  // Target to text
+  def text(process: notificationvm.Process, target: Target) = {}
+
   // Target to call
   def call(process: notificationvm.Process, target: Target) = {}
 
@@ -84,8 +88,21 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
     listener.preTick(proc, instruction, registers)
 
     val nextState = instruction match {
-      case INVOKE(target, directions) => {
+      case DELIVER(EmailTarget) => {
+        val target = proc.popStack().asInstanceOf[Target]
         listener.email(proc, target)
+        NEXT
+      }
+
+      case DELIVER(TextTarget) => {
+        val target = proc.popStack().asInstanceOf[Target]
+        listener.text(proc, target)
+        NEXT
+      }
+
+      case DELIVER(CallTarget) => {
+        val target = proc.popStack().asInstanceOf[Target]
+        listener.call(proc, target)
         NEXT
       }
 
@@ -114,12 +131,12 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
         proc.pushStack(value)
         NEXT
 
-      case ST_VAR(variable) =>
+      case STORE(variable) =>
         val value = proc.popStack()
         proc.setVar(variable, value)
         NEXT
 
-      case LD_VAR(variable) =>
+      case LOAD(variable) =>
         val value = proc.getVar(variable)
         proc.pushStack(value)
         NEXT

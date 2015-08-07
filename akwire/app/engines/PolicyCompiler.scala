@@ -1,7 +1,7 @@
 package engines
 
 import models.notificationvm.{InstructionSet, Handoff, Program}
-import Handoff.{TextTarget, EmailTarget, CallTarget}
+import models.notificationvm.Handoff._
 import models.Policy
 import play.api.Logger
 
@@ -75,7 +75,7 @@ object PolicyCompiler {
 
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
-            List(PUSH(0), ST_VAR(VAR_CUR_ITER), PUSH(max), ST_VAR(VAR_MAX_ITER))
+            List(PUSH(0), STORE(VAR_CUR_ITER), PUSH(max), STORE(VAR_MAX_ITER))
           } else {
             Nil
           }
@@ -83,7 +83,7 @@ object PolicyCompiler {
           val body = compileAST(statements)
 
           val counter_inc = if (max > 0) {
-            List(LD_VAR(VAR_CUR_ITER), PUSH(1), ADD(), ST_VAR(VAR_CUR_ITER))
+            List(LOAD(VAR_CUR_ITER), PUSH(1), ADD(), STORE(VAR_CUR_ITER))
           } else {
             Nil
           }
@@ -94,7 +94,7 @@ object PolicyCompiler {
             case Some(Attempts(count, None)) =>
               val body_start = labeler.next()
               // If the repeat > count then jump back to the top of the loop, which would be just after the preamble
-              (List(LD_VAR(VAR_CUR_ITER), LD_VAR(VAR_MAX_ITER), LT(), JT(body_start)), List(body_start))
+              (List(LOAD(VAR_CUR_ITER), LOAD(VAR_MAX_ITER), LT(), JT(body_start)), List(body_start))
             case None =>
               (Nil, Nil)
           }
@@ -154,32 +154,40 @@ object PolicyCompiler {
         }
 
         case Property(context, field) =>
-          List(LD_VAR(context + "." + field))
+          List(LOAD(context + "." + field))
 
-        case ImpactVal(n) => {
-          List(PUSH(n))
-        }
+        case ImpactVal(v) =>
+          List(PUSH(v))
 
-        case UrgencyVal(n) => {
-          List(PUSH(n))
-        }
+        case UrgencyVal(v) =>
+          List(PUSH(v))
 
-        case Call(target) => {
-          List(INVOKE(target, CallTarget()))
-        }
+        case Call(target) =>
+          List(LD_TARGET(target),DELIVER(CallTarget))
 
-        case Email(target) => {
-          List(INVOKE(target, EmailTarget()))
-        }
+        case Email(target) =>
+          List(LD_TARGET(target),DELIVER(EmailTarget))
 
-        case Text(target) => {
-          List(INVOKE(target, TextTarget()))
-        }
+        case Text(target) =>
+          List(LD_TARGET(target),DELIVER(TextTarget))
+
+        case Notify(target) =>
+          List(LD_TARGET(target),DELIVER(NotifyTarget))
+
+        case Page(target) =>
+          List(LD_TARGET(target),DELIVER(PageTarget))
 
         case x => throw new RuntimeException("[compiler] implement me: " + x)
       }
     }
     visit(ast)
+  }
+
+  // A pseudo-instruction...
+  def LD_TARGET(target:Target) : Instruction = target match {
+    case ThisUser() => LOAD("target.thisUser")
+    case ThisTeam() => LOAD("target.thisTeam")
+    case t : Target => PUSH(t)
   }
 }
 

@@ -3,8 +3,9 @@ package models.notificationvm
 import InstructionSet.LBL
 import com.mongodb.casbah.MongoConnection
 import com.novus.salat.dao.{SalatDAO, ModelCompanion}
-import engines.{VM, Registers}
-import models.Incident
+import engines.PolicyAST.{Team, User}
+import engines.{Target, VM, Registers}
+import models.{Scope, Incident}
 import org.bson.types.ObjectId
 
 import models.mongoContext._
@@ -81,6 +82,20 @@ case class Process(id: ObjectId,                                            // y
   private def property(key: String): Any = {
     key match {
       case "incident.impact" => incident.impact
+      case "incident.urgency" => incident.urgency
+
+      case "target.thisUser" =>
+        if (incident.owner.scope == Scope.USER)
+          User(incident.owner.id.toString).asInstanceOf[Target]
+        else
+          throw new Exception(s"Compiler Error! Should not accept Keyword 'me' in non-User policy")
+
+      case "target.thisTeam" =>
+        if (incident.owner.scope == Scope.TEAM)
+          Team(incident.owner.id.toString).asInstanceOf[Target]
+        else
+          throw new Exception(s"Compiler Error! Should not accept Keyword 'crew' in non-Team policy")
+
       case _ => throw new Exception(s"Runtime Error: property '$key' not found")
     }
   }

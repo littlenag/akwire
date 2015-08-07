@@ -9,8 +9,11 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(routesI
 scalaVersion := "2.11.7"
 
 
-/** JAVA DEPS **/
+/** JAVA APPLICATION DEPS **/
 libraryDependencies ++= Seq(
+  // AWS SDK provides access to SNS
+  "com.amazonaws" % "aws-java-sdk" % "1.9.31",
+  "com.twilio.sdk" % "twilio-java-sdk" % "3.4.5",
   "javax.inject" % "javax.inject" % "1",
   "com.rabbitmq" % "amqp-client" % "3.3.0",
   "org.mockito" % "mockito-core" % "1.9.5" % "test"
@@ -26,11 +29,7 @@ libraryDependencies ++= Seq(
   "org.scaldi" %% "scaldi-play" % "0.5.4",
   "org.scaldi" %% "scaldi-akka" % "0.5.4",
   // For user authentication and sign in
-  "ws.securesocial" %% "securesocial" % "3.0-M1"
-)
-
-/** AKKA DEPS **/
-libraryDependencies ++= Seq(
+  "ws.securesocial" %% "securesocial" % "3.0-M1",
   // Streams for Akka
   "com.typesafe.akka" %% "akka-stream-experimental" % "1.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.12",

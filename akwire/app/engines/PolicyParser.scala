@@ -161,10 +161,10 @@ object PolicyParser extends RegexParsers {
     case "crew" => ThisTeam()
   }
 
-  def directTarget: Parser[Target] = (("user" | "team" | "service") ~ ("("~>(intLiteral)<~")"))^^{
-    case "user" ~ id => User(id.value)
-    case "team" ~ id => Team(id.value)
-    case "service" ~ id => Service(id.value)
+  def directTarget: Parser[Target] = (("user" | "team" | "service") ~ ("("~> "\\w+".r <~")"))^^{
+    case "user" ~ id => User(id)
+    case "team" ~ id => Team(id)
+    case "service" ~ id => Service(id)
   }
 
   // probably want off-board to SNS, plain email, SMS
