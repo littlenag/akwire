@@ -17,6 +17,8 @@ import play.api.Play.current
 
 import scala.collection.immutable.ListMap
 
+case object Init
+
 class CoreModule extends Module {
   Logger.debug("DI Start")
 
@@ -62,8 +64,8 @@ class CoreModule extends Module {
   binding to current.classloader
 
   // Careful, injectActorRef[T] creates a new instance of T !!
-  binding toProvider new IncidentEngine
   binding toProvider new NotificationEngine
+  binding toProvider new IncidentEngine
 
   // Engines (active); FIXME replace these with cluster singleton proxies
   bind[ActorRef] identifiedBy 'incidentEngine to {

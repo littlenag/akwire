@@ -1,6 +1,8 @@
 package controllers
 
+import akka.actor.ActorRef
 import com.mongodb.casbah.commons.MongoDBObject
+import engines.ArchiveIncident
 import models._
 import org.bson.types.ObjectId
 import play.api.Logger
@@ -16,7 +18,9 @@ import Binders._
 
 class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with Injectable {
 
-  val core = inject[CoreServices]
+  lazy val core = inject[CoreServices]
+
+  lazy val incidentEngine = inject[ActorRef] ('incidentEngine)
 
   def queryIncidents(entity:Option[OwningEntityRef], active:Boolean = true, resolved:Boolean = false, interred:Boolean = false) = SecuredAction.async { request =>
     Future {
@@ -61,14 +65,9 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
 
       // TODO check user access to entity (team,user,service)
 
-      Incident.findOneById(id) match {
-        case Some(incident) =>
-          Incident.save(incident.copy(active = false))
-          Ok(Json.toJson(incident))
+      incidentEngine ! ArchiveIncident(id)
 
-        case None =>  BadRequest(s"Invalid id $id")
-      }
-
+      Ok("Message received")
     }
   }
 

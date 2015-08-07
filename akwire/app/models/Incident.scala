@@ -93,7 +93,7 @@ case class Incident( id: ObjectId,
                      archivedBy: Option[User] = None,
                      archivedWhen: Option[DateTime] = None,
 
-                     notificationProcesses: Map[String, ProcessInfo] = Map.empty                // Salat doesn't like non-string keys
+                     notificationProcesses: Map[String, ProcessInfo] = Map.empty         // Map of PID to ProcessInfo; BTW Salat doesn't like non-string keys
 
                      // other possible data:
                      // tags

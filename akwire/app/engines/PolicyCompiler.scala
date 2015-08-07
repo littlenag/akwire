@@ -41,21 +41,16 @@ object PolicyCompiler {
     }
   }
 
-  def compile(policy: Policy): Either[parser.NoSuccess, Program] = compile(policy.policySource)
+  def compile(sourceCode: String): Either[parser.NoSuccess, List[Instruction]] = {
+    Logger.info("Compiling policy: " + sourceCode)
 
-  def compile(policy: String): Either[parser.NoSuccess, Program] = {
-    Logger.info("Compiling policy: " + policy)
-
-    parser.parse(policy) match {
+    parser.parse(sourceCode) match {
       case parser.Success(result, _) =>
-
         // And then the Environment will need to point at the next instruction to execute
         implicit val labelMaker = new LabelMaker()
         val ast = result.asInstanceOf[AST]
-        val program = new Program(compileAST(ast))
         Logger.info(s"ast: #$ast")
-        Logger.info(s"program: $program")
-        Right(program)
+        Right(compileAST(ast))
       case er: parser.NoSuccess =>
         Logger.error("Parse error: " + er)
         Left(er)

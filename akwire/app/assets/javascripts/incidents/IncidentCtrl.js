@@ -1,15 +1,15 @@
 (function() {
 
   controllersModule.controller('ListIncidentsCtrl', [
-    "$scope", '$log',  'IncidentService',
-    function($scope, $log, IncidentService) {
+    "$scope", '$log', '$state', 'IncidentService',
+    function($scope, $log, $state, IncidentService) {
       $log.debug("constructing ListIncidentController");
       $scope.incidents = [];
 
       $scope.getAllIncidents = function() {
         $log.debug("getAllIncidents()");
         return IncidentService.getIncidents().then(function(data) {
-          $log.debug("Promise returned " + data.length + " Incidents");
+          $log.debug("Promise returned Incidents", data);
           $scope.incidents = data;
           return data;
         }, function(error) {
@@ -21,7 +21,7 @@
         $log.debug("archiveIncident()", id);
         return IncidentService.archiveIncident(id).then(function(data) {
           $log.debug("Incident archived", id);
-          return $scope.getAllIncidents();
+          $state.go("incidents.list", {});
         }, function(error) {
           return $log.error("Unable to get Incidents: " + error);
         });

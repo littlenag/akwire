@@ -1,8 +1,11 @@
 package engines
 
+import java.lang.{Process => _}
+import models.notificationvm.{Program, Process}
+
 import akka.actor.{ActorRef, Actor}
 import models.{OwningEntityRef, Incident, Policy}
-
+import modules.Init
 import org.bson.types.ObjectId
 import play.api.Logger
 import scaldi.Injector
@@ -18,14 +21,27 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
   lazy val incidentEngine = inject[ActorRef] ('incidentEngine)
 
+  case class RuntimeInfo(process:Process, owner:OwningEntityRef, actor:ActorRef)
+
+  private var procs : List[RuntimeInfo] = Nil
+
   def receive = {
+    case Init =>
+
+      for (proc <- Process.findAll() if !proc.terminated) {
+        val policyActor = injectActorRef[ProcessExecutor]
+        policyActor ! ExecuteProcess(proc)
+        procs = RuntimeInfo(proc, proc.incident.owner, policyActor) :: procs
+      }
+
+    // Sent by the incident engine to have us start a Process
     case NotifyOwnerReturnPid(owner, incident) =>
 
       val policy = Policy.findDefaultForOwner(owner).getOrElse(throw new RuntimeException(s"No default policy for owner $owner"))
 
       val policyActor = injectActorRef[ProcessExecutor]
 
-      val compiledProgram = PolicyCompiler.compile(policy).right.getOrElse(throw new RuntimeException(s"Expected a compiling policy for $owner"))
+      val compiledProgram = Program(policy.policySource)
 
       val process = compiledProgram.instance(incident)
 
@@ -36,13 +52,22 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
       policyActor ! ExecuteProcess(process)
 
+      procs = RuntimeInfo(process, owner, policyActor) :: procs
+
+      // Sent back by the process to inform us of its completion
     case ProcessCompleted(proc) =>
       incidentEngine ! NotificationProcessCompleted(proc.id)
 
+      // Sent by the incident service to inform us that we can stop trying to notify anyone
     case HaltNotifications(owner, incident) =>
       Logger.debug("Halting notifications for: " + owner)
 
-      // cancel the execution of the team's notification scripts
+      procs.find(i => i.owner == owner && i.process.incident.id == incident.id).foreach { i =>
+        // cancel the execution of the notification scripts
+        i.actor ! EarlyTermination
+      }
+
+      procs = procs.filterNot(i => i.owner == owner && i.process.incident.id == incident.id)
 
     case msg =>
       Logger.error("Unable to process: " + msg)

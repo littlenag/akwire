@@ -24,9 +24,12 @@ case class Process(id: ObjectId,                                            // y
                    incident : Incident,
                    registers : Registers = Registers(0, None),
                    stack : List[Any] = Nil,                                 // ick, Stack is deprecated and may not serialize
-                   memory : Map[String, Any] = Map.empty[String, Any]) {
+                   memory : Map[String, Any] = Map.empty[String, Any],
+                   active: Boolean = true) {
 
-  def snapshot = Process(id, program, incident, _registers, _stack, _memory)
+  def terminated = !active
+
+  def snapshot = Process(id, program, incident, _registers, _stack, _memory, active)
 
   // Internal copies since these change as the VM executes the Process
   private var _stack = stack

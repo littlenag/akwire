@@ -25,7 +25,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
 
   implicit val actorSystem = inject[ActorSystem]
 
-  val incidentEngine = inject[ActorRef] ('incidentEngine)
+  lazy val incidentEngine = inject[ActorRef] ('incidentEngine)
 
   // TODO alerting rules and resolution rules need to know their StreamContext
 

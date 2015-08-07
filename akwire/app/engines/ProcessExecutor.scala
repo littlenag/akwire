@@ -16,6 +16,7 @@ case class ExecuteProcess(process: Process)
 case class ProcessCompleted(process: Process)
 
 case object Tick
+case object EarlyTermination
 
 class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable {
 
@@ -36,7 +37,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
 
         override def halted(process:Process): Unit = {
           // Save state to the DB.
-          Process.save(process.snapshot)
+          Process.save(process.snapshot.copy(active = false))
           origSender ! ProcessCompleted(process)
         }
 
@@ -61,6 +62,10 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           context.system.scheduler.schedule(3 seconds, 3 seconds, self, Tick),
           new VM(listener))
       )
+
+    case EarlyTermination =>
+      Logger.info("Exiting without having started Proc")
+      self ! PoisonPill
     case  _ => Logger.info("Whoa! already executing something")
   }
 
@@ -68,10 +73,16 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
     // Should Tick till completion and nothing more
     case Tick =>
       Logger.debug("tick")
-      if (!process.tick()(vm)) {
+      if (!process.tick()(vm) || process.terminated) {
         // Time to cleanup
         Logger.info(s"Process has terminated: $process")
+        Process.save(process.snapshot.copy(active = false))
         self ! PoisonPill
       }
+    case EarlyTermination =>
+      Logger.info("Exiting early")
+      timer.cancel()
+      Process.save(process.snapshot.copy(active = false))
+      self ! PoisonPill
   }
 }

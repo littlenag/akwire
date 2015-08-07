@@ -1,6 +1,7 @@
+import akka.actor.ActorRef
 import com.mongodb.casbah.commons.conversions.scala._
 import models._
-import modules.CoreModule
+import modules.{Init, CoreModule}
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import play.api.GlobalSettings
@@ -29,6 +30,14 @@ object Global extends GlobalSettings with ScaldiSupport {
     RegisterJodaTimeConversionHelpers()
 
     firstBoot
+
+    // Once everything is setup, now for any initialization
+    val incidentEngine = inject[ActorRef] ('incidentEngine)
+    val notificationEngine = inject[ActorRef] ('notificationEngine)
+
+    notificationEngine ! Init
+    incidentEngine ! Init
+
     Logger.debug("onStart() complete")
   }
 

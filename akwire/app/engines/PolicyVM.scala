@@ -80,14 +80,14 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
    * @return true if still executing, false if halted
    */
   def tick(proc:notificationvm.Process): Boolean = {
-    val instruction = proc.program.instructions(proc.registers.pc)
-    val registers = proc.registers
+    val instruction = proc.program.instructions(proc.getRegisters.pc)
+    def registers = proc.getRegisters
 
     val NEXT = Some(registers.copy(pc = registers.pc + 1))
 
     listener.preTick(proc, instruction, registers)
 
-    val nextState = instruction match {
+    val transitionOp = instruction match {
       case DELIVER(EmailTarget) => {
         val target = proc.popStack().asInstanceOf[Target]
         listener.email(proc, target)
@@ -226,7 +226,7 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
     }
 
 
-    nextState match {
+    transitionOp match {
       case Some(newRegisters) =>
 
         // Stepping is implemented by watching for changes to the registers (not memory!) and
@@ -244,7 +244,7 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
         }
 
         proc.updateRegisters(newRegisters)
-        listener.postTick(proc, instruction, proc.registers)
+        listener.postTick(proc, instruction, proc.getRegisters)
         // This should return an object, not a bool. Oh well.
         true
       case None =>

@@ -5,7 +5,7 @@ import org.joda.time.Duration
 
 object InstructionSet {
 
-  sealed abstract class Instruction
+  sealed trait Instruction
 
   // Push a literal value
   case class PUSH(value: Any) extends Instruction

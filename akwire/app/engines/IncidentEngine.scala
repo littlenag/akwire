@@ -6,6 +6,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import models.{ProcessInfo, Incident}
 import models.alert.{AlertMsg, DoTrigger}
 import models.core.ObservedMeasurement
+import modules.Init
 import org.bson.types.ObjectId
 import play.api.Logger
 import scaldi.Injector
@@ -16,6 +17,8 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+case class ArchiveIncident(id:ObjectId)
+
 class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
 
   lazy val notificationEngine = inject[ActorRef] ('notificationEngine)
@@ -23,11 +26,15 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
   implicit val timeout = Timeout(15 seconds)
 
   def receive = {
+    case Init => Logger.info("Nothing to do")
     case trigger : DoTrigger => persistAlert(trigger)
 
     case msg : NotificationProcessStarted => Logger.error("This shouldn't be received here: $msg")
 
     case msg: NotificationProcessCompleted => markNotificationProcessCompleted(msg.pid)
+
+    // Sent by the web controllers
+    case archive : ArchiveIncident => archiveIncident(archive.id)
 
     case a => Logger.error("Bad message: " + a)
   }
@@ -91,5 +98,20 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
 
   def persistMeasurement(obs : ObservedMeasurement) = {
 
+  }
+
+  def archiveIncident(id:ObjectId) : Option[Incident]= {
+    Logger.info(s"Archiving incident: id=$id")
+
+    Incident.findOneById(id).flatMap { incident =>
+      val i = incident.copy(active = false)
+
+      for (procs <- i.notificationProcesses) {
+        notificationEngine ! HaltNotifications(i.owner, i)
+      }
+
+      Incident.save(i)
+      Some(i)
+    }
   }
 }
