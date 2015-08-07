@@ -14,21 +14,25 @@
                 <th>Observer</th>
                 <th>Key</th>
                 <th>Message</th>
+                <th>Archive</th>
             </tr>
             </thead>
             <tbody>
             <tr ng-repeat="i in incidents | filter:searchText">
                 <td>
-                    {{ i.host }}
+                    {{ i.incidentKey.host }}
                 </td>
                 <td>
-                    {{ i.observer }}
+                    {{ i.incidentKey.observer }}
                 </td>
                 <td>
-                    {{ i.key }}
+                    {{ i.incidentKey.key }}
                 </td>
                 <td>
-                    {{ i.message }}
+                    {{ i.rule.params }}
+                </td>
+                <td>
+                    <button ng-click="archiveIncident(i.id)" class="btn" id="btn_login">Archive</button>
                 </td>
             </tr>
             <tr ng-hide="incidents.length">

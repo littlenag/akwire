@@ -65,21 +65,6 @@ case class Process(id: ObjectId,                                            // y
   def getRegisters = _registers
 
   def getVar(key: String): Any = {
-    if (key.startsWith("incident.")) {
-      property(key)
-    } else {
-      _memory.getOrElse(key, throw new Exception("var '%s' not found".format(key)))
-    }
-  }
-
-  def setVar(key: String, value: Any): Any = {
-    _memory += key -> value
-    value
-  }
-
-  def labeltoPC(label:LBL) : Int = _labels(label)
-
-  private def property(key: String): Any = {
     key match {
       case "incident.impact" => incident.impact
       case "incident.urgency" => incident.urgency
@@ -96,9 +81,17 @@ case class Process(id: ObjectId,                                            // y
         else
           throw new Exception(s"Compiler Error! Should not accept Keyword 'crew' in non-Team policy")
 
-      case _ => throw new Exception(s"Runtime Error: property '$key' not found")
+      case _ =>
+        _memory.getOrElse(key, throw new Exception(s"Runtime Error: var '$key' not found"))
     }
   }
+
+  def setVar(key: String, value: Any): Any = {
+    _memory += key -> value
+    value
+  }
+
+  def labeltoPC(label:LBL) : Int = _labels(label)
 
   /**
    * Move the clock one tick forward for the Process

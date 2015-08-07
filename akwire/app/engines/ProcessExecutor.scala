@@ -67,6 +67,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
   def executing(process: Process, timer:Cancellable, vm:VM): Receive = {
     // Should Tick till completion and nothing more
     case Tick =>
+      Logger.debug("tick")
       if (!process.tick()(vm)) {
         // Time to cleanup
         Logger.info(s"Process has terminated: $process")

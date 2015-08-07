@@ -8,7 +8,7 @@ import play.api.Logger
 import scaldi.Injector
 import scaldi.akka.AkkaInjectable
 
-case class NotifyOwner(owner:OwningEntityRef, incident:Incident)
+case class NotifyOwnerReturnPid(owner:OwningEntityRef, incident:Incident)
 case class HaltNotifications(owner:OwningEntityRef, incident:Incident)
 
 case class NotificationProcessStarted(pid:ObjectId)
@@ -19,7 +19,7 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
   lazy val incidentEngine = inject[ActorRef] ('incidentEngine)
 
   def receive = {
-    case NotifyOwner(owner, incident) =>
+    case NotifyOwnerReturnPid(owner, incident) =>
 
       val policy = Policy.findDefaultForOwner(owner).getOrElse(throw new RuntimeException(s"No default policy for owner $owner"))
 
@@ -29,7 +29,10 @@ class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectab
 
       val process = compiledProgram.instance(incident)
 
-      incidentEngine ! NotificationProcessStarted(process.id)
+      // This CANNOT be incidentEngine here because that breaks the ask pattern. Instead we ASSUME that its
+      // the incidentEngine that is asking, but returning a message to the logical sender (which is actually
+      // proxy for incidentEngine)
+      sender() ! NotificationProcessStarted(process.id)
 
       policyActor ! ExecuteProcess(process)
 

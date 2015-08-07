@@ -4,7 +4,9 @@ name := """akwire"""
 
 version := "0.2-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(routesImport += "controllers.Binders._")
+lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(
+  routesImport ++= Seq("controllers.Binders._", "com.mongodb.casbah.Imports.ObjectId", "models._")
+)
 
 scalaVersion := "2.11.7"
 

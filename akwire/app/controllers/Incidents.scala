@@ -18,7 +18,7 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
 
   val core = inject[CoreServices]
 
-  def queryIncidents(entity:Option[OwningEntityRef]) = SecuredAction.async { request =>
+  def queryIncidents(entity:Option[OwningEntityRef], active:Boolean = true, resolved:Boolean = false, interred:Boolean = false) = SecuredAction.async { request =>
     Future {
       Logger.info(s"Querying incidents: entity=$entity")
 
@@ -29,6 +29,9 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
       if (entity.isDefined) {
         filter.putAll(MongoDBObject("owner._id" -> entity.get.id, "owner.scope" -> entity.get.scope.toString))
       }
+
+      // FIXME allow for "either" queries like copper did
+      filter.putAll(MongoDBObject("active" -> active, "resolved" -> resolved, "interred" -> interred))
 
       val sort = MongoDBObject("name" -> 1)
       val list = Incident.find(filter).sort(sort).toList
@@ -49,6 +52,23 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
       val list = Incident.find(filter).sort(sort).toList
 
       Ok(Json.toJson(list))
+    }
+  }
+
+  def archiveIncident(id:ObjectId) = SecuredAction.async { request =>
+    Future {
+      Logger.info(s"Archiving incident: id=$id")
+
+      // TODO check user access to entity (team,user,service)
+
+      Incident.findOneById(id) match {
+        case Some(incident) =>
+          Incident.save(incident.copy(active = false))
+          Ok(Json.toJson(incident))
+
+        case None =>  BadRequest(s"Invalid id $id")
+      }
+
     }
   }
 

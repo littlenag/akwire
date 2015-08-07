@@ -20,12 +20,14 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
 
   lazy val notificationEngine = inject[ActorRef] ('notificationEngine)
 
-  implicit val timeout = Timeout(5 seconds)
+  implicit val timeout = Timeout(15 seconds)
 
   def receive = {
     case trigger : DoTrigger => persistAlert(trigger)
 
-    case NotificationProcessCompleted(pid) => markNotificationProcessCompleted(pid)
+    case msg : NotificationProcessStarted => Logger.error("This shouldn't be received here: $msg")
+
+    case msg: NotificationProcessCompleted => markNotificationProcessCompleted(msg.pid)
 
     case a => Logger.error("Bad message: " + a)
   }
@@ -78,7 +80,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
 
         val incident = Incident.fromAlert(alert)
 
-        val startedInfo = Await.result(notificationEngine ? NotifyOwner(alert.rule.owner, incident), Duration.Inf).asInstanceOf[NotificationProcessStarted]
+        val startedInfo = Await.result(notificationEngine ? NotifyOwnerReturnPid(alert.rule.owner, incident), Duration.Inf).asInstanceOf[NotificationProcessStarted]
 
         val incidentWithProc = incident.copy(notificationProcesses = Map(startedInfo.pid.toString -> ProcessInfo(startedInfo.pid, None, running = true)))
 

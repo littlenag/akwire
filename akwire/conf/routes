@@ -65,9 +65,10 @@ PUT           /rules/:owner/start              @controllers.Rules.startRule(owne
 PUT           /rules/:owner/pause              @controllers.Rules.pauseRule(owner:models.OwningEntityRef,ruleId)
 
 # Incidents (Users, Teams, etc)
-GET           /incidents                       @controllers.Incidents.queryIncidents(owner:Option[models.OwningEntityRef])
-GET           /incidents/:id                   @controllers.Incidents.getIncident(id:org.bson.types.ObjectId)
-POST          /incidents/:id                   @controllers.Incidents.updateIncident(id:org.bson.types.ObjectId)
+GET           /incidents                       @controllers.Incidents.queryIncidents(owner:Option[OwningEntityRef])
+GET           /incidents/:id                   @controllers.Incidents.getIncident(id:ObjectId)
+POST          /incidents/:id                   @controllers.Incidents.updateIncident(id:ObjectId)
+POST          /incidents/:id/archive           @controllers.Incidents.archiveIncident(id:ObjectId)
 
 # Agent management API
 GET           /agents                          @controllers.Agents.findAllAgents
@@ -79,7 +80,7 @@ PUT           /agents                          @controllers.Agents.updateAgent
 POST          /policies                        @controllers.Policies.createPolicy
 PUT           /policies                        @controllers.Policies.updatePolicy
 GET           /policies                        @controllers.Policies.retrievePolicies
-GET           /policies/:owner/default         @controllers.Policies.retrieveDefaultPolicy(owner:models.OwningEntityRef)
+GET           /policies/:owner/default         @controllers.Policies.retrieveDefaultPolicy(owner:OwningEntityRef)
 GET           /policies/by-id/:policyId        @controllers.Policies.retrievePolicyById(policyId)
 DELETE        /policies/by-id/:policyId        @controllers.Policies.deletePolicy(policyId)
 

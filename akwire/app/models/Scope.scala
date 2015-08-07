@@ -1,6 +1,6 @@
 package models
 
-import org.bson.types.ObjectId
+import com.mongodb.casbah.Imports._
 import play.api.mvc.{QueryStringBindable, PathBindable}
 
 import scala.util.Try

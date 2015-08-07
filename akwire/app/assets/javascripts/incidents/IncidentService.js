@@ -69,17 +69,34 @@
 
       // ack, suppress (single, any from host, any from rule), resolve, archive
 
-      service.ackIncident = function(incident) {
+      service.ackIncident = function(id) {
         $log.debug("ACK Incident " + (angular.toJson(incident, true)));
 
         var deferred = $q.defer();
 
-        $http.post("/incident", incident).
+        $http.post("/incidents"+id+"/ack").
           success(function(data, status, headers) {
-            $log.info("Successfully updated Incident - status " + status);
+            $log.info("Successfully acked Incident - status " + status);
             return deferred.resolve(data);
           }).error(function(data, status, headers) {
-            $log.error("Failed to update Incident - status " + status);
+            $log.error("Failed to ack Incident - status " + status);
+            return deferred.reject(data);
+          });
+
+        return deferred.promise;
+      };
+
+      service.archiveIncident = function(id) {
+        $log.debug("ARCHIVE Incident ", id);
+
+        var deferred = $q.defer();
+
+        $http.post("/incidents/"+id+"/archive").
+          success(function(data, status, headers) {
+            $log.info("Successfully archived Incident - status " + status);
+            return deferred.resolve(data);
+          }).error(function(data, status, headers) {
+            $log.error("Failed to archive Incident - status " + status);
             return deferred.reject(data);
           });
 
