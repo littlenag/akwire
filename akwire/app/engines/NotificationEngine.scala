@@ -1,57 +1,45 @@
 package engines
 
-import akka.actor.{Props, Actor}
-import controllers.Policies
-import models.{Incident, Policy}
-import models.alert.{DoResolve, DoTrigger}
+import akka.actor.{ActorRef, Actor}
+import models.{OwningEntityRef, Incident, Policy}
+
+import org.bson.types.ObjectId
 import play.api.Logger
 import scaldi.Injector
 import scaldi.akka.AkkaInjectable
 
+case class NotifyOwner(owner:OwningEntityRef, incident:Incident)
+case class HaltNotifications(owner:OwningEntityRef, incident:Incident)
+
+case class NotificationProcessStarted(pid:ObjectId)
+case class NotificationProcessCompleted(pid:ObjectId)
+
 class NotificationEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
-  import models.Team
+
+  lazy val incidentEngine = inject[ActorRef] ('incidentEngine)
 
   def receive = {
-    case (trigger:DoTrigger, incident:Incident) =>
+    case NotifyOwner(owner, incident) =>
 
-      // want to compile the script against the incident
-      // re-writing terms as necessary
-      // then the script needs to be executable
-      // so i'm basically creating a virtual machine for these actions to run on
-      // where each action is effectively atomic
-
-      // encode all this handling an actor that takes care of the runtime
-      // and saving changes to the runtime
-
-      // pagerduty treats this as a simple list of steps, where
-      // each step may have a delay attached
-      // and then the whole script just has a repeat counter
-
-      // need a barrier primitive, where all actions need to complete before moving forward
-      //  - to implement the primitive will need to be able to trigger a save of the runtime
-
-      // execute after primitive, so act as a delay
-
-      // probably want a clock that ticks against the runtime, asking it to execute the next action
-
-      // probably want to implement this first in the same spirit as pagerduty, as a simple list of actions
-
-      //trigger.rule.
-
-      val policy = Policy.findDefaultForOwner(trigger.rule.owner).getOrElse(throw new RuntimeException(s"No default policy for owner ${trigger.rule.owner}"))
+      val policy = Policy.findDefaultForOwner(owner).getOrElse(throw new RuntimeException(s"No default policy for owner $owner"))
 
       val policyActor = injectActorRef[ProcessExecutor]
 
-      val compiledProgram = PolicyCompiler.compile(policy).right.getOrElse(throw new RuntimeException(s"Expected a compiling policy for ${trigger.rule.owner}"))
+      val compiledProgram = PolicyCompiler.compile(policy).right.getOrElse(throw new RuntimeException(s"Expected a compiling policy for $owner"))
 
       val process = compiledProgram.instance(incident)
 
+      incidentEngine ! NotificationProcessStarted(process.id)
+
       policyActor ! ExecuteProcess(process)
 
-    case resolve : DoResolve =>
-      Logger.debug("Resolve: " + resolve)
+    case ProcessCompleted(proc) =>
+      incidentEngine ! NotificationProcessCompleted(proc.id)
 
-    // cancel the execution of the team's notification scriptx
+    case HaltNotifications(owner, incident) =>
+      Logger.debug("Halting notifications for: " + owner)
+
+      // cancel the execution of the team's notification scripts
 
     case msg =>
       Logger.error("Unable to process: " + msg)

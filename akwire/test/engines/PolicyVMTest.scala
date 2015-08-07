@@ -1,7 +1,9 @@
 package engines
 
-import engines.InstructionSet.{Invokation, Instruction}
+import models.notificationvm.{InstructionSet, Program}
+import InstructionSet.{Invokation, Instruction}
 import models._
+import models.notificationvm.Program
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.specs2.mock.Mockito
@@ -78,7 +80,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         implicit val vm = new VM(listener, clock)
 
-        val proc : Process = program.instance(incident)
+        val proc : notificationvm.Process = program.instance(incident)
 
         // need a VM object that
         // owns the clock
@@ -142,7 +144,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         implicit val vm = new VM(listener, clock)
 
-        val proc : Process = program.instance(incident)
+        val proc : notificationvm.Process = program.instance(incident)
 
         // load the process, run to completion
         var ticks = 0
@@ -202,7 +204,7 @@ class PolicyVMTest extends Specification with Mockito {
 
         implicit val vm = new VM(listener, clock)
 
-        val proc : Process = program.instance(incident)
+        val proc : notificationvm.Process = program.instance(incident)
 
         // load the process, run to completion
         var ticks = 0

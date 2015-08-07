@@ -1,9 +1,27 @@
 package engines
 
-import engines.Handoff.{TextTarget, EmailTarget, CallTarget}
-import engines.Primitives._
-import models.{Policy, Urgency, Impact}
+import models.notificationvm.{InstructionSet, Handoff, Program}
+import Handoff.{TextTarget, EmailTarget, CallTarget}
+import models.Policy
 import play.api.Logger
+
+
+// want to compile the script against the incident
+// re-writing terms as necessary
+// then the script needs to be executable
+// so i'm basically creating a virtual machine for these actions to run on
+// where each action is effectively atomic
+
+// encode all this handling an actor that takes care of the runtime
+// and saving changes to the runtime
+
+// pagerduty treats this as a simple list of steps, where
+// each step may have a delay attached
+// and then the whole script just has a repeat counter
+
+// need a barrier primitive, where all actions need to complete before moving forward
+//  - to implement the primitive will need to be able to trigger a save of the runtime
+
 
 object PolicyCompiler {
   import InstructionSet._
@@ -57,7 +75,7 @@ object PolicyCompiler {
 
           // If we repeat, then include those statements
           val preamble = if (max > 0) {
-            List(PUSH(IntValue(0)), ST_VAR(VAR_CUR_ITER), PUSH(IntValue(max)), ST_VAR(VAR_MAX_ITER))
+            List(PUSH(0), ST_VAR(VAR_CUR_ITER), PUSH(max), ST_VAR(VAR_MAX_ITER))
           } else {
             Nil
           }
@@ -65,7 +83,7 @@ object PolicyCompiler {
           val body = compileAST(statements)
 
           val counter_inc = if (max > 0) {
-            List(LD_VAR(VAR_CUR_ITER), PUSH(IntValue(1)), ADD(), ST_VAR(VAR_CUR_ITER))
+            List(LD_VAR(VAR_CUR_ITER), PUSH(1), ADD(), ST_VAR(VAR_CUR_ITER))
           } else {
             Nil
           }
@@ -139,11 +157,11 @@ object PolicyCompiler {
           List(LD_VAR(context + "." + field))
 
         case ImpactVal(n) => {
-          List(PUSH(ImpactValue(n)))
+          List(PUSH(n))
         }
 
         case UrgencyVal(n) => {
-          List(PUSH(UrgencyValue(n)))
+          List(PUSH(n))
         }
 
         case Call(target) => {

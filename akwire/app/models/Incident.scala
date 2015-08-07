@@ -56,6 +56,10 @@ trait Contextualized {
   def contextualizedStream: ContextualizedStream
 }
 
+case class ProcessInfo(pid:ObjectId, ppid:Option[ObjectId], running:Boolean) {
+  def halted = !running
+}
+
 case class Incident( id: ObjectId,
 
                      // State variables
@@ -87,7 +91,9 @@ case class Incident( id: ObjectId,
                      ackedWhen: Option[DateTime] = None,
 
                      archivedBy: Option[User] = None,
-                     archivedWhen: Option[DateTime] = None
+                     archivedWhen: Option[DateTime] = None,
+
+                     notificationProcesses: Map[String, ProcessInfo] = Map.empty                // Salat doesn't like non-string keys
 
                      // other possible data:
                      // tags
@@ -171,7 +177,6 @@ trait StreamContextJson {
       //}
     }
   }
-
 }
 
 trait IncidentJson extends StreamContextJson with UserJson with RuleJson {
@@ -179,5 +184,6 @@ trait IncidentJson extends StreamContextJson with UserJson with RuleJson {
 
   import JsonUtil._
 
+  implicit val processInfoWriter = Json.writes[ProcessInfo]
   implicit val incidentWriter = Json.writes[Incident]
 }

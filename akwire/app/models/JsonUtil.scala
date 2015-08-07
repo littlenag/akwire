@@ -1,8 +1,8 @@
 package models
 
+import com.mongodb.casbah.Imports._
 import play.api.libs.json._
 import java.util.UUID
-import org.bson.types.ObjectId
 
 import scala.util.Try
 import scala.util.matching.Regex

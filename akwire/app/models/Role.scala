@@ -2,7 +2,7 @@ package models
 
 import org.joda.time.DateTime
 
-import com.mongodb.casbah.Imports.{ObjectId}
+import com.mongodb.casbah.Imports._
 
 case class Role( _id: ObjectId,
                  name: String,

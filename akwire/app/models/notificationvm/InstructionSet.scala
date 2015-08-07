@@ -1,7 +1,6 @@
-package engines
+package models.notificationvm
 
-import engines.Handoff.DeliveryDirections
-import engines.Primitives.Value
+import engines.Target
 import org.joda.time.Duration
 
 object InstructionSet {
@@ -11,7 +10,7 @@ object InstructionSet {
   sealed abstract class Instruction
 
   // Push a literal value
-  case class PUSH(value: Value) extends Instruction
+  case class PUSH(value: Any) extends Instruction
 
   // Pop the top of the stack, discarding the value
   case class POP() extends Instruction
@@ -22,7 +21,7 @@ object InstructionSet {
   // Pop the top of the stack, save it in the named variable
   case class ST_VAR(variable: String) extends Instruction
 
-  case class INVOKE(target: Target, directions: DeliveryDirections) extends Instruction with Invokation
+  case class INVOKE(target: Target, directions: Handoff.DeliveryDirections) extends Instruction with Invokation
 
   case class WAIT(duration: Duration) extends Instruction
 
