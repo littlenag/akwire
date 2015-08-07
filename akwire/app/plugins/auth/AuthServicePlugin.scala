@@ -7,7 +7,7 @@ import securesocial.core.providers.MailToken
 import scala.concurrent.Future
 
 import securesocial.core.{PasswordInfo, BasicProfile}
-import models.User
+import models.{ContactInfo, User}
 
 import securesocial.core.services.SaveMode
 
@@ -41,7 +41,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
     mode match {
       case SaveMode.SignUp =>
         Logger.info(s"Saving new user: ${profile.email.get}")
-        val newUser = User(ObjectId.get(), profile, Nil)
+        val newUser = User(ObjectId.get(), profile, ContactInfo(None), Nil)
         User.save(newUser)
         Future.successful(newUser)
       case SaveMode.LoggedIn =>

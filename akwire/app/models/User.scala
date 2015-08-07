@@ -11,8 +11,11 @@ import securesocial.core.providers.UsernamePasswordProvider
 
 case class TeamRef(id: ObjectId,name: String)
 
+case class ContactInfo(phoneNumber:Option[String])
+
 case class User(id: ObjectId,                     // object id, unique for this object for this database
                 profile : BasicProfile,
+                contactInfo: ContactInfo,
                 memberOfTeams: List[TeamRef]) extends EntityScoped {
   val scope = Scope.USER
 }
@@ -51,6 +54,7 @@ trait UserJson {
   implicit val profileWrites = Json.writes[BasicProfile]
 
   implicit val teamRef = Json.format[TeamRef]
+  implicit val contactInfoFormat = Json.format[ContactInfo]
 
   // Generates Writes and Reads for Beans thanks to Json Macros
   implicit val userWrites = Json.writes[User]

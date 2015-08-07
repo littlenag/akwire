@@ -85,7 +85,7 @@ object Global extends GlobalSettings with ScaldiSupport {
 
         val tr = new TeamRef(adminTeam.id, adminTeam.name)
 
-        val admin = new User(id, profile, List(tr))
+        val admin = new User(id, profile, ContactInfo(None), List(tr))
 
         User.save(admin)
 

@@ -50,8 +50,7 @@ class PolicyVMTest extends Specification with Mockito {
     None, None,
     Some(hasher.hash("password")))
 
-  val testUser = new User(id, profile, List())
-
+  val testUser = new User(id, profile, ContactInfo(None), List())
 
   "PolicyVM" should {
 
@@ -98,6 +97,55 @@ class PolicyVMTest extends Specification with Mockito {
         val simplePolicy =
           """
             | email me
+            |
+          """.stripMargin
+
+        val program = Program(simplePolicy)
+
+        program.instructions must not beEmpty
+
+        program.instructions must have size(3)
+
+        val listener = new TestListener
+
+        val clock = mock[Clock]
+        clock.now() returns (EPOCH, EPOCH.plusHours(1), EPOCH.plusHours(2), EPOCH.plusHours(3))
+
+        implicit val vm = new VM(listener, clock)
+
+        val proc : notificationvm.Process = program.instance(incident)
+
+        // need a VM object that
+        // owns the clock
+        // and handles execution of the instructions
+
+        // the process owns its state
+
+        // load the process, run to completion
+        while (proc.tick()) {}
+
+        listener.deliveries must have size(1)
+        listener.completeHistory must have size(2)
+      }
+    }
+
+    "text number policy" in {
+      running(FakeApplication()) {
+        val team = Team.apply("t1")
+
+        val rule = RuleConfig(testUser.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
+
+        val incident = Incident(ObjectId.get(), active = true, resolved = false, interred = false, new DateTime(), new DateTime(), 1, rule,
+          ContextualizedStream(List(("host", "h1"))),
+          Impact.IL_1,
+          Urgency.UL_0,
+          None,
+          None
+        )
+
+        val simplePolicy =
+          """
+            | text number(2062354380)
             |
           """.stripMargin
 

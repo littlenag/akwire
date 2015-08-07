@@ -1,6 +1,13 @@
 package engines
 
-import java.lang.{Process => _}                           // don't want any conflicts with the Java class
+import java.lang.{Process => _}
+import java.util
+
+import com.twilio.sdk.TwilioRestClient
+import org.apache.http.NameValuePair
+import org.apache.http.message.BasicNameValuePair
+
+// don't want any conflicts with the Java class
 import akka.actor.{PoisonPill, Cancellable, Actor}
 import models.notificationvm.InstructionSet
 import InstructionSet.Instruction
@@ -11,6 +18,8 @@ import scaldi.akka.AkkaInjectable
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+
+import play.api.Play.current
 
 case class ExecuteProcess(process: Process)
 case class ProcessCompleted(process: Process)
@@ -45,6 +54,29 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           Logger.info(s"[EMAIL] Notification sent to $target")
 
           val email = target.getEmailAddress
+        }
+
+        override def text(process: Process, target: Target) = {
+          Logger.info(s"[TEXT] Notification sent to $target")
+
+          // Ten digit number enforced by Parser
+          val digits = target.getPhoneNumber.get
+
+          val AKWIRE_NUMBER = "+13236724363"
+          val accountSid = current.configuration.getString("twilio.accountSID").get
+          val authToken = current.configuration.getString("twilio.authToken").get
+
+          val client = new TwilioRestClient(accountSid, authToken)
+
+          // Build a filter for the MessageList
+          val params = new util.ArrayList[NameValuePair]()
+          params.add(new BasicNameValuePair("Body", s"Problem on ${process.incident.contextualizedStream}"))
+          params.add(new BasicNameValuePair("To", "+1"+digits))
+          params.add(new BasicNameValuePair("From", AKWIRE_NUMBER))
+
+          val messageFactory = client.getAccount().getMessageFactory()
+          val message = messageFactory.create(params)
+          Logger.info(message.getSid())
         }
 
         override def call(process: Process, target: Target) = {

@@ -45,8 +45,8 @@
   ]);
 
   controllersModule.controller('NotificationPolicyCtrl', [
-    "$scope", '$log',  'NotificationPolicyService',
-    function($scope, $log, NotificationPolicyService) {
+    "$scope", '$log',  'NotificationPolicyService', 'Session',
+    function($scope, $log, NotificationPolicyService, Session) {
       $log.debug("constructing NotificationPolicyCtrl");
 
       // Policy object we've loaded from the server
@@ -59,7 +59,7 @@
         $log.debug("saving policy to server");
 
         // Save the user policy
-        NotificationPolicyService.saveUserPolicy($scope.activePolicy).then(function(data) {
+        NotificationPolicyService.saveUserPolicy($scope.activePolicy, Session.userId).then(function(data) {
           $log.debug("Promise returned Policy data", data);
         }, function(error) {
           $log.error("Unable to save Policy: ", error);
@@ -84,7 +84,7 @@
         _renderer.setShowGutter(true);
 
         // Fetch the policy from the server
-        NotificationPolicyService.getDefaultUserPolicy().then(function(data) {
+        NotificationPolicyService.getDefaultUserPolicy(Session.userId).then(function(data) {
           $log.debug("Promise returned Policy data", data);
           _editor.setReadOnly(false);
           _editor.setValue(data.policySource, -1);

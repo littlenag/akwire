@@ -13,12 +13,12 @@
         'Content-Type': 'application/json'
       };
 
-      service.saveUserPolicy = function(policy) {
+      service.saveUserPolicy = function(policy, id) {
         $log.debug("saveUserPolicy ", policy);
 
         var deferred = $q.defer();
 
-        $http.put('/policies/user', policy).
+        $http.put('/policies', policy).
           success(function(data, status, headers) {
             return deferred.resolve(data);
           }).
@@ -47,12 +47,12 @@
         return deferred.promise;
       };
 
-      service.getDefaultUserPolicy = function() {
+      service.getDefaultUserPolicy = function(id) {
         $log.debug("getDefaultUserPolicy()");
 
         var deferred = $q.defer();
 
-        $http.get("/policies/user/default").
+        $http.get("/policies/user-"+id+"/default").
           success(function(data, status, headers) {
             $log.info("Successfully retrieved (default) Policy - status " + status);
             return deferred.resolve(data);

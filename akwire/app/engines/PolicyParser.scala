@@ -154,17 +154,21 @@ object PolicyParser extends RegexParsers {
     case "call" ~ t => Call(t)
   }
 
-  def target: Parser[Target] = thisTarget | directTarget
+  def target: Parser[Target] = thisTarget | entityTarget | directTarget
 
   def thisTarget: Parser[Target] = ("me" | "crew")^^{
     case "me" => ThisUser()
     case "crew" => ThisTeam()
   }
 
-  def directTarget: Parser[Target] = (("user" | "team" | "service") ~ ("("~> "\\w+".r <~")"))^^{
+  def entityTarget: Parser[Target] = (("user" | "team" | "service") ~ ("("~> "\\w+".r <~")"))^^{
     case "user" ~ id => User(id)
     case "team" ~ id => Team(id)
     case "service" ~ id => Service(id)
+  }
+
+  def directTarget: Parser[Target] = ("number" ~ ("("~> "\\d{10}".r <~")"))^^{
+    case "number" ~ digits => PhoneNumber(digits)
   }
 
   // probably want off-board to SNS, plain email, SMS

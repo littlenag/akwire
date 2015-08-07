@@ -70,6 +70,11 @@ object PolicyAST {
   case class ThisTeam() extends AST with Target            // Self-target for Team
   case class Team(id: String) extends AST with Target
 
+  // Raw Phone number to call or text
+  case class PhoneNumber(digits:String) extends AST with Target {
+    override def getPhoneNumber = Some(digits)
+  }
+
   case class Wait(duration: Duration) extends AST
 
   case class Service(id: String) extends AST with Target      // Is this right?

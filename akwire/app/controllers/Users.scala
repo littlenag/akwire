@@ -1,7 +1,7 @@
 package controllers
 
 import com.mongodb.casbah.commons.MongoDBObject
-import models.{TeamRef, User}
+import models.{ContactInfo, TeamRef, User}
 import org.bson.types.ObjectId
 import scaldi.{Injectable, Injector}
 import securesocial.core.{AuthenticationMethod, BasicProfile, RuntimeEnvironment, SecureSocial}
@@ -50,7 +50,7 @@ class Users(implicit inj: Injector, implicit val env: RuntimeEnvironment[User]) 
 
           // TODO User's should always be a member of their own private eponymous Team and other teams
           // as an admin decides
-          val user = new User(id, profile, Nil)
+          val user = new User(id, profile, ContactInfo(None), Nil)
           User.insert(user)
           Future.successful(Created(s"User Created"))
         }
