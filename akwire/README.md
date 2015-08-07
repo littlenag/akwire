@@ -150,7 +150,17 @@ Automagic expansions:
 Weekdays -> Monday to Friday
 Weekends -> Saturday to Sunday
 
+----
 
+buy number from twilio ((323) 672-4363)
+if you call the number, you get
+ - automatic recording of any current incidents for you (team first, then user)
+ - dial 0
+   - prompt to get to contact directory, transfer to those numbers
+     (good when you don't know everyone's number)
+     (could do the same from an app)
+
+----
 
 examples:
 
