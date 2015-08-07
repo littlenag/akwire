@@ -54,13 +54,13 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
       "active" -> true,
       "resolved" -> false,
       "interred" -> false,
-      "notificationProcesses.pid" -> pid
+      "notificationProcList.pid" -> pid
     )
 
     for (inc <- Incident.findOne(query);
-         pi : ProcessInfo <- inc.notificationProcesses.get(pid.toString)) {
+         pi : ProcessInfo <- inc.notificationProcesses.get(pid)) {
       val newPi : ProcessInfo = pi.copy(running = false)
-      Incident.save(inc.copy(notificationProcesses = inc.notificationProcesses + (pid.toString -> newPi)))
+      Incident.save(inc.copy(notificationProcList = newPi :: inc.notificationProcList.filterNot(_.pid == pid)))
       Logger.info(s"Notifications completed: $pid")
       return
     }
@@ -89,7 +89,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
 
         val startedInfo = Await.result(notificationEngine ? NotifyOwnerReturnPid(alert.rule.owner, incident), Duration.Inf).asInstanceOf[NotificationProcessStarted]
 
-        val incidentWithProc = incident.copy(notificationProcesses = Map(startedInfo.pid.toString -> ProcessInfo(startedInfo.pid, None, running = true)))
+        val incidentWithProc = incident.copy(notificationProcList = List(ProcessInfo(startedInfo.pid, None, running = true)))
 
         Logger.info(s"Saving new incident: $incidentWithProc")
         Incident.insert(incidentWithProc)
@@ -106,7 +106,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
     Incident.findOneById(id).flatMap { incident =>
       val i = incident.copy(active = false)
 
-      for (procs <- i.notificationProcesses) {
+      for (procs <- i.notificationProcList) {
         notificationEngine ! HaltNotifications(i.owner, i)
       }
 

@@ -267,6 +267,11 @@ repeat until ...
 rollup/batch
  - could be a property of a channel, with the script just handling routing
 
+channels in the akwire sense are global; we might need the notion of a conduit, which would
+let messages on a particular channel be guided along a particular path
+ => e.g. choosing one email server over another
+ => sns region might be property of an SNS conduit
+
 ---
 
 in-scope vars:

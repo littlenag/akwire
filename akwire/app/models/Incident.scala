@@ -93,7 +93,7 @@ case class Incident( id: ObjectId,
                      archivedBy: Option[User] = None,
                      archivedWhen: Option[DateTime] = None,
 
-                     notificationProcesses: Map[String, ProcessInfo] = Map.empty         // Map of PID to ProcessInfo; BTW Salat doesn't like non-string keys
+                     notificationProcList: List[ProcessInfo] = Nil
 
                      // other possible data:
                      // tags
@@ -109,6 +109,8 @@ case class Incident( id: ObjectId,
 
   // Incidents are in the same scope as the Rule that created them
   def owner = rule.owner
+
+  val notificationProcesses: Map[ObjectId, ProcessInfo] = notificationProcList.map(pi => pi.pid -> pi).toMap
 }
 
 object Incident extends IncidentDAO with IncidentJson {
