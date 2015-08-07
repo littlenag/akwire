@@ -4,7 +4,12 @@ import models.{Urgency, Impact}
 import org.bson.types.ObjectId
 import org.joda.time.Duration
 
-trait Target
+import scala.util.Try
+
+trait Target {
+  def getEmailAddress : Option[String] = None
+  def getPhoneNumber : Option[String] = None
+}
 
 object PolicyAST {
 
@@ -56,7 +61,11 @@ object PolicyAST {
 
   // UI will take care of making is pretty
   case class ThisUser() extends AST with Target            // Self-target for User
-  case class User(id: String) extends AST with Target
+  case class User(id: String) extends AST with Target {
+    override def getEmailAddress = {
+      Try { models.User.findOneById(new ObjectId(id)).flatMap(_.profile.email).get }.toOption
+    }
+  }
 
   case class ThisTeam() extends AST with Target            // Self-target for Team
   case class Team(id: String) extends AST with Target

@@ -42,6 +42,8 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
 
         override def email(process: Process, target: Target) = {
           Logger.info(s"[EMAIL] Notification sent to $target")
+
+          val email = target.getEmailAddress
         }
 
         override def call(process: Process, target: Target) = {
