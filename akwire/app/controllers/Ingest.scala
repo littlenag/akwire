@@ -15,9 +15,9 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable {
 
   logger.info("Controller has started")
 
-  var ingestService  = inject[IngestService]
+  val ingestService = inject[IngestService]
 
-  var configuration = inject[Configuration]
+  val configuration = inject[Configuration]
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._

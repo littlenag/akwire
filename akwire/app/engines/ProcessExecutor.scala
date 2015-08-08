@@ -98,7 +98,8 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
     case EarlyTermination =>
       Logger.info("Exiting without having started Proc")
       self ! PoisonPill
-    case  _ => Logger.info("Whoa! already executing something")
+
+    case msg => Logger.info(s"Whoa! already executing something but still got: $msg")
   }
 
   def executing(process: Process, timer:Cancellable, vm:VM): Receive = {
