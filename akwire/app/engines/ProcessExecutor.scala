@@ -46,7 +46,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
 
         override def halted(process:Process): Unit = {
           // Save state to the DB.
-          Process.save(process.snapshot.copy(active = false))
+          Process.save(process.snapshot)
           origSender ! ProcessCompleted(process)
         }
 
@@ -106,16 +106,20 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
     // Should Tick till completion and nothing more
     case Tick =>
       Logger.debug("tick")
-      if (!process.tick()(vm) || process.terminated) {
+      val iter = process.iterator(vm)
+      if (iter.hasNext) {
+        iter.next()
+      } else {
         // Time to cleanup
         Logger.info(s"Process has terminated: $process")
-        Process.save(process.snapshot.copy(active = false))
+        Process.save(process.snapshot)
         self ! PoisonPill
       }
     case EarlyTermination =>
       Logger.info("Exiting early")
       timer.cancel()
-      Process.save(process.snapshot.copy(active = false))
+      process.halt
+      Process.save(process.snapshot)
       self ! PoisonPill
   }
 }

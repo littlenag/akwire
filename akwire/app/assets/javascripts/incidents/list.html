@@ -18,7 +18,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="i in incidents | filter:searchText">
+            <tr ng-repeat="(index, i) in incidents | filter:searchText">
                 <td>
                     {{ i.incidentKey.host }}
                 </td>
@@ -32,11 +32,11 @@
                     {{ i.rule.params }}
                 </td>
                 <td>
-                    <button ng-click="archiveIncident(i.id)" class="btn" id="btn_login">Archive</button>
+                    <button ng-click="archiveIncident(index,i)" class="btn" id="btn_login">Archive</button>
                 </td>
             </tr>
             <tr ng-hide="incidents.length">
-                <td colspan="4">
+                <td colspan="5">
                     <p class="text-center">No Incidents</p>
                 </td>
             </tr>

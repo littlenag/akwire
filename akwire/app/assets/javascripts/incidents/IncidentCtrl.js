@@ -17,11 +17,12 @@
         });
       };
 
-      $scope.archiveIncident = function(id) {
+      $scope.archiveIncident = function(index,incident) {
+        var id = incident.id;
         $log.debug("archiveIncident()", id);
         return IncidentService.archiveIncident(id).then(function(data) {
           $log.debug("Incident archived", id);
-          $state.go("incidents.list", {});
+          $scope.incidents.splice(index,1);
         }, function(error) {
           return $log.error("Unable to get Incidents: " + error);
         });

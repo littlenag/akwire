@@ -25,7 +25,7 @@ class StandardClock extends Clock {
  * @param pc The Program Counter, points to current instruction to execute
  * @param ws Wait Start, used by the WAIT instruction to stash the start time of the interval
  */
-case class Registers(pc : Int = 0, ws : Option[DateTime] = None)
+case class Registers(pc : Int = 0, ws : Option[DateTime] = None, terminated : Boolean = false)
 
 trait VMStateListener {
   // Executed after every partial (not atomic!) update to the virtual machine state,
@@ -69,9 +69,11 @@ trait VMStateListener {
   def halted(process: notificationvm.Process) = {}
 }
 
+object ListenerSink extends VMStateListener
+
 //case object HALTED extends ((Registers) => Registers)
 
-class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
+class VM(listener: VMStateListener = ListenerSink, clock : Clock = new StandardClock()) {
   import InstructionSet._
 
   /**
@@ -79,7 +81,7 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
    * @param proc Process to execute
    * @return true if still executing, false if halted
    */
-  def tick(proc:notificationvm.Process): Boolean = {
+  def tick(proc:notificationvm.Process): Instruction = {
     val instruction = proc.program.instructions(proc.getRegisters.pc)
     def registers = proc.getRegisters
 
@@ -245,12 +247,13 @@ class VM(listener: VMStateListener, clock : Clock = new StandardClock()) {
 
         proc.updateRegisters(newRegisters)
         listener.postTick(proc, instruction, proc.getRegisters)
-        // This should return an object, not a bool. Oh well.
-        true
+
       case None =>
         listener.halted(proc)
-        false
+        proc.updateRegisters(registers.copy(terminated = true))
     }
+
+    instruction
   }
 }
 

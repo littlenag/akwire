@@ -56,7 +56,7 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
 
         engine.loadAlertingRule(r1)
 
-        val obs = ObservedMeasurement(new DateTime(), "i", "h", "o", "k", 5)
+        val obs = ObservedMeasurement("i", "h", "o", "k", 5)
 
         engine.inspect(obs)
         //expectMsgType[DoTrigger]

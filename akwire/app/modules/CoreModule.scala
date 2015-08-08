@@ -1,17 +1,24 @@
 package modules
 
+import java.util
+
 import akka.actor.{ActorRef, ActorSystem}
-import controllers.Policies
+import akka.stream.scaladsl.Source
+import akka.util.BoundedBlockingQueue
 import engines.{IncidentEngine, ProcessExecutor, NotificationEngine}
-import models.User
+import models.{RawSubmission, User}
 import play.api.Logger
 import play.api.Configuration
 import plugins.auth.AuthServicePlugin
 import scaldi.Module
 import scaldi.akka.AkkaInjectable
 import securesocial.core.providers.UsernamePasswordProvider
-import securesocial.core.{RuntimeEnvironment}
+import securesocial.core.RuntimeEnvironment
 import services._
+
+import scala.collection.JavaConversions._
+
+import java.util.concurrent.ArrayBlockingQueue
 
 import play.api.Play.current
 
@@ -36,6 +43,12 @@ class CoreModule extends Module {
       include(new UsernamePasswordProvider(userService, avatarService, viewTemplates, passwordHashers))
     )
   }
+
+  val submissionQueueSize = 50
+  val submissionsQueue = new BoundedBlockingQueue[RawSubmission](submissionQueueSize, new ArrayBlockingQueue(submissionQueueSize))
+  bind[util.Queue[RawSubmission]] to submissionsQueue
+
+  val submissionsSource = Source(() => submissionsQueue.iterator())
 
   bind[ActorSystem] toNonLazy ActorSystem("Akwire") destroyWith (_.shutdown())
   bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load)

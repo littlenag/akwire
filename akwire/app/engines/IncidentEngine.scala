@@ -49,6 +49,12 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
     )
   }
 
+  /**
+   * FIXME this method can be run async, but does need to return a response since
+   * the notification actor shouldn't completely die until it knows this message
+   * has been handled. That keeps the Incident and Process tables in sync.
+   * @param pid
+   */
   def markNotificationProcessCompleted(pid:ObjectId) : Unit = {
     val query = MongoDBObject(
       "active" -> true,

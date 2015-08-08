@@ -1,12 +1,6 @@
 package models.core
 
-import models.JsonUtil
-import org.joda.time.DateTime;
-
-import java.lang.String.format
-
-import play.api.libs.json.Reads
-;
+import org.joda.time.DateTime
 
 /**
  * base concepts: observers, sensors, and observations
@@ -14,7 +8,7 @@ import play.api.libs.json.Reads
  *  -> observers can read sensors and turn their data into interpretable observations
  *  -> these observations form a stream when an observer periodically reports them
  */
-abstract class Observation(timestamp: DateTime, instance:String, host:String, observer:String, key:String) extends Stream {
+sealed trait Observation extends Stream {
 
   /**
    * other properties
@@ -34,32 +28,27 @@ abstract class Observation(timestamp: DateTime, instance:String, host:String, ob
    * will want to retain instance and cluster information as part of a streams provenance
    */
 
-  //val timestamp = new DateTime();
-  //val instance : String    // getInstance of copper that this observation is tied to, MUST BE A STRING SO THAT ESPER IS HAPPY!
-  //val host : String         // hostname of the device that generated this metric
-  //val observer : String     // software that detected this observation
-  //val key : String          // key of this observation
+  def timestamp : DateTime
+  def instance : String    // getInstance of copper that this observation is tied to, MUST BE A STRING SO THAT ESPER IS HAPPY!
+  def host : String         // hostname of the device that generated this metric
+  def observer : String     // software that detected this observation
+  def key : String          // key of this observation
 
   //private String tags = "os:/linux";  // metadata about either the device or the stream itself
 
-  override def toString() : String = {
+  override def toString: String = {
     String.format("[%s]/%s/%s/%s/%s", timestamp, instance, host, observer, key)
   }
 }
 
-case class ObservedMeasurement(val timestamp: DateTime,
-                          override val instance:String,
-                          override val host:String,
-                          override val observer:String,
-                          override val key:String,
-                          val value:Double)
-      extends Observation(timestamp, instance, host, observer, key) {
+case class ObservedMeasurement(instance:String,
+                               host:String,
+                               observer:String,
+                               key:String,
+                               value:Double,
+                               timestamp: DateTime = new DateTime()) extends Observation {
 
-  def this(instance : String, host : String, observer: String, key: String, value:Double) {
-    this(new DateTime(), instance, host, observer, key, value)
-  }
-
-  override def toString() : String = {
+  override def toString: String = {
     s"${super.toString()}:$value"
   }
 }

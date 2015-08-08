@@ -1,6 +1,7 @@
 package models.notificationvm
 
-import InstructionSet.LBL
+import com.novus.salat.annotations.raw.Persist
+import models.notificationvm.InstructionSet.{HALT, Instruction, LBL}
 import com.mongodb.casbah.MongoConnection
 import com.novus.salat.dao.{SalatDAO, ModelCompanion}
 import engines.PolicyAST.{Team, User}
@@ -22,14 +23,17 @@ import models.mongoContext._
 case class Process(id: ObjectId,                                            // yep its technically a pid
                    program: Program,
                    incident : Incident,
-                   registers : Registers = Registers(0, None),
+                   registers : Registers = Registers(),
                    stack : List[Any] = Nil,                                 // ick, Stack is deprecated and may not serialize
-                   memory : Map[String, Any] = Map.empty[String, Any],
-                   active: Boolean = true) {
+                   memory : Map[String, Any] = Map.empty[String, Any]) {
 
-  def terminated = !active
+  // We record termination as a register state in order to force processing of the HALT instruction
+  // Once HALT has been executed then the halted register is flipped and execution can cease
+  def terminated = getRegisters.terminated
 
-  def snapshot = Process(id, program, incident, _registers, _stack, _memory, active)
+  def snapshot = Process(id, program, incident, _registers, _stack, _memory)
+
+  def halt = updateRegisters(getRegisters.copy(terminated = true))
 
   // Internal copies since these change as the VM executes the Process
   private var _stack = stack
@@ -63,7 +67,10 @@ case class Process(id: ObjectId,                                            // y
     _stack = value :: _stack
   }
 
-  def updateRegisters(updated:Registers) = _registers = updated
+  def updateRegisters(updated:Registers) : Registers = {
+    _registers = updated
+    _registers
+  }
 
   def getRegisters = _registers
 
@@ -97,11 +104,13 @@ case class Process(id: ObjectId,                                            // y
   def labeltoPC(label:LBL) : Int = _labels(label)
 
   /**
-   * Move the clock one tick forward for the Process
-   * @return true if still executing, false if halted
+   * Use the iterator to step the Process through the instructions its going to execute.
+   * @param vm
+   * @return
    */
-  def tick()(implicit vm: VM) = {
-    vm.tick(this)
+  def iterator(implicit vm: VM): Iterator[Instruction] = new Iterator[Instruction] {
+    def next() = vm.tick(Process.this)
+    def hasNext = !terminated
   }
 }
 
