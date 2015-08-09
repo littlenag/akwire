@@ -102,7 +102,13 @@ object PolicyParser extends RegexParsers {
 
   def expr: Parser[AST] = compare_op | logic_op | terminal | ( "(" ~> expr <~ ")")
 
-  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property
+  // Terminals ALWAYS are required to parse, so put a fail-safe to capture the bad token at the end of the chain
+  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property | badToken
+
+  // Capture the bad token and throw
+  def badToken: Parser[AST] =  "\\w+".r^^{
+    case badToken => throw new RuntimeException("Unparseable token: " + badToken)
+  }
 
   def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
