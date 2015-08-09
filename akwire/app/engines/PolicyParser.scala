@@ -62,7 +62,7 @@ object PolicyParser extends RegexParsers {
   import engines.PolicyAST._
 
   // statements ::= expr +
-  def policy: Parser[AST] = opt(attempt_st) ~ statements ^^ {
+  def policyStart: Parser[AST] = opt(attempt_st) ~ statements ^^ {
     case at ~ body => ProgramRoot(body, at)
   }
 
@@ -186,7 +186,7 @@ object PolicyParser extends RegexParsers {
 
   //def priorityLiteral : Parser[PriorityLevel] = ("PL-"~"""[0-9]""".r)^^{value => PriorityLevel(Priority.withName(value._1 + value._2))}
 
-  def tagLiteral : Parser[TagVal] = """tag\([A-Za-z_][a-zA-Z0-9]*\)""".r^^{value => TagVal(value.toString)}
+  def tagLiteral : Parser[TagVal] = "tag" ~> "[A-Za-z_][a-zA-Z0-9]*".r^^{value => TagVal(value.toString)}
 
   def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
     value => IntVal(value.toInt)}
@@ -216,5 +216,5 @@ object PolicyParser extends RegexParsers {
     case "false" => BooleanVal(false)
   }
 
-  def parse(str:String) = parseAll(policy, str)
+  def parse(str:String) = parseAll(policyStart, str)
 }

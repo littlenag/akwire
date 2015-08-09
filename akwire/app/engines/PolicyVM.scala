@@ -23,9 +23,9 @@ class StandardClock extends Clock {
 /**
  * Register state for the policy machine
  * @param pc The Program Counter, points to current instruction to execute
- * @param ws Wait Start, used by the WAIT instruction to stash the start time of the interval
+ * @param waitStart Wait Start, used by the WAIT instruction to stash the start time of the interval
  */
-case class Registers(pc : Int = 0, ws : Option[DateTime] = None, terminated : Boolean = false)
+case class Registers(pc : Int = 0, waitStart : Option[DateTime] = None, terminated : Boolean = false)
 
 trait VMStateListener {
   // Executed after every partial (not atomic!) update to the virtual machine state,
@@ -110,12 +110,13 @@ class VM(listener: VMStateListener = ListenerSink, clock : Clock = new StandardC
 
       case WAIT(duration) => {
         val now = clock.now()
-        registers.ws match {
-          case Some(t) =>
-            if (t.plus(duration).isBefore(now)) {
+        registers.waitStart match {
+          case Some(start) =>
+            // Clearer than (! start.plus(duration).isAfter(now))
+            if (start.plus(duration).isBefore(now) || start.plus(duration).isEqual(now)) {
               // We've finished waiting, move PC to the next instruction, and clear the WAIT register
               listener.wait_complete(proc, duration, now)
-              Some(registers.copy(pc = registers.pc + 1, ws = None))
+              Some(registers.copy(pc = registers.pc + 1, waitStart = None))
             } else {
               // Keep waiting
               listener.wait_continue(proc, duration, now)
@@ -124,7 +125,7 @@ class VM(listener: VMStateListener = ListenerSink, clock : Clock = new StandardC
           case None =>
             // First time called, initialize the register
             listener.wait_start(proc, duration, now)
-            Some(registers.copy(ws = Some(now)))
+            Some(registers.copy(waitStart = Some(now)))
         }
 
       }
