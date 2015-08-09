@@ -176,11 +176,11 @@ object PolicyParser extends RegexParsers {
 
   // levels in reverse index order 0 = highest, 9 = lowest
   // users can allocate and name their levels however they would like, UI can take care of making pretty
-  def impactLiteral : Parser[ImpactVal] = ("IL-" ~ """[0-9]""".r)^^{
+  def impactLiteral : Parser[ImpactVal] = ("IL_" ~ """[0-9]""".r)^^{
     case value => ImpactVal(Impact.withName(value._1 + value._2))
   }
 
-  def urgencyLiteral : Parser[UrgencyVal] = ("UL-" ~ """[0-9]""".r)^^{
+  def urgencyLiteral : Parser[UrgencyVal] = ("UL_" ~ """[0-9]""".r)^^{
     case value => UrgencyVal(Urgency.withName(value._1 + value._2))
   }
 

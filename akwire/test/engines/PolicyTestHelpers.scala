@@ -59,7 +59,7 @@ object PolicyTestHelpers extends WithApplication {
     1,
     ruleSimpleThreshold,
     ContextualizedStream(List(("host", "h1"))),
-    Impact.IL_1,
+    Impact.IL_0,
     Urgency.UL_0,
     None,
     None

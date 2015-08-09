@@ -74,9 +74,9 @@ class PolicyVMTest extends WithApplication with SpecificationLike with Mockito {
 
       val (process, executed) = compileAndExec(policy, incident_IL_0)
 
-      process.program.instructions must have size 8
+      process.program.instructions must have size 9
       executed.filter(_.isInstanceOf[DELIVER]) must have size 1
-      executed must have size 7
+      executed must have size 9
     }
 
     "matching policy" in {
@@ -87,14 +87,14 @@ class PolicyVMTest extends WithApplication with SpecificationLike with Mockito {
           | else
           |   email user(1)
           | end
-          | wait 1h
+          | wait 2m
         """.stripMargin
 
       val (process, executed) = compileAndExec(policy, incident_IL_0)
 
-      process.program.instructions must have size 15
+      process.program.instructions must have size 13
       executed.filter(_.isInstanceOf[DELIVER]) must have size 1
-      executed must have size 26
+      executed must have size 12
     }
   }
 }
