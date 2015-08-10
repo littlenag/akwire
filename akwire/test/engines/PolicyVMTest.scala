@@ -66,9 +66,9 @@ class PolicyVMTest extends WithApplication with SpecificationLike with Mockito {
     "filtering policy" in {
       val policy =
         """
-          | if incident.impact == IL_0 then
+          | if (incident.impact == IL_0) {
           |   call user(1)
-          | end
+          | }
           |
         """.stripMargin
 
@@ -82,11 +82,11 @@ class PolicyVMTest extends WithApplication with SpecificationLike with Mockito {
     "matching policy" in {
       val policy =
         """
-          | if incident.impact == IL_1 then
+          | if (incident.impact == IL_1) {
           |   call user(1)
-          | else
+          | } else {
           |   email user(1)
-          | end
+          | }
           | wait 2m
         """.stripMargin
 

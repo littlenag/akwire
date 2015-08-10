@@ -16,7 +16,7 @@ import org.joda.time.{Duration}
 //  escalate_to :: halts the policy and passes the incident to the named policy
 //  halt        :: halts the policy, takes an optional message
 //  abandon     :: halts the policy, takes an optional message
-//  next        :: ? start execution of the next iteration, if no iterations left then abandon's the incident (should be a path dependent statement)
+//  next        :: ? start execution of the next iteration, if no iterations left then abandons the incident (should be a path dependent statement)
 //  repeat?
 
 // Functions to use as part of conditional flow control:
@@ -61,54 +61,36 @@ object PolicyParser extends RegexParsers {
 
   import engines.PolicyAST._
 
-  // statements ::= expr +
+  // http://hepunx.rl.ac.uk/~adye/jsspec11/llr.htm
+  // http://www-archive.mozilla.org/js/language/grammar14.html
+  // TODO add math ops
+  // TODO make sure operator precedence matches that of JavaScript
+
+  // add command to auto-ack incidents
+
   def policyStart: Parser[AST] = opt(attempt_st) ~ statements ^^ {
     case at ~ body => ProgramRoot(body, at)
   }
 
   def statements: Parser[Block] = rep(statement)^^Block
 
-  def statement: Parser[AST] = action_st | wait_st | cond_1 | cond_2 | cond_n // | next_st | halt_st | escalate | invoke schedule/policy
+  def statement: Parser[AST] = action_st |
+    wait_st |
+    ("if" ~> condition) ~ statement ~ opt("else" ~> statement)^^{ case c ~ p ~ n => ConditionalStatement(c,p,n.getOrElse(Empty())) } |
+    compoundStatement // | next_st | halt_st | escalate | invoke schedule/policy
 
-  def attempt_st: Parser[Attempts] = (("attempt" ~> intLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
-    case t ~ du if t.value > 1 => Attempts(t.value, du)
+  def compoundStatement: Parser[AST] = "{" ~> statements <~ "}"
+
+  def attempt_st: Parser[Attempts] = (("attempt" ~> numberLiteral <~ "times") ~ opt("every" ~> duration)) ^^ {
+    case t ~ du if t.value > 1 => Attempts(t.value.toInt, du)
   }
 
-  def cond_1: Parser[AST] =
-    ("if" ~> expr <~ "then") ~ (statements <~ "end")^^{
-      case c ~ p => ConditionalStatement(c,p,Empty())
-    }
+  def condition: Parser[AST] = "(" ~> expr <~ ")"
 
-  def cond_2: Parser[AST] =
-    ("if" ~> expr <~ "then") ~
-      statements ~
-      ("else" ~> statements <~ "end")^^{
-      case c ~ p ~ n => ConditionalStatement(c,p,n)
-    }
+  def expr: Parser[AST] = compare_op | logic_op | terminal
 
-  def cond_n: Parser[AST] =
-    ("if" ~> expr <~ "then") ~ statements ~
-      rep(("elif" ~> expr <~ "then") ~ statements) ~
-      (("else" ~> statements <~ "end") | "end")^^{
-      case c1 ~ b1 ~ blocks ~ (otherwise:AST) =>
-        // Destructured into pairs of conditions and their statements
-        val l = for (block <- blocks) yield (block._1, block._2)
-        ConditionalList(List((c1,b1)) ::: l,otherwise)
-      case c1 ~ b1 ~ blocks ~ (end:String) =>
-        // Destructured into pairs of conditions and their statements
-        val l = for (block <- blocks) yield (block._1, block._2)
-        ConditionalList(List((c1,b1)) ::: l,Empty())
-    }
-
-  def expr: Parser[AST] = compare_op | logic_op | terminal | ( "(" ~> expr <~ ")")
-
-  // Terminals ALWAYS are required to parse, so put a fail-safe to capture the bad token at the end of the chain
-  def terminal: Parser[AST] = impactLiteral | tagLiteral | intLiteral | boolLiteral | property | badToken
-
-  // Capture the bad token and throw
-  def badToken: Parser[AST] =  "\\w+".r^^{
-    case badToken => throw new RuntimeException("Unparseable token: " + badToken)
-  }
+  // Terminals ALWAYS are required to parse since you reached a leave in the tree, so put a fail-safe to capture the bad token at the end of the chain
+  def terminal: Parser[AST] = impactLiteral | tagLiteral | numberLiteral | boolLiteral | property | ( "(" ~> expr <~ ")") | failure("unparseable token")
 
   def wait_st: Parser[AST] = ("wait" ~> duration)^^{
     case d => Wait(d)
@@ -116,30 +98,26 @@ object PolicyParser extends RegexParsers {
 
   def logic_op: Parser[AST] = andOp | orOp | notOp
 
-  def condOp: Parser[AST] = chainl1(terminal,
-    "<"^^{op => (left:AST, right:AST) => LtOp(left, right)}
-  )
-
-  def andOp: Parser[AST] = (expr ~ "&&" ~ expr)^^{case l~_~r => AndOp(l,r)}
-  def orOp: Parser[AST] = (expr ~ "||" ~ expr)^^{case l~_~r => OrOp(l,r)}
+  def andOp: Parser[AST] = (terminal ~ "&&" ~ expr)^^{case l~_~r => AndOp(l,r)}
+  def orOp: Parser[AST] = (terminal ~ "||" ~ expr)^^{case l~_~r => OrOp(l,r)}
   def notOp: Parser[AST] = ("!" ~> expr)^^{case c => NotOp(c)}
 
   def compare_op: Parser[AST] = lt | gt | lte | gte | eq
 
-  def lt: Parser[AST] = (terminal ~ "<" ~ terminal)^^{case l~_~r => LtOp(l,r)}
-  def lte: Parser[AST] = (terminal ~ "<=" ~ terminal)^^{case l~_~r => LteOp(l,r)}
+  def lt: Parser[AST] = (terminal ~ "<" ~ expr)^^{case l~_~r => LtOp(l,r)}
+  def lte: Parser[AST] = (terminal ~ "<=" ~ expr)^^{case l~_~r => LteOp(l,r)}
 
-  def eq: Parser[AST] = (terminal ~ "==" ~ terminal)^^{case l~_~r => EqOp(l,r)}
-  def notEq: Parser[AST] = (terminal ~ "!=" ~ terminal)^^{case l~_~r => NotOp(EqOp(l,r))}
+  def gt: Parser[AST] = (terminal ~ ">" ~ expr)^^{case l~_~r => GtOp(l,r)}
+  def gte: Parser[AST] = (terminal ~ ">=" ~ expr)^^{case l~_~r => GteOp(l,r)}
 
-  def gt: Parser[AST] = (terminal ~ ">" ~ terminal)^^{case l~_~r => GtOp(l,r)}
-  def gte: Parser[AST] = (terminal ~ ">=" ~ terminal)^^{case l~_~r => GteOp(l,r)}
+  def eq: Parser[AST] = (terminal ~ "==" ~ expr)^^{case l~_~r => EqOp(l,r)}
+  def notEq: Parser[AST] = (terminal ~ "!=" ~ expr)^^{case l~_~r => NotOp(EqOp(l,r))}
 
-  def duration: Parser[Duration] = intLiteral ~ ("s" | "m" | "h" | "d") ^^ {
-    case v ~ "s" => Duration.standardSeconds(v.value)
-    case v ~ "m" => Duration.standardMinutes(v.value)
-    case v ~ "h" => Duration.standardHours(v.value)
-    case v ~ "d" => Duration.standardDays(v.value)
+  def duration: Parser[Duration] = numberLiteral ~ ("s" | "m" | "h" | "d") ^^ {
+    case v ~ "s" => Duration.standardSeconds(v.value.toLong)
+    case v ~ "m" => Duration.standardMinutes(v.value.toLong)
+    case v ~ "h" => Duration.standardHours(v.value.toLong)
+    case v ~ "d" => Duration.standardDays(v.value.toLong)
   }
 
   // note: actions should be the verb form of what the channel is said to carry
@@ -194,8 +172,9 @@ object PolicyParser extends RegexParsers {
 
   def tagLiteral : Parser[TagVal] = "tag" ~> "[A-Za-z_][a-zA-Z0-9]*".r^^{value => TagVal(value.toString)}
 
-  def intLiteral : Parser[IntVal] = """[1-9][0-9]*|0""".r^^{
-    value => IntVal(value.toInt)}
+  def numberLiteral : Parser[NumberVal] = """[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?""".r ^^{
+    case value => NumberVal(value.toDouble)
+  }
 
   // global variables / state
   //  any thing in the incident, team, service

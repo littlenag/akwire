@@ -13,6 +13,9 @@ trait Target {
 
 object PolicyAST {
 
+  // Javascript only has "numbers" which it then represents as Doubles. We do the same, but call
+  // then numbers for consistencies sake.
+  type Number = Double
 
   sealed trait AST {
     // type
@@ -30,6 +33,7 @@ object PolicyAST {
     //  any thing in the incident, user, team, service
     //  the SLA, the priority matrix, service owner
 
+    def tipe : Class[_] = throw new RuntimeException("ASTs are untyped unless otherwise specified")
   }
 
   // Root node for all ASTs; by construction our programs don't repeat
@@ -37,10 +41,7 @@ object PolicyAST {
 
   case class Block(statements: List[AST]) extends AST
 
-  case class ConditionalStatement(cond: AST, pos: AST, neg: AST) extends AST
-
-  // List of conditions and their statements
-  case class ConditionalList(blocks: List[(AST, AST)], neg: AST) extends AST
+  case class ConditionalStatement(cond: AST, ifTrue: AST, ifFalse: AST) extends AST
 
   case class ActionLiteral(name: String) extends AST
 
@@ -81,23 +82,71 @@ object PolicyAST {
 
   // Basic Comparison Ops
 
-  case class EqOp(left: AST, right: AST) extends AST
+  case class EqOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe) {
+      left.tipe
+    } else {
+      throw new RuntimeException("Expected equivalent types")
+    }
+  }
 
-  case class GtOp(left: AST, right: AST) extends AST
+  case class GtOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Number]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Number types")
+    }
+  }
 
-  case class GteOp(left: AST, right: AST) extends AST
+  case class GteOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Number]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Number types")
+    }
+  }
 
-  case class LtOp(left: AST, right: AST) extends AST
+  case class LtOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Number]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Number types")
+    }
+  }
 
-  case class LteOp(left: AST, right: AST) extends AST
+  case class LteOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Number]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Number types")
+    }
+  }
 
-  case class AndOp(l: AST, r: AST) extends AST
+  case class AndOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Boolean]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Boolean types")
+    }
+  }
 
   // a and b
-  case class OrOp(l: AST, r: AST) extends AST
+  case class OrOp(left: AST, right: AST) extends AST {
+    override val tipe = if (left.tipe == right.tipe && left.tipe == classOf[Boolean]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Boolean types")
+    }
+  }
 
   // a or b
-  case class NotOp(c: AST) extends AST
+  case class NotOp(c: AST) extends AST {
+    override val tipe = if (c.tipe == classOf[Boolean]) {
+      classOf[Boolean]
+    } else {
+      throw new RuntimeException("Expected Boolean types")
+    }
+  }
 
   // ! a
 
@@ -105,29 +154,48 @@ object PolicyAST {
   //case class TimeRangeVal(value: String) extends AST
   //case class DateRangeVal(value: String) extends AST
 
-  case class ImpactVal(value: Impact.Value) extends AST
-  case class UrgencyVal(value: Urgency.Value) extends AST
+  case class ImpactVal(value: Impact.Value) extends AST {
+    override val tipe = classOf[Impact.Value]
+  }
+
+  case class UrgencyVal(value: Urgency.Value) extends AST {
+    override val tipe = classOf[Urgency.Value]
+  }
 
   // P = f(I,U)
   //case class PriorityVal(value: Priority.Value) extends AST
 
   case class TagVal(value: String) extends AST
 
-  case class TrueVal() extends AST
+  case class TrueVal() extends AST {
+    override val tipe = classOf[Boolean]
+  }
 
-  case class FalseVal() extends AST
+  case class FalseVal() extends AST {
+    override val tipe = classOf[Boolean]
+  }
 
-  case class NotExpr(cond: AST) extends AST
+  case class NotExpr(cond: AST) extends AST {
+    override val tipe = classOf[Boolean]
+  }
 
-  case class IntVal(value: Int) extends AST
+  case class NumberVal(value: Number) extends AST {
+    override val tipe = classOf[Number]
+  }
 
-  case class BooleanVal(value: Boolean) extends AST
-
-  case class UnitVal() extends AST
+  case class BooleanVal(value: Boolean) extends AST {
+    override val tipe = classOf[Boolean]
+  }
 
   // Representing an empty blocks of statements
-  case class Empty() extends AST
+  case class Empty() extends AST {
+    override val tipe = classOf[Unit]
+  }
 
-  case class Property(context: String, field: String) extends AST
+  case class Property(context: String, field: String) extends AST {
+    override val tipe = (context, field) match {
+      case ("incident", "impact") => classOf[Impact.Value]
+    }
+  }
 
 }
