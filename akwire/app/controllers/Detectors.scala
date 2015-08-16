@@ -22,6 +22,12 @@ import models.mongoContext._
 import com.mongodb.casbah.MongoConnection
 import java.util.UUID
 
+/**
+ * A Detector is an existing external monitoring system, like say a nagios instance, that you
+ * would want to integrate with Akwire.
+ *
+ * Each external detector is granted its own 
+ */
 class Detectors extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Detectors])
