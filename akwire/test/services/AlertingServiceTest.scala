@@ -1,16 +1,14 @@
 package services
 
-import akka.actor.{ActorRef, Props, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestKit, ImplicitSender}
 import engines.{IncidentEngine, NotificationEngine}
-import models.alert.DoTrigger
 import models.core.ObservedMeasurement
 import models._
 import org.bson.types.ObjectId
-import org.joda.time.DateTime
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
-import resources.rules.SimpleThreshold
+import resources.rules.SimpleThresholdRuleFactory$
 import scaldi.DynamicModule
 import org.scalatest.WordSpecLike
 import org.scalatest.Matchers
@@ -42,7 +40,6 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
           implicit val system = dm.inject[ActorSystem]
           AkkaInjectable.injectActorRef [NotificationEngine]
         }
-
       }
 
       val engine = new AlertingService()
@@ -52,7 +49,7 @@ class AlertingServiceTest() extends TestKit(ActorSystem("AlertingSpec")) with Im
       running(FakeApplication()) {
         val t1 = Team("t1")
         val s = StreamExpr("i".r, "h".r, "o".r, "k".r)
-        val r1 = RuleConfig(OwningEntityRef(t1.id, Scope.TEAM), ObjectId.get(), "test1", SimpleThreshold.builderClass, Map("threshold" -> "2", "op" -> "gt"), s)
+        val r1 = PersistedRuleConfiguration(OwningEntityRef(t1.id, Scope.TEAM), ObjectId.get(), "test1", SimpleThresholdRuleFactory.builderClass, Map("threshold" -> "2", "op" -> "gt"), s)
 
         engine.loadAlertingRule(r1)
 

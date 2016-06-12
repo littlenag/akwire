@@ -25,7 +25,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
   val core = inject[CoreServices]
 
   import models.Team
-  import models.RuleConfig
+  import models.PersistedRuleConfig$
 
   def createTeam = SecuredAction.async(parse.json) {
     implicit request =>

@@ -1,6 +1,6 @@
 package services
 
-import models.{RuleConfig, Incident}
+import models.{PersistedRuleConfig$, Incident}
 import org.slf4j.{Logger, LoggerFactory}
 import scaldi.{Injectable, Injector}
 
@@ -34,7 +34,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
   def loadAlertingRules = {
     logger.info("Loading Alerting Rules");
-    for (rule <- RuleConfig.findAll()) {
+    for (rule <- PersistedRuleConfig.findAll()) {
       if (rule.active) {
         logger.trace("Loading Alerting Rule: {}", rule)
         alertingEngine.loadAlertingRule(rule)
@@ -55,8 +55,8 @@ class CoreServices(implicit inj: Injector) extends Injectable {
     }
   }
 
-  def saveRule(rule: RuleConfig) = Try {
-    RuleConfig.save(rule)
+  def saveRule(rule: PersistedRuleConfig) = Try {
+    PersistedRuleConfig.save(rule)
 
     // Is the old rule running, if so unload it
     alertingEngine.unloadAlertingRule(rule.id)
