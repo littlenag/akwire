@@ -50,13 +50,13 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           origSender ! ProcessCompleted(process)
         }
 
-        override def email(process: Process, target: Target) = {
+        override def email(process: Process, target: Target): Unit = {
           Logger.info(s"[EMAIL] Notification sent to $target")
 
           val email = target.getEmailAddress
         }
 
-        override def text(process: Process, target: Target) = {
+        override def text(process: Process, target: Target): Unit = {
           Logger.info(s"[TEXT] Notification sent to $target")
 
           // Ten digit number enforced by Parser

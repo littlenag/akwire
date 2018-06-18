@@ -2,11 +2,8 @@ package controllers
 
 import java.util
 
-import akka.stream.scaladsl.Source
-import akka.util.BoundedBlockingQueue
-import models.core.{Observation, ObservedMeasurement}
+import models.core.ObservedMeasurement
 import org.joda.time.DateTime
-import org.reactivestreams.{Subscriber, Publisher}
 import play.api.Configuration
 import play.api.mvc._
 
@@ -19,16 +16,18 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable  {
 
   logger.info("Controller has started")
 
-  val configuration = inject[Configuration]
+  val configuration: Configuration = inject[Configuration]
 
-  val submissionBus = inject[util.Queue[RawSubmission]]
+  val submissionBus: util.Queue[RawSubmission] = inject[util.Queue[RawSubmission]]
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
-  implicit val measReader : Reads[ObservedMeasurement] =
+  val defaultInstance: Reads[String] = Reads.pure(configuration.getString("akwire.instance").get)
+
+  implicit val measurementReader: Reads[ObservedMeasurement] =
     (
-      ((__ \ "instance").read[String] orElse Reads.pure(configuration.getString("akwire.instance").get)) ~
+      ((__ \ "instance").read[String] orElse defaultInstance) ~
       (__ \ "host").read[String] ~      // should be inferred from the sending host
       (__ \ "observer").read[String] ~
       (__ \ "key").read[String] ~
@@ -36,17 +35,17 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable  {
       ((__ \ "timestamp").read[DateTime] orElse Reads.pure(DateTime.now()))
     )(ObservedMeasurement.apply _)
 
-  implicit val submissionReads = Json.reads[RawSubmission]
+  implicit val submissionReads: Reads[RawSubmission] = Json.reads[RawSubmission]
 
   // try to accept data from:
   //   collectd (write http plugin)
   //   statsd
   //   diamond
-  //   akwire
+  //   akwire agent
   //   zabbix agent push
   //   datadog (dd-agent)
 
-  def submitObservations = Action(parse.json) { request =>
+  def submitObservations: Action[JsValue] = Action(parse.json) { request =>
     request.body.asOpt[RawSubmission] match {
       case Some(submission) =>
         if (submissionBus.offer(submission)) {
@@ -60,12 +59,12 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable  {
     }
   }
 
-  def submitAlert = Action(parse.json) { request =>
+  def submitAlert: Action[JsValue] = Action(parse.json) { request =>
     request.body.validate[RawAlert].fold(
       valid = alert => {
         Ok("Received: " + alert)
       },
-      invalid = (e => BadRequest(e.toString))
+      invalid = e => BadRequest(e.toString)
     )
   }
 }

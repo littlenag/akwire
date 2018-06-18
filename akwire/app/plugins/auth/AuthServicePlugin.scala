@@ -20,19 +20,19 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
   }
 
   def findByEmailAndProvider(email: String, providerId: String): Future[Option[BasicProfile]] = {
-    Logger.info(s"Finding identity: ${email} ${providerId}")
+    Logger.info(s"Finding identity: $email $providerId")
     User.findByEmailAndProvider(email, providerId) match {
       case Some(user) =>
-        Logger.info(s"Found identity: ${user}")
+        Logger.info(s"Found identity: $user")
         Future.successful(Some(user.profile))
       case None =>
-        Logger.info(s"No identity: ${email} ${providerId}")
+        Logger.info(s"No identity: $email $providerId")
         Future.successful(None)
     }
   }
 
   def save(profile : BasicProfile, mode : SaveMode) : Future[User] = {
-    Logger.info(s"Saving profile: ${profile}")
+    Logger.info(s"Saving profile: $profile")
 
     if (profile.email.isEmpty) {
       throw new Exception("Users MUST have an email!")
@@ -47,7 +47,7 @@ class AuthServicePlugin extends securesocial.core.services.UserService[User] {
       case SaveMode.LoggedIn =>
         User.findByEmailAndProvider(profile.userId, profile.providerId) match {
           case Some(user) =>
-            Logger.info(s"Saving identity: ${user}")
+            Logger.info(s"Saving identity: $user")
             // Add a last login time here
             Future.successful(user)
           case None =>

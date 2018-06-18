@@ -6,7 +6,8 @@ import models._
 import org.bson.types.ObjectId
 import play.api.Logger
 import play.api.libs.json.Json
-import scaldi.{Injector, Injectable}
+import play.api.mvc.{Action, AnyContent}
+import scaldi.{Injectable, Injector}
 import securesocial.core.{RuntimeEnvironment, SecureSocial}
 import services.CoreServices
 
@@ -20,7 +21,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
   // PathBindable is used to handle map complex URL segments more gracefully
 
-  def getRules(entity:OwningEntityRef) = SecuredAction.async { request =>
+  def getRules(entity:OwningEntityRef): Action[AnyContent] = SecuredAction.async { request =>
     Future {
       Logger.info(s"Getting rules for entity: $entity")
 
@@ -34,7 +35,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def createRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
+  def createRule(entity:OwningEntityRef): Action[RuleConfig] = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Saving rule for entity: $entity")
 
@@ -51,7 +52,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def updateRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
+  def updateRule(entity:OwningEntityRef): Action[RuleConfig] = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Updating rule for team: $entity")
 
@@ -68,21 +69,15 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def deleteRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
-    Future {
-      Ok("placeholder")
-    }
+  def deleteRule(entity:OwningEntityRef, ruleId:String): Action[AnyContent] = SecuredAction.async {
+    Future.successful(Ok("placeholder"))
   }
 
-  def startRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
-    Future {
-      Ok("placeholder")
-    }
+  def startRule(entity:OwningEntityRef, ruleId:String): Action[AnyContent] = SecuredAction.async {
+    Future.successful(Ok("placeholder"))
   }
 
-  def pauseRule(entity:OwningEntityRef, ruleId:String) = SecuredAction.async {
-    Future {
-      Ok("placeholder")
-    }
+  def pauseRule(entity:OwningEntityRef, ruleId:String): Action[AnyContent] = SecuredAction.async {
+    Future.successful(Ok("placeholder"))
   }
 }

@@ -1,9 +1,10 @@
 package controllers
 
 import models.mongoContext._
-
 import models.User
-import scaldi.{Injector, Injectable}
+import models.Team
+
+import scaldi.{Injectable, Injector}
 import services.CoreServices
 
 import scala.concurrent.Future
@@ -11,28 +12,23 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Logger
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-
 import securesocial.core.{RuntimeEnvironment, SecureSocial}
-
 import org.bson.types.ObjectId
-
 import com.mongodb.casbah.commons.Imports._
+import play.api.mvc.{Action, AnyContent}
 
-import scala.util.{Try, Failure, Success}
+import scala.util.Try
 
 class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironment[User]) extends SecureSocial[User] with Injectable {
 
   val core = inject[CoreServices]
 
-  import models.Team
-  import models.RuleConfig
+  val readTeamCreateRequest: Reads[String] = (__ \ "name").read(minLength[String](3))
 
-  def createTeam = SecuredAction.async(parse.json) {
+  def createTeam: Action[JsValue] = SecuredAction.async(parse.json) {
     implicit request =>
 
-      val customReads: Reads[String] = (__ \ "name").read(minLength[String](3))
-
-      customReads.reads(request.body).fold(
+      readTeamCreateRequest.reads(request.body).fold(
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { name =>
           Team.insert(Team(name))
@@ -41,7 +37,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
       )
   }
 
-  def retrieveTeams = SecuredAction.async {
+  def retrieveTeams: Action[AnyContent] = SecuredAction.async {
     Future {
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
@@ -51,7 +47,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def retrieveTeam(teamId:String) = SecuredAction.async {
+  def retrieveTeam(teamId:String): Action[AnyContent] = SecuredAction.async {
     Future {
       Try {
         new ObjectId(teamId)
@@ -66,7 +62,7 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def renameTeam(teamId:String, oldName:String, newName:String) = SecuredAction.async {
+  def renameTeam(teamId:String, oldName:String, newName:String): Action[AnyContent] = SecuredAction.async {
     Future {
       Team.findOne(MongoDBObject("_id" -> new ObjectId(teamId))) match {
         case Some(team : Team) =>
@@ -81,12 +77,10 @@ class Teams(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def deleteTeam(teamId:String) = SecuredAction.async {
+  def deleteTeam(teamId:String): Action[AnyContent] = SecuredAction.async {
     Future {
       Team.removeById(new ObjectId(teamId))
       Ok(s"Removed team with id $teamId")
     }
   }
-
-
 }

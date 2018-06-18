@@ -40,7 +40,7 @@ class Messaging(implicit inj: Injector) extends Injectable {
   val dao = inject[Dao]
   val configuration  = inject[Configuration]
 
-  var sessionBroker : ActorRef = null;
+  var sessionBroker : ActorRef = null
 
   def init = {
     try {
@@ -61,6 +61,7 @@ class Messaging(implicit inj: Injector) extends Injectable {
       sessionBroker ! Connect(factory.newConnection())
     } catch {
       case ex:Exception =>
+        logger.error("Unable to init", ex)
     }
   }
 
@@ -91,11 +92,11 @@ case class ReleaseAgent(agentId: AgentId)
 class SessionBroker extends Actor with DefaultWrites {
   private final val logger: Logger = LoggerFactory.getLogger(classOf[SessionBroker])
 
-  var consumer : QueueingConsumer = null;
+  var consumer : QueueingConsumer = null
 
-  var channel : Channel = null;
+  var channel : Channel = null
 
-  var connected = false;
+  var connected = false
 
   // Agents we have observed and registered
   var registeredAgents : Map[AgentId, ActorRef] = new collection.immutable.HashMap
@@ -108,13 +109,15 @@ class SessionBroker extends Actor with DefaultWrites {
 
   var latched = false
 
-  var staleCommands : Cancellable = null;
+  var staleCommands : Cancellable = null
 
   import akka.actor.SupervisorStrategy._
 
   override val supervisorStrategy =
       OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
-        case _ => logger.error("major fault"); Escalate
+        case _ =>
+          logger.error("major fault")
+          Escalate
       }
 
   def receive = {
@@ -132,9 +135,9 @@ class SessionBroker extends Actor with DefaultWrites {
         channel.queueDeclare(AGENT_TO_HUB_EXCH, false, true, true, null)
         channel.queueBind(AGENT_TO_HUB_EXCH, AGENT_TO_HUB_EXCH, "")
 
-        consumer = new QueueingConsumer(channel);
+        consumer = new QueueingConsumer(channel)
 
-        channel.basicConsume(AGENT_TO_HUB_EXCH, true, consumer);
+        channel.basicConsume(AGENT_TO_HUB_EXCH, true, consumer)
 
         connected = true
 
@@ -153,7 +156,7 @@ class SessionBroker extends Actor with DefaultWrites {
       try {
         if (!latched) { logger.info("Waiting for messages") }
 
-        val delivery = consumer.nextDelivery(10);
+        val delivery = consumer.nextDelivery(10)
         if (delivery != null) {
           latched = false
           self ! Process(delivery)
@@ -205,7 +208,7 @@ class SessionBroker extends Actor with DefaultWrites {
         // assume the request is valid, would need to check the agent-id etc
 
         val agentHandler = context.actorOf(Props[AgentHandler], "agent." + agentId.value)
-        registeredAgents += (agentId -> agentHandler);
+        registeredAgents += (agentId -> agentHandler)
 
         agentHandler ! Start(agentId)
 
@@ -218,19 +221,19 @@ class SessionBroker extends Actor with DefaultWrites {
     case ExecuteCommand(agentId, command) =>
       logger.info("Executing Command: " + agentId + " command: " + command)
 
-      val corrId = java.util.UUID.randomUUID();
+      val corrId = java.util.UUID.randomUUID()
 
       val props = new BasicProperties.Builder()
         .correlationId(corrId.toString)
         .replyTo(AGENT_TO_HUB_EXCH)
-        .build();
+        .build()
 
       // use the agentId as the routing key
       // Set mandatory true (message must find a home in some queue)
 
       val toSend = Json.obj("command" -> command)
 
-      channel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true, props, Json.stringify(toSend).getBytes);
+      channel.basicPublish(HUB_TO_AGENT_EXCH, agentId.value, true, props, Json.stringify(toSend).getBytes)
 
       val resultPromise = Promise[CommandResult]
       commandsInFlight += (corrId -> CommandInfo(corrId, resultPromise))
@@ -306,7 +309,7 @@ class AgentHandler extends Actor {
     AgentsDAO.findOne(MongoDBObject("agentId" -> agentId.value)) match {
       case Some(agent:Agent) => agent
       case None =>
-        val agent = Agent(ObjectId.get(), agentId.value, "", false, false);
+        val agent = Agent(ObjectId.get(), agentId.value, "", false, false)
         AgentsDAO.save(agent)
         agent
     }
@@ -324,7 +327,7 @@ class AgentHandler extends Actor {
     case Start(agentId) =>
       logger.info("Starting agent manager:" + agentId)
       this.sessionBroker = sender
-      this.agentId = agentId;
+      this.agentId = agentId
 
       upsertConnected(false)
 

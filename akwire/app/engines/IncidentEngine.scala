@@ -63,9 +63,11 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
       "notificationProcList.pid" -> pid
     )
 
-    for (inc <- Incident.findOne(query);
-         pi : ProcessInfo <- inc.notificationProcesses.get(pid)) {
-      val newPi : ProcessInfo = pi.copy(running = false)
+    for {
+      inc <- Incident.findOne(query)
+      pi <- inc.notificationProcesses.get(pid)
+    } {
+      val newPi = pi.copy(running = false)
       Incident.save(inc.copy(notificationProcList = newPi :: inc.notificationProcList.filterNot(_.pid == pid)))
       Logger.info(s"Notifications completed: $pid")
       return
@@ -75,7 +77,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
     Logger.error(s"Pid not found in Incidents table: $pid")
   }
 
-  def persistAlert(alert : DoTrigger) = {
+  def persistAlert(alert : DoTrigger): Unit = {
     Logger.info(s"Normal Alert: $alert")
 
     val q = genIncidentQuery(alert)
@@ -102,7 +104,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
     }
   }
 
-  def persistMeasurement(obs : ObservedMeasurement) = {
+  def persistMeasurement(obs : ObservedMeasurement): Unit = {
 
   }
 

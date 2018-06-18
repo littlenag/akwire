@@ -1,11 +1,11 @@
 package controllers
 
-import com.mongodb.casbah.commons.MongoDBObject
-import models.{OwningEntityRef, Scope, Policy, User}
+import models.{OwningEntityRef, Policy, User}
 import org.bson.types.ObjectId
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
+import play.api.mvc.{Action, AnyContent}
 import scaldi.{Injectable, Injector}
 import securesocial.core.{RuntimeEnvironment, SecureSocial}
 
@@ -20,61 +20,54 @@ class Policies(implicit inj: Injector, implicit val env: RuntimeEnvironment[User
 
   import play.api.libs.json._
 
-  def createPolicy() = SecuredAction.async(parse.json) {
-    implicit request =>
-      Future {
-        request.body.validate[Policy].map { policy =>
-          val newPolicy = policy.copy(id = ObjectId.get())
-          Policy.save(policy)
-          Created(Json.toJson(newPolicy))
-        }.recoverTotal {
-          errors => BadRequest("invalid json")
-        }
+  def createPolicy(): Action[JsValue] = SecuredAction.async(parse.json) { implicit request =>
+    Future {
+      request.body.validate[Policy].map { policy =>
+        val newPolicy = policy.copy(id = ObjectId.get())
+        Policy.save(policy)
+        Created(Json.toJson(newPolicy))
+      }.recoverTotal {
+        errors => BadRequest("invalid json")
       }
+    }
   }
 
-  def updatePolicy() = SecuredAction.async(parse.json[Policy]) { implicit request =>
-    logger.info(s"Updating policy for ${request.body.owner}")
-
-    // TODO check user access to policy
-
+  def updatePolicy(): Action[Policy] = SecuredAction.async(parse.json[Policy]) { implicit request =>
     Future {
+      // TODO check user access to policy
+      logger.info(s"Updating policy for ${request.body.owner}")
       val policy = request.body
       Policy.save(policy)
-      logger.info(s"Saving policy: ${policy}")
+      logger.info(s"Saving policy: $policy")
       Ok(Json.toJson(policy))
     }
   }
 
-  def retrievePolicies() = SecuredAction.async {
-    implicit request =>
-      Future {
-        val list = Policy.findAll().toList
-        Ok(Json.arr(list)(0))
-      }
+  def retrievePolicies(): Action[AnyContent] = SecuredAction.async { implicit request =>
+    Future {
+      Ok(Json.toJson(Policy.findAll().toList))
+    }
   }
 
-  def retrievePolicyById(policyId:String) = SecuredAction.async {
-    implicit request =>
-      Future {
-        Policy.findOneById(new ObjectId(policyId)) match {
-          case Some(policy : Policy) => Ok(Json.toJson(policy))
-          case None => BadRequest(s"Invalid id $policyId")
-        }
+  def retrievePolicyById(policyId:String): Action[AnyContent] = SecuredAction.async { implicit request =>
+    Future {
+      Policy.findOneById(new ObjectId(policyId)) match {
+        case Some(policy : Policy) => Ok(Json.toJson(policy))
+        case None => BadRequest(s"Invalid id $policyId")
       }
+    }
   }
 
-  def deletePolicy(policyId:String) = SecuredAction.async {
-    implicit request =>
-      Future {
-        Policy.removeById(new ObjectId(policyId))
-        Ok(s"Removed policy with id $policyId")
-      }
+  def deletePolicy(policyId:String): Action[AnyContent] = SecuredAction.async { implicit request =>
+    Future {
+      Policy.removeById(new ObjectId(policyId))
+      Ok(s"Removed policy with id $policyId")
+    }
   }
 
   // Non-CRUD methods
 
-  def retrieveDefaultPolicy(owner:OwningEntityRef) = SecuredAction.async { implicit request =>
+  def retrieveDefaultPolicy(owner:OwningEntityRef): Action[AnyContent] = SecuredAction.async { implicit request =>
     Future {
       Policy.findDefaultForOwner(owner) match {
         case Some(policy : Policy) => Ok(Json.toJson(policy))

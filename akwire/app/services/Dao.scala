@@ -19,8 +19,7 @@ class Dao(implicit inj: Injector) extends Injectable {
 
   object AgentsDAO extends SalatDAO[Agent, ObjectId](MongoConnection()("akwire")("agents"))
 
-
-// users
+  // users
   // roles
   // agents
   //  - instances of collectors

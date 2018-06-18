@@ -95,7 +95,7 @@ class CoreModule extends Module {
   binding toProvider new ProcessExecutor
 
   // Services (passive)
-  binding toNonLazy new IngestService initWith(_.init)
+  binding toNonLazy new IngestService
   binding toNonLazy new AlertingService initWith(_.init) destroyWith(_.shutdown)
   binding toNonLazy new CoreServices initWith(_.init)
 

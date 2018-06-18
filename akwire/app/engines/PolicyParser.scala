@@ -4,8 +4,7 @@ import models.{Urgency, Impact}
 
 import scala.util.parsing.combinator.RegexParsers
 
-import org.joda.time.{Duration}
-
+import org.joda.time.Duration
 
 // Flow control:
 //  attempt     :: executes the policy up to N times, may only occur once at the start of the policy, N must be > 1, optional duration
@@ -38,7 +37,7 @@ import org.joda.time.{Duration}
 // new/open -> ack -> archive
 // archive -> ack
 
-// At any point a rule can fired a Resolved Alert and resolve an incident
+// At any point a rule can fire a ResolvedAlert message and resolve an incident
 // * -> resolve (auto) -> archive
 
 // should be able to handle suppressed notifications in a policy (subscribe rules)

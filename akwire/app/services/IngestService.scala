@@ -1,35 +1,30 @@
 package services
 
-import akka.actor.{ActorSystem, Props, Actor}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import models.core.ObservedMeasurement
 import models.{RawAlert, RawSubmission}
 import play.api.Logger
 import scaldi.akka.AkkaInjectable
-import scaldi.{Injector}
+import scaldi.Injector
 
 class IngestService(implicit inj: Injector) extends AkkaInjectable {
 
-  val actorSystem  = inject[ActorSystem]
+  val actorSystem: ActorSystem = inject[ActorSystem]
 
-  val alerting = inject[AlertingService]
+  val alerting: AlertingService = inject[AlertingService]
 
-  lazy val o = actorSystem.actorOf(Props(classOf[ObsHandler], alerting), name = "obsHandler");
+  lazy val obsHandler: ActorRef = actorSystem.actorOf(Props(classOf[ObsHandler], alerting), name = "obsHandler")
 
-  def init = {
-
+  def process(submission: RawSubmission): Unit = {
+    obsHandler ! submission
   }
 
-  def process(submission: RawSubmission) = {
-    o ! submission
+  def process(alert: RawAlert): Unit = {
+    obsHandler ! alert
   }
-
-  def process(alert: RawAlert) = {
-    o ! alert
-  }
-
 }
 
-class ObsHandler(val alerting: AlertingService) extends Actor {
+class ObsHandler(alerting: AlertingService) extends Actor {
 
   def tag(measurements: List[ObservedMeasurement]) = {
     measurements

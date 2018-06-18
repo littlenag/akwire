@@ -12,7 +12,7 @@ import org.bson.types.ObjectId
 import org.joda.time.DateTime
 
 import com.mongodb.casbah.commons.Imports._
-import com.mongodb.casbah.{MongoClient, MongoConnection}
+import com.mongodb.casbah.MongoClient
 
 import models.mongoContext._
 
@@ -23,32 +23,17 @@ class Roles extends Controller {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Roles])
 
-  // ------------------------------------------ //
-  // Using case classes + Json Writes and Reads //
-  // ------------------------------------------ //
-
   import models._
   import models.Role.roleFormatter
 
   object RolesDAO extends SalatDAO[Role, ObjectId](MongoClient()("akwire")("roles"))
 
-  def createRole = Action.async(parse.json) {
+  val readRoleCreateRequest: Reads[String] = (__ \ "name").read(minLength[String](3))
+
+  def createRole: Action[JsValue] = Action.async(parse.json) {
     request =>
-      /*
-       * request.body is a JsValue.
-       * There is an implicit Writes that turns this JsValue as a JsObject,
-       * so you can call insert() with this JsValue.
-       * (insert() takes a JsObject as parameter, or anything that can be
-       * turned into a JsObject using a Writes.)
-       *
-       * http://www.playframework.com/documentation/2.2.2/ScalaJsonCombinators
-       */
 
-      // minLength(3) tupled
-      //val customReads: Reads[(String, String)] = (__ \ "name").read[String] and (__ \ "foo").read[String] tupled
-      val customReads: Reads[String] = (__ \ "name").read(minLength[String](3))
-
-      customReads.reads(request.body).fold(
+      readRoleCreateRequest.reads(request.body).fold(
         invalid = { errors => Future.successful(BadRequest("invalid json")) },
         valid = { res =>
           val name: String = res
@@ -59,7 +44,7 @@ class Roles extends Controller {
       )
   }
 
-  def retrieveRoles = Action.async {
+  def retrieveRoles: Action[AnyContent] = Action.async {
     Future {
       //val filter = MongoDBObject.empty
       val filter = MongoDBObject("active" -> true)
@@ -69,7 +54,7 @@ class Roles extends Controller {
     }
   }
 
-  def retrieveRole(roleId:String) = Action.async {
+  def retrieveRole(roleId:String): Action[AnyContent] = Action.async {
     Future {
       val filter = MongoDBObject("_id" -> new ObjectId(roleId))
       RolesDAO.findOne(filter) match {
@@ -79,7 +64,7 @@ class Roles extends Controller {
     }
   }
 
-  def updateRole(roleId:String) = Action.async(parse.json) {
+  def updateRole(roleId:String): Action[JsValue] = Action.async(parse.json) {
     request =>
       request.body.asOpt[Role] match {
         case Some(role: Role) =>
@@ -90,7 +75,7 @@ class Roles extends Controller {
       }
   }
 
-  def deleteRole(roleId:String) = Action.async {
+  def deleteRole(roleId:String): Action[AnyContent] = Action.async {
     Future {
       RolesDAO.removeById(new ObjectId(roleId))
       Ok(s"Removed role with id $roleId")

@@ -4,7 +4,6 @@ import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.regions.{Regions, Region}
 import play.api.Logger
 
-
 import scala.concurrent.{ExecutionContext, Future}
 
 sealed trait ChannelResponse
@@ -23,11 +22,11 @@ sealed trait MessageChannel {
   def submit(body:String, subject:String="")(implicit ec: ExecutionContext) : Future[ChannelResponse]
 }
 
-case class SnsChannel( accessKey : String,
-                       secretKey : String,
-                       topicId   : String,
-                       region    : Region = Region.getRegion(Regions.US_EAST_1)
-                       ) extends MessageChannel {
+case class SnsChannel(accessKey : String,
+                      secretKey : String,
+                      topicId   : String,
+                      region    : Region = Region.getRegion(Regions.US_EAST_1)
+                      ) extends MessageChannel {
 
   import com.amazonaws.services.sns.model.PublishRequest
   import com.amazonaws.services.sns.AmazonSNSClient

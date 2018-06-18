@@ -23,7 +23,7 @@ package object MailHelper {
                    subject: String,
                    message: String,
                    richMessage: Option[String] = None,
-                   attachment: Option[(java.io.File)] = None
+                   attachment: Option[java.io.File] = None
                    )
 
   object send {

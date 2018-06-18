@@ -1,14 +1,10 @@
 package controllers
 
-import models.{User, Team}
 import play.api.libs.json._
 import scaldi.{Injector, Injectable}
-import securesocial.controllers.ProviderController
-import services.{UUIDGenerator}
+import services.UUIDGenerator
 import org.slf4j.{LoggerFactory, Logger}
 import play.api.mvc._
-
-import scala.concurrent.Future
 
 /**
  * Instead of declaring an object of Application as per the template project, we must declare a class given that
@@ -30,7 +26,12 @@ class Application(implicit inj: Injector) extends Controller with ConstraintRead
     logger.info("calling UUIDGenerator...")
     Ok(uuidGenerator.generate.toString)
   }
+
 /*
+  import models.{User, Team}
+  import securesocial.controllers.ProviderController
+  import scala.concurrent.Future
+
   def authenticate(provider:String) = Action.async { implicit request =>
     if (request.remoteAddress == "127.0.0.1") {
       logger.warn("Accepting login from localhost")

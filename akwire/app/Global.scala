@@ -100,6 +100,6 @@ object Global extends GlobalSettings with ScaldiSupport {
   // Load the self-health engine
 
   // Ensure that we're using GMT, makes Joda happy
-  //TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
-  //DateTimeZone.setDefault(DateTimeZone.UTC);
+  //TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
+  //DateTimeZone.setDefault(DateTimeZone.UTC)
 }

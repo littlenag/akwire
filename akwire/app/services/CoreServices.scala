@@ -10,7 +10,7 @@ class CoreServices(implicit inj: Injector) extends Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[CoreServices])
 
-  var alertingEngine = inject[AlertingService]
+  val alertingEngine = inject[AlertingService]
 
   def init = {
     //loadAdapters()    // to sync alert state with other systems
@@ -33,19 +33,19 @@ class CoreServices(implicit inj: Injector) extends Injectable {
   }
 
   def loadAlertingRules = {
-    logger.info("Loading Alerting Rules");
+    logger.info("Loading Alerting Rules")
     for (rule <- RuleConfig.findAll()) {
       if (rule.active) {
         logger.trace("Loading Alerting Rule: {}", rule)
         alertingEngine.loadAlertingRule(rule)
       } else {
-        logger.info("Not Loading Alerting Rule: {}", rule);
+        logger.info("Not Loading Alerting Rule: {}", rule)
       }
     }
   }
 
   def loadResolveRules = {
-    logger.info("Loading Resolution Rules for Active Situations");
+    logger.info("Loading Resolution Rules for Active Situations")
     for (incident <- Incident.findAll()) {
       // Only for "active" situations would we load a resolve rule
       if (incident.active) {

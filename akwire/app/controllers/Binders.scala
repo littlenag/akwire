@@ -35,7 +35,7 @@ object Binders {
   }
 
   // Assume that format is: SCOPE-ID, e.g. TEAM-00001234123412341234
-  implicit def pathBinderForScope(implicit stringBinder: PathBindable[String]) = new PathBindable[OwningEntityRef] {
+  implicit def pathBinderForScope(implicit stringBinder: PathBindable[String]): PathBindable[OwningEntityRef] = new PathBindable[OwningEntityRef] {
 
     override def bind(key: String, value: String): Either[String, OwningEntityRef] = {
       for {
@@ -50,7 +50,7 @@ object Binders {
   }
 
   // Assume that format is: SCOPE-ID, e.g. TEAM-00001234123412341234
-  implicit def queryBinderForScope(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[OwningEntityRef] {
+  implicit def queryBinderForScope(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[OwningEntityRef] = new QueryStringBindable[OwningEntityRef] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, OwningEntityRef]] = {
       for {
         maybeScopeAndId <- stringBinder.bind(key, params)

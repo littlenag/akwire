@@ -56,7 +56,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertC
     alertingRules.keys.map(unloadAlertingRule)
   }
 
-  // TODO this should be a blocking call to provide back pressure
+  // TODO this should provide back pressure
   def inspect(obs:Observation): Unit = {
     Logger.info(s"Inspecting: $obs")
     for ((id, rule) <- alertingRules) {
