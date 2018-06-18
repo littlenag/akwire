@@ -23,10 +23,6 @@ libraryDependencies ++= Seq(
 
 /** SCALA APPLICATION DEPS **/
 libraryDependencies ++= Seq(
-  "io.spray" % "spray-can" % "1.3.3" % "test",
-  "io.spray" % "spray-client" % "1.3.3" % "test",
-  "io.spray" % "spray-routing" % "1.3.3" % "test",
-  "io.spray" % "spray-testkit" % "1.3.3" % "test",
   // MONGODB for persistence
   "org.mongodb" %% "casbah" % "2.7.3",
   "com.novus" %% "salat" % "1.9.9",

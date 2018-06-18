@@ -3,9 +3,9 @@ package resources.rules
 import models._
 import models.core.ObservedMeasurement
 
-case class RuleParams(threshold:Double, op:String)
+case class RuleParamsW(threshold:Double, op:String)
 
-class WindowedThresholdFactory extends AkkaStreamsRuleFactory[RuleParams] {
+class WindowedThresholdFactory extends AkkaStreamsRuleFactory[RuleParamsW] {
   validateParams { params =>
     params.op match {
       case "gt" | "lt" | "eq" => true
@@ -23,7 +23,7 @@ class WindowedThresholdFactory extends AkkaStreamsRuleFactory[RuleParams] {
       case "eq" => _ == threshold
     }
 
-    source.buffer()
+    //source.buffer()
 
     // for each group
     // 1 - drop while !threshold

@@ -142,7 +142,7 @@ trait AkkaStreamsRuleFactory[T] extends RuleFactory {
           buf = Vector.empty
           List(group)
         }
-    })
+    }
   }
 }
 
