@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import org.mindrot.jbcrypt.BCrypt
 
 import play.api.test._
-import resources.rules.SimpleThresholdFactory$
+import resources.rules.SimpleThreshold
 import securesocial.core.providers.utils.PasswordHasher
 import securesocial.core.{PasswordInfo, AuthenticationMethod, BasicProfile}
 import securesocial.core.providers.UsernamePasswordProvider
@@ -47,7 +47,7 @@ object PolicyTestHelpers extends WithApplication {
     ContactInfo(None), List()
   )
 
-  val ruleSimpleThreshold = PersistedRuleConfiguration(testUser.asRef, ObjectId.get(), "r1", SimpleThresholdFactory.builderClass, Map.empty[String, String])
+  val ruleSimpleThreshold = RuleConfig(testUser.asRef, ObjectId.get(), "r1", SimpleThreshold.builderClass, Map.empty[String, String])
 
   val incident_IL_0 = Incident(
     ObjectId.get(),

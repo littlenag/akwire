@@ -28,13 +28,13 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
 
       val filter = MongoDBObject("owner._id" -> entity.id, "owner.scope" -> entity.scope.toString)
       val sort = MongoDBObject("name" -> 1)
-      val list = PersistedRuleConfiguration.find(filter).sort(sort).toList
+      val list = RuleConfig.find(filter).sort(sort).toList
 
       Ok(Json.toJson(list))
     }
   }
 
-  def createRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[PersistedRuleConfiguration]) { request =>
+  def createRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Saving rule for entity: $entity")
 
@@ -51,7 +51,7 @@ class Rules(implicit inj: Injector, override implicit val env: RuntimeEnvironmen
     }
   }
 
-  def updateRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[PersistedRuleConfiguration]) { request =>
+  def updateRule(entity:OwningEntityRef) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Updating rule for team: $entity")
 

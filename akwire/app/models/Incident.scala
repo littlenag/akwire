@@ -73,7 +73,7 @@ case class Incident( id: ObjectId,
                      count : Int,
 
                      // Ownership and Context
-                     rule: PersistedRuleConfiguration,
+                     rule: RuleConfig,
 
                      @Key("incident_key") incidentKey: ContextualizedStream,
 

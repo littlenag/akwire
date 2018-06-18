@@ -80,7 +80,7 @@ class Detectors extends Controller {
     }
   }
 
-  def updateDetector() = Action.async(parse.json) {
+  def updateDetector = Action.async(parse.json) {
     request =>
       request.body.asOpt[Detector] match {
         case Some(detector: Detector) =>
@@ -91,7 +91,7 @@ class Detectors extends Controller {
       }
   }
 
-  def deleteDetector() = Action.async(parse.json) {
+  def deleteDetector = Action.async(parse.json) {
     request =>
       request.body.asOpt[Detector] match {
         case Some(detector: Detector) =>

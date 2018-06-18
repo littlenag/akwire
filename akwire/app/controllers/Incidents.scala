@@ -76,7 +76,7 @@ class Incidents(implicit inj: Injector, override implicit val env: RuntimeEnviro
    * @param id
    * @return
    */
-  def updateIncident(id:ObjectId) = SecuredAction.async(parse.json[PersistedRuleConfiguration]) { request =>
+  def updateIncident(id:ObjectId) = SecuredAction.async(parse.json[RuleConfig]) { request =>
     Future {
       Logger.info(s"Querying incidents: id=$id")
 

@@ -1,7 +1,7 @@
 package services
 
 import models.core.{ObservedMeasurement, Observation}
-import models.{PersistedRuleConfig$, Team}
+import models.{RuleConfig, Team}
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.specs2.mock.Mockito

@@ -1,6 +1,6 @@
 package models.alert
 
-import models.{PersistedRuleConfiguration, ContextualizedStream, Contextualized}
+import models.{ContextualizedStream, Contextualized, RuleConfig}
 import models.core.Observation
 import org.joda.time.DateTime
 
@@ -9,7 +9,7 @@ import org.joda.time.DateTime
  * Incident life-cycle. Incidents are created following a DoTrigger
  * and closed once
  */
-sealed abstract class AlertMsg(val rule:PersistedRuleConfiguration,
+sealed abstract class AlertMsg(val rule:RuleConfig,
                                val observations:List[Observation],
                                val created:DateTime) extends Contextualized {
 
@@ -37,7 +37,7 @@ sealed abstract class AlertMsg(val rule:PersistedRuleConfiguration,
  * @param observations
  * @param created
  */
-case class DoTrigger(override val rule:PersistedRuleConfiguration,
+case class DoTrigger(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -48,7 +48,7 @@ case class DoTrigger(override val rule:PersistedRuleConfiguration,
  * @param observations
  * @param created
  */
-case class DoProlong(override val rule:PersistedRuleConfiguration,
+case class DoProlong(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -59,7 +59,7 @@ case class DoProlong(override val rule:PersistedRuleConfiguration,
  * @param observations
  * @param created
  */
-case class DoResolve(override val rule:PersistedRuleConfiguration,
+case class DoResolve(override val rule:RuleConfig,
                      override val observations:List[Observation],
                      override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)
 
@@ -75,6 +75,6 @@ case class DoResolve(override val rule:PersistedRuleConfiguration,
  * @param observations
  * @param created
  */
-case class DoInter(override val rule:PersistedRuleConfiguration,
+case class DoInter(override val rule:RuleConfig,
                    override val observations:List[Observation],
                    override val created:DateTime = new DateTime()) extends AlertMsg(rule, observations, created)

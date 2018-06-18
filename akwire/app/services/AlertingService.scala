@@ -16,7 +16,12 @@ import play.api.Logger
 
 import scala.collection.mutable
 
-class AlertingService(implicit inj: Injector) extends AkkaInjectable {
+trait AlertContext {
+  def triggerAlert(rule:TriggeringRule, obs:List[Observation])
+  def resolveAlert(rule:ResolvingRule, obs:List[Observation])
+}
+
+class AlertingService(implicit inj: Injector) extends AkkaInjectable with AlertContext {
 
   implicit val actorSystem = inject[ActorSystem]
 
@@ -25,7 +30,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
   // TODO alerting rules and resolution rules need to know their StreamContext
 
   // rules and their compiled processors mapped via the rule id
-  val builders = mutable.HashSet[AkkaStreamsRuleFactory]()
+  val builders = mutable.HashSet[RuleBuilder]()
 
   // rules and their compiled processors mapped via the rule id
   var alertingRules = TrieMap[ObjectId, TriggeringRule]()
@@ -59,17 +64,17 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
     }
   }
 
-  def getBuilder(rule:PersistedRuleConfiguration) : AkkaStreamsRuleFactory = {
-    builders.find(builder => rule.factoryName.instantiates(builder)) match {
+  def getBuilder(rule:RuleConfig) : RuleBuilder = {
+    builders.find(builder => rule.builderClass.instantiates(builder)) match {
       case Some(builder) => builder
       case None =>
-        val newBuilder = rule.factoryName.newInstance(this)
+        val newBuilder = rule.builderClass.newInstance(this)
         builders += newBuilder
         newBuilder
     }
   }
 
-  def loadAlertingRule(ruleConfig:PersistedRuleConfiguration) = {
+  def loadAlertingRule(ruleConfig:RuleConfig) = {
 
     val builder = getBuilder(ruleConfig)
 
@@ -97,7 +102,7 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
    * @param ruleId Id of the rule to unload
    * @return The rule that was running
    */
-  def unloadAlertingRule(ruleId:ObjectId) : Option[PersistedRuleConfiguration] = {
+  def unloadAlertingRule(ruleId:ObjectId) : Option[RuleConfig] = {
     val rule = alertingRules.get(ruleId)
 
     Logger.info(s"Unloading rule: ${rule}")
@@ -113,8 +118,6 @@ class AlertingService(implicit inj: Injector) extends AkkaInjectable {
     alertingRules = alertingRules - ruleId
     rule.map(_.ruleConfig)
   }
-
-  //// !!!
 
   /** Go through a java ArrayList since Java is our glue here */
   def triggerAlert(rule:TriggeringRule, obs:List[Observation]) = {
