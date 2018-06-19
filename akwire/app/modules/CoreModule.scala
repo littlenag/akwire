@@ -3,7 +3,7 @@ package modules
 import java.util
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.Source
+
 import akka.util.BoundedBlockingQueue
 import engines.{IncidentEngine, ProcessExecutor, NotificationEngine}
 import models.{RawSubmission, User}
@@ -15,8 +15,6 @@ import scaldi.akka.AkkaInjectable
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.RuntimeEnvironment
 import services._
-
-import scala.collection.JavaConversions._
 
 import java.util.concurrent.ArrayBlockingQueue
 
@@ -48,8 +46,6 @@ class CoreModule extends Module {
   val submissionsQueue = new BoundedBlockingQueue[RawSubmission](submissionQueueSize, new ArrayBlockingQueue(submissionQueueSize))
   bind[util.Queue[RawSubmission]] to submissionsQueue
 
-  val submissionsSource = Source(() => submissionsQueue.iterator())
-
   bind[ActorSystem] toNonLazy ActorSystem("Akwire") destroyWith (_.shutdown())
   bind[Configuration] toNonLazy new play.api.Configuration(ConfigFactory.load)
 
@@ -70,8 +66,8 @@ class CoreModule extends Module {
   binding to new controllers.Incidents
   binding to new controllers.Auth
 
-  binding to getSSController(classOf[securesocial.controllers.ProviderController])
-  binding to getSSController(classOf[securesocial.controllers.LoginApi])
+  binding to getSecureSocialController(classOf[securesocial.controllers.ProviderController])
+  binding to getSecureSocialController(classOf[securesocial.controllers.LoginApi])
 
   // The app classloader is our default classloader
   binding to current.classloader
@@ -103,7 +99,7 @@ class CoreModule extends Module {
 
   Logger.debug("DI Complete")
 
-  def getSSController[A](controllerClass: Class[A]): A = {
+  def getSecureSocialController[A](controllerClass: Class[A]): A = {
     val instance = controllerClass.getConstructors.find { c =>
       val params = c.getParameterTypes
       params.length == 1 && params(0) == classOf[RuntimeEnvironment[User]]

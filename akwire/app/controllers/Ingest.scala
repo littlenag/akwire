@@ -1,24 +1,24 @@
 package controllers
 
-import java.util
-
 import models.core.ObservedMeasurement
 import org.joda.time.DateTime
 import play.api.Configuration
 import play.api.mvc._
-
 import org.slf4j.{Logger, LoggerFactory}
-import scaldi.{Injector, Injectable}
+import scaldi.{Injectable, Injector}
 import models.{RawAlert, RawSubmission}
+import services.IngestService
+
 
 class Ingest(implicit inj: Injector) extends Controller with Injectable  {
+
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Ingest])
 
   logger.info("Controller has started")
 
   val configuration: Configuration = inject[Configuration]
 
-  val submissionBus: util.Queue[RawSubmission] = inject[util.Queue[RawSubmission]]
+  val ingestService: IngestService = inject[IngestService]
 
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
@@ -48,12 +48,10 @@ class Ingest(implicit inj: Injector) extends Controller with Injectable  {
   def submitObservations: Action[JsValue] = Action(parse.json) { request =>
     request.body.asOpt[RawSubmission] match {
       case Some(submission) =>
-        if (submissionBus.offer(submission)) {
-          Ok("Received: " + submission)
-        } else {
-          // Tell the clients to back off
-          TooManyRequest
-        }
+        logger.info(s"Received submission: $submission")
+        ingestService.processObservations(submission)
+        Ok("Processed Observations")
+
       case None =>
         Ok("Invalid Observations Document")
     }

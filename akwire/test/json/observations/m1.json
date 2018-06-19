@@ -1,10 +1,10 @@
 { 
  "measurements": [
    {
-     "host" : "h1",
-    "observer":"m1",
-    "key":"test",
-    "value":15
+    "host" : "h1",
+    "observer": "m1",
+    "key": "test",
+    "value": 150
     }
   ],
  "events": [

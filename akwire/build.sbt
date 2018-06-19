@@ -2,14 +2,13 @@ import play.PlayImport.PlayKeys._
 
 name := """akwire"""
 
-version := "0.2-SNAPSHOT"
+version := "0.3-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(
   routesImport ++= Seq("controllers.Binders._", "com.mongodb.casbah.Imports.ObjectId", "models._")
 )
 
 scalaVersion := "2.11.7"
-
 
 /** JAVA APPLICATION DEPS **/
 libraryDependencies ++= Seq(
@@ -23,6 +22,8 @@ libraryDependencies ++= Seq(
 
 /** SCALA APPLICATION DEPS **/
 libraryDependencies ++= Seq(
+  // Logging
+  //"org.slf4j" % "slf4j-api" % "1.7.12",
   // MONGODB for persistence
   "org.mongodb" %% "casbah" % "2.7.3",
   "com.novus" %% "salat" % "1.9.9",
@@ -33,8 +34,9 @@ libraryDependencies ++= Seq(
   // For user authentication and sign in
   "ws.securesocial" %% "securesocial" % "3.0-M1",
   // Streams for Akka
-  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.12",
+  //"com.typesafe.akka" %% "akka-slf4j" % "2.4.2",
+  //"com.typesafe.akka" %% "akka-stream" % "2.4.2",
+  //"com.typesafe.akka" %% "akka-testkit" % "2.4.2",
   "org.scalatest"     %% "scalatest" % "2.2.0"
 )
 

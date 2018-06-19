@@ -1,7 +1,6 @@
 package models.notificationvm
 
-import com.novus.salat.annotations.raw.Persist
-import models.notificationvm.InstructionSet.{HALT, Instruction, LBL}
+import models.notificationvm.InstructionSet.{Instruction, LBL}
 import com.mongodb.casbah.MongoConnection
 import com.novus.salat.dao.{SalatDAO, ModelCompanion}
 import engines.PolicyAST.{Team, User}

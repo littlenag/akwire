@@ -23,7 +23,7 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
 
   private final val logger: Logger = LoggerFactory.getLogger(classOf[Agents])
 
-  val messaging =  inject[Messaging]
+  val messaging = inject[Messaging]
 
   import mongoContext._
 
@@ -57,8 +57,8 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
   }
 
   def findAllAgents = Action.async {
-    Future {
-      Ok(Json.arr(AgentsDAO.find(MongoDBObject.empty).sort(orderBy = MongoDBObject("created" -> -1)).toList))
+    Future.successful {
+      Ok(Json.toJson(AgentsDAO.find(MongoDBObject.empty).sort(orderBy = MongoDBObject("created" -> -1)).toList))
     }
   }
 
@@ -80,10 +80,6 @@ class Agents(implicit inj: Injector) extends Controller with Injectable {
   }
 
   def queryAgent(agentId:String, command:String) = Action.async {
-    val f = messaging.invokeCommand(AgentId(agentId),command)
-
-    f.transform(c => Ok(Json.toJson(c)), t => t)
-
-//      case Failure(t) => return InternalServerError("")
+    messaging.invokeCommand(AgentId(agentId),command).map(result => Ok(Json.toJson(result)))
   }
 }

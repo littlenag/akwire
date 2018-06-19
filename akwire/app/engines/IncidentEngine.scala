@@ -45,7 +45,7 @@ class IncidentEngine(implicit inj: Injector) extends Actor with AkkaInjectable {
       "resolved" -> false,
       "interred" -> false,
       "rule._id" -> alert.rule.id,
-      "incident_key" -> alert.contextualizedStream.asDBObject
+      "incidentKey" -> alert.contextualizedStream.asDBObject
     )
   }
 

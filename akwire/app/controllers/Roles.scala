@@ -50,7 +50,7 @@ class Roles extends Controller {
       val filter = MongoDBObject("active" -> true)
       val sort = MongoDBObject("name" -> 1)
       val list = RolesDAO.find(filter).sort(sort).toList
-      Ok(Json.arr(list)(0))
+      Ok(Json.toJson(list))
     }
   }
 

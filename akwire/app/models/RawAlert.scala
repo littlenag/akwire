@@ -4,7 +4,6 @@ import java.util.UUID
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import models.RawAlert.IncidentKeyType
 
 object IncidentAction extends Enumeration {
   val Trigger = Value("trigger")
@@ -12,8 +11,9 @@ object IncidentAction extends Enumeration {
   val Resolve = Value("resolve")
 }
 
-
-case class IncidentKey(key : IncidentKeyType)
+sealed trait IncidentKey
+case class SimpleKey(key: String) extends IncidentKey
+case class TagValueKey(key : Map[String, String]) extends IncidentKey
 
 /**
  * These are going to be sent by externally integrated systems, like Nagios and PRTG.
@@ -21,7 +21,7 @@ case class IncidentKey(key : IncidentKeyType)
 case class RawAlert( service_key: UUID,
                      action: IncidentAction.Value = IncidentAction.Trigger,
                      description: Option[String] = None,
-                     incident_key: IncidentKey,
+                     incidentKey: IncidentKey,   // renamed from incident_key
                      details : JsObject)
 
 object RawAlert {
@@ -38,13 +38,10 @@ object RawAlert {
   }
 
   implicit object keyReader extends Reads[IncidentKey] {
-    def one = (contentType:String) => IncidentKey(Left(contentType))
-    def two = (keys: Map[String, String]) => IncidentKey(Right(keys))
-
     override def reads(json: JsValue): JsResult[IncidentKey] = {
       val reader : Reads[IncidentKey] =
-        (JsPath.read[String]).map(one) or
-        (JsPath.read[Map[String, String]]).map(two)
+        JsPath.read[String].map(SimpleKey.apply) or
+        JsPath.read[Map[String, String]].map(TagValueKey.apply)
       reader.reads(json)
     }
   }

@@ -75,7 +75,7 @@ case class Incident( id: ObjectId,
                      // Ownership and Context
                      rule: RuleConfig,
 
-                     @Key("incident_key") incidentKey: ContextualizedStream,
+                     incidentKey: ContextualizedStream,
 
                      impact: Impact.Value,              // set by the Rule
                      urgency: Urgency.Value,            // initial value set by the Rule
@@ -137,7 +137,7 @@ trait IncidentDAO extends ModelCompanion[Incident, ObjectId] {
     "interred" -> 1,
     "rule.id" -> 1,
 //    "rule.context" -> 1,
-    "incident_key" -> 1
+    "incidentKey" -> 1
   )
 
   collection.ensureIndex(fields, "primary_idx")

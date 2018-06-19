@@ -1,6 +1,5 @@
 package models.notificationvm
 
-import engines.Target
 import org.joda.time.Duration
 
 object InstructionSet {

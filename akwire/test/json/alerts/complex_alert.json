@@ -1,6 +1,6 @@
 {    
   "service_key": "310877c9-5be4-435f-bade-f20c776e258a",
-  "incident_key": {
+  "incidentKey": {
     "server": "srv01",
     "request": "HTTP"
   },
