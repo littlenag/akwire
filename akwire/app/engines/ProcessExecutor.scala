@@ -62,7 +62,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           // Ten digit number enforced by Parser
           val digits = target.getPhoneNumber.get
 
-          val AKWIRE_NUMBER = "+13236724363"
+          val fromNumber = current.configuration.getString("twilio.fromNumber").get
           val accountSid = current.configuration.getString("twilio.accountSID").get
           val authToken = current.configuration.getString("twilio.authToken").get
 
@@ -72,7 +72,7 @@ class ProcessExecutor(implicit inj: Injector) extends Actor with AkkaInjectable 
           val params = new util.ArrayList[NameValuePair]()
           params.add(new BasicNameValuePair("Body", s"Problem on ${process.incident.contextualizedStream}"))
           params.add(new BasicNameValuePair("To", "+1"+digits))
-          params.add(new BasicNameValuePair("From", AKWIRE_NUMBER))
+          params.add(new BasicNameValuePair("From", "+1"+fromNumber))
 
           val messageFactory = client.getAccount().getMessageFactory()
           val message = messageFactory.create(params)
